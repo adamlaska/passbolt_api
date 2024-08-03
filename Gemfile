@@ -1,5 +1,5 @@
 source 'https://rubygems.org' do
-  gem 'test-kitchen'
+  gem 'test-kitchen', '>= 3.3.1'
   gem 'chef'
   gem 'berkshelf'
   gem 'chef-cli'

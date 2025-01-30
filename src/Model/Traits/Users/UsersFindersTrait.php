@@ -16,14 +16,18 @@ declare(strict_types=1);
  */
 namespace App\Model\Traits\Users;
 
+use App\Error\Exception\NoAdminInDbException;
 use App\Model\Entity\Role;
 use App\Model\Entity\User;
 use App\Model\Event\TableFindIndexBefore;
 use App\Model\Table\AvatarsTable;
 use App\Model\Table\Dto\FindIndexOptions;
+use App\Model\Traits\Query\CaseInsensitiveSearchQueryTrait;
+use App\Model\Validation\EmailValidationRule;
 use App\Utility\UuidFactory;
-use Cake\Core\Configure;
+use Cake\Collection\CollectionInterface;
 use Cake\Database\Expression\IdentifierExpression;
+use Cake\Database\Expression\QueryExpression;
 use Cake\I18n\FrozenTime;
 use Cake\ORM\Query;
 use Cake\Utility\Hash;
@@ -37,6 +41,8 @@ use InvalidArgumentException;
  */
 trait UsersFindersTrait
 {
+    use CaseInsensitiveSearchQueryTrait;
+
     /**
      * Filter a Groups query by groups users.
      *
@@ -93,34 +99,49 @@ trait UsersFindersTrait
      *
      * @param \Cake\ORM\Query $query The query to augment.
      * @param string $resourceId The resource the users must have access.
-     * @throws \InvalidArgumentException if the ressourceId is not a valid uuid
      * @return \Cake\ORM\Query $query
+     * @throws \InvalidArgumentException if the ressourceId is not a valid uuid
      */
-    private function _filterQueryByResourceAccess(\Cake\ORM\Query $query, string $resourceId)
+    public function filterQueryByResourceAccess(Query $query, string $resourceId): Query
     {
         if (!Validation::uuid($resourceId)) {
             throw new InvalidArgumentException(__('The resource identifier should be a valid UUID.'));
         }
 
+        return $this->filterQueryByResourcesAccess($query, [$resourceId]);
+    }
+
+    /**
+     * @param \Cake\ORM\Query $query Users query
+     * @param array|\Cake\ORM\Query $resourceIds Resource IDs the users should have access to
+     * @param array $permissionTypes array of permission type to filter along (OWNER, UPDATE or READ). If empty do not filter vy permission type
+     * @return \Cake\ORM\Query
+     */
+    public function filterQueryByResourcesAccess(Query $query, $resourceIds, array $permissionTypes = []): Query
+    {
+        if (is_array($resourceIds) && empty($resourceIds)) {
+            return $query;
+        }
         // The query requires a join with Permissions not constraint with the default condition added by the HasMany
         // relationship : Users.id = Permissions.aro_foreign_key.
         // The join will be used in relation to Groups as well, to find the users inherited permissions from Groups.
         // To do so, add an extra join.
+        $conditions = ['PermissionsFilterAccess.aco_foreign_key IN' => $resourceIds];
+        if (!empty($permissionTypes)) {
+            $conditions['PermissionsFilterAccess.type IN'] = $permissionTypes;
+        }
         $query->join([
             'table' => $this->getAssociation('Permissions')->getTable(),
             'alias' => 'PermissionsFilterAccess',
             'type' => 'INNER',
-            'conditions' => ['PermissionsFilterAccess.aco_foreign_key' => $resourceId],
+            'conditions' => $conditions,
         ]);
 
         // Subquery to retrieve the groups the user is member of.
-        $groupsSubquery = $this->Groups->find()
-            ->innerJoinWith('GroupsUsers')
-            ->select('Groups.id')
-            ->where([
-                'Groups.deleted' => false,
-                'GroupsUsers.user_id' => new IdentifierExpression('Users.id'),
-            ]);
+        $groupIdsSubquery = $this->Groups->GroupsUsers
+            ->find()
+            ->select('group_id')
+            ->where(['user_id' => new IdentifierExpression('Users.id')]);
 
         // Use distinct to avoid duplicate as it can happen that a user is member of two groups which
         // both have a permission for the same resource
@@ -130,7 +151,7 @@ trait UsersFindersTrait
             ->where(
                 ['OR' => [
                     ['PermissionsFilterAccess.aro_foreign_key' => new IdentifierExpression('Users.id')],
-                    ['PermissionsFilterAccess.aro_foreign_key IN' => $groupsSubquery],
+                    ['PermissionsFilterAccess.aro_foreign_key IN' => $groupIdsSubquery],
                 ]]
             );
     }
@@ -154,13 +175,11 @@ trait UsersFindersTrait
      */
     private function _filterQueryBySearch(Query $query, string $search)
     {
-        $search = '%' . $search . '%';
-
-        return $query->where(['OR' => [
-            ['Users.username LIKE' => $search],
-            ['Profiles.first_name LIKE' => $search],
-            ['Profiles.last_name LIKE' => $search],
-        ]]);
+        return $this->searchCaseInsensitiveOnMultipleFields($query, [
+            'Users.username',
+            'Profiles.first_name',
+            'Profiles.last_name',
+        ], $search);
     }
 
     /**
@@ -174,8 +193,8 @@ trait UsersFindersTrait
      *
      * @param \Cake\ORM\Query $query The query to augment.
      * @param string $resourceId The resource to search potential users for.
-     * @throws \InvalidArgumentException if the resource id is not a valid uuid
      * @return \Cake\ORM\Query $query
+     * @throws \InvalidArgumentException if the resource id is not a valid uuid
      */
     private function _filterQueryByHasNotPermission(Query $query, string $resourceId)
     {
@@ -198,9 +217,9 @@ trait UsersFindersTrait
      * Build the query that fetches data for user index
      *
      * @param string $role name
-     * @param array $options filters
-     * @throws \InvalidArgumentException if no role is specified
+     * @param array|null $options filters
      * @return \Cake\ORM\Query
+     * @throws \InvalidArgumentException if no role is specified
      */
     public function findIndex(string $role, ?array $options = [])
     {
@@ -276,7 +295,7 @@ trait UsersFindersTrait
 
         // If searching by resource access
         if (isset($options['filter']['has-access']) && count($options['filter']['has-access'])) {
-            $query = $this->_filterQueryByResourceAccess($query, $options['filter']['has-access'][0]);
+            $query = $this->filterQueryByResourceAccess($query, $options['filter']['has-access'][0]);
         }
 
         // If searching by resource the user do not have a direct permission for
@@ -297,9 +316,9 @@ trait UsersFindersTrait
      *
      * @param string $userId uuid
      * @param string $roleName role name
-     * @throws \InvalidArgumentException if the role name or user id are not valid
-     * @throws \Exception
      * @return \Cake\ORM\Query
+     * @throws \Exception
+     * @throws \InvalidArgumentException if the role name or user id are not valid
      */
     public function findView(string $userId, string $roleName)
     {
@@ -319,8 +338,8 @@ trait UsersFindersTrait
      *
      * @param string $userId uuid
      * @param string $roleName role name
-     * @throws \InvalidArgumentException if the role name or user id are not valid
      * @return \Cake\ORM\Query
+     * @throws \InvalidArgumentException if the role name or user id are not valid
      */
     public function findDelete(string $userId, string $roleName)
     {
@@ -339,8 +358,8 @@ trait UsersFindersTrait
      *
      * @param \Cake\ORM\Query $query a query instance
      * @param array $options options
-     * @throws \Exception if fingerprint id is not set
      * @return \Cake\ORM\Query
+     * @throws \Exception if fingerprint id is not set
      */
     public function findAuth(Query $query, array $options)
     {
@@ -362,24 +381,113 @@ trait UsersFindersTrait
      * including role and profile
      *
      * @param string $username email of user to retrieve
-     * @param array $options options
-     * @throws \InvalidArgumentException if the username is not an email
+     * @param array|null $options options
      * @return \Cake\ORM\Query
+     * @throws \InvalidArgumentException if the username is not an email
      */
     public function findByUsername(string $username, ?array $options = [])
     {
-        if (!Validation::email($username, Configure::read('passbolt.email.validate.mx'))) {
+        if (!EmailValidationRule::check($username)) {
             throw new InvalidArgumentException('The username should be a valid email.');
         }
 
         // show active first and do not count deleted ones
-        return $this->find()
-            ->where(['Users.username' => $username, 'Users.deleted' => false])
+        return $this->findByUsernameCaseAware($username)
+            ->where(['deleted' => false])
             ->contain([
                 'Roles',
                 'Profiles' => AvatarsTable::addContainAvatar(),
             ])
             ->order(['Users.active' => 'DESC']);
+    }
+
+    /**
+     * Search a user by username. If username are defined as case-sensitive,
+     * filter out the false matches
+     *
+     * @param string $username username to query
+     * @return \Cake\ORM\Query
+     * @throws \InvalidArgumentException if the username is not valid email
+     * @see UsersTable::isUsernameCaseSensitive()
+     */
+    public function findByUsernameCaseAware(string $username): Query
+    {
+        $query = $this->find()->where([
+            'LOWER(Users.username)' => mb_strtolower($username),
+        ]);
+
+        if ($this->isUsernameCaseSensitive()) {
+            $query->formatResults(function (CollectionInterface $results) use ($username): CollectionInterface {
+                    return $results->filter(function (User $user) use ($username) {
+                        return $user->username === $username;
+                    })->compile(false);
+            });
+        }
+
+        return $query;
+    }
+
+    /**
+     * Lists ['user_id' => 'username'] not deleted and featured multiple times
+     *
+     * @return \Cake\ORM\Query
+     */
+    public function listDuplicateUsernames(): Query
+    {
+        if ($this->isUsernameCaseSensitive()) {
+            return $this->listDuplicateUsernameCaseSensitive();
+        } else {
+            return $this->listDuplicateUsernamesCaseInsensitive();
+        }
+    }
+
+    /**
+     * Lists all duplicated lower-cased usernames
+     *
+     * @return \Cake\ORM\Query
+     */
+    protected function listDuplicateUsernamesCaseInsensitive(): Query
+    {
+        $subQueryOfLowerCasedUsernameDuplicates = $this
+            ->find()
+            // MAX() here is just to make MySQL happy without that query breaks in MySQL(especially in 5.7)
+            ->select(['lower_username' => 'MAX(LOWER(Users.username))'])
+            ->where(['deleted' => false])
+            ->group('LOWER(Users.username)')
+            ->having('count(*) > 1');
+
+        return $this->find('list', ['keyField' => 'id', 'valueField' => 'username'])
+            ->disableHydration()
+            ->select(['id', 'username'])
+            ->where([
+                'LOWER(username) IN' => $subQueryOfLowerCasedUsernameDuplicates,
+                'deleted' => false,
+            ])
+            ->orderAsc('LOWER(username)');
+    }
+
+    /**
+     * @return \Cake\ORM\Query
+     */
+    protected function listDuplicateUsernameCaseSensitive(): Query
+    {
+        // Let PHP remove the unique usernames, case sensitive
+        $filterUniqueCaseSensitive = function (CollectionInterface $results): CollectionInterface {
+            $duplicates = $results->toArray();
+            foreach (array_count_values($duplicates) as $val => $c) {
+                if ($c === 1) {
+                    $results = $results->reject(function (string $value) use ($val) {
+                        return $val === $value;
+                    });
+                }
+            }
+
+            return $results->compile(false);
+        };
+
+        return $this
+            ->listDuplicateUsernamesCaseInsensitive()
+            ->formatResults($filterUniqueCaseSensitive);
     }
 
     /**
@@ -414,8 +522,15 @@ trait UsersFindersTrait
      */
     public function findFirstAdmin(): ?User
     {
+        $tableHasDisabledField = $this->getSchema()->hasColumn('disabled');
+        $query = $this->find();
+        // This check is required as this method is called in migrations
+        // anterior to the creation of the "disabled" field
+        if ($tableHasDisabledField) {
+            $query->find('notDisabled');
+        }
         /** @var \App\Model\Entity\User $user */
-        $user = $this->find()
+        $user = $query
             ->where([
                 'Users.deleted' => false,
                 'Users.active' => true,
@@ -424,6 +539,20 @@ trait UsersFindersTrait
             ->order(['Users.created' => 'ASC'])
             ->contain(['Roles'])
             ->first();
+
+        return $user;
+    }
+
+    /**
+     * @return \App\Model\Entity\User
+     * @throws \App\Error\Exception\NoAdminInDbException if no admin were found
+     */
+    public function findFirstAdminOrThrowNoAdminInDbException(): User
+    {
+        $user = $this->findFirstAdmin();
+        if (is_null($user)) {
+            throw new NoAdminInDbException();
+        }
 
         return $user;
     }
@@ -463,6 +592,23 @@ trait UsersFindersTrait
     }
 
     /**
+     * Filter out disabled users.
+     *
+     * @param \Cake\ORM\Query $query query
+     * @return \Cake\ORM\Query
+     */
+    public function findNotDisabled(Query $query): Query
+    {
+        return $query->where(function (QueryExpression $where) {
+            return $where->or(function (QueryExpression $or) {
+                return $or
+                    ->isNull($this->aliasField('disabled'))
+                    ->gt($this->aliasField('disabled'), FrozenTime::now());
+            });
+        });
+    }
+
+    /**
      * Retrieve users' last logged in date.
      *
      * @param \Cake\ORM\Query $query query
@@ -471,38 +617,24 @@ trait UsersFindersTrait
     public function findlastLoggedIn(Query $query)
     {
         // Retrieve the last logged in date for each user, based on the action_logs table.
-        $loginActionId = UuidFactory::uuid('AuthLogin.loginPost');
+        $loginActionIds = [
+            UuidFactory::uuid('AuthLogin.loginPost'),
+            UuidFactory::uuid('JwtLogin.loginPost'),
+        ];
         $subQuery = $this->ActionLogs->find();
-        $subQuery->select([
-                'user_id' => 'user_id',
-                'last_logged_in' => $subQuery->func()->max(new IdentifierExpression('ActionLogs.created')),
-            ])
+        $subQuery
+            ->select(['last_logged_in' => $subQuery->func()->max(new IdentifierExpression('ActionLogs.created'))])
             ->where([
-                 'ActionLogs.action_id' => $loginActionId,
+                 'ActionLogs.action_id IN' => $loginActionIds,
                  'ActionLogs.status' => 1,
+                 'ActionLogs.user_id' => new IdentifierExpression('Users.id'),
             ])
-            ->group('user_id');
+            ->limit(1);
 
-        // Left join the last logged in query to the given query.
-        $query = $query->select(['last_logged_in' => 'JoinedUsersLastLoggedIn.last_logged_in'])
-            ->enableAutoFields() // Autofields are disabled when a select is made manually on a query, reestablish it.
-            ->join([
-                'table' => $subQuery,
-                'alias' => 'JoinedUsersLastLoggedIn',
-                'type' => 'LEFT',
-                'conditions' => [
-                    'Users.id' => new IdentifierExpression('JoinedUsersLastLoggedIn.user_id'),
-                ],
-            ]);
+        $selectTypeMap = $query->getSelectTypeMap();
+        $selectTypeMap->addDefaults(['last_logged_in' => 'datetime']);
 
-        // The last logged in date should be formatted as other dates (FrozenTime).
-        $query->decorateResults(function ($row) {
-            if (!is_null($row['last_logged_in'])) {
-                $row['last_logged_in'] = new FrozenTime($row['last_logged_in']);
-            }
-
-            return $row;
-        });
+        $query->selectAlso(['last_logged_in' => $subQuery]);
 
         return $query;
     }

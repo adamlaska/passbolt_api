@@ -19,8 +19,8 @@ namespace App\Service\Avatars;
 use App\Model\Table\AvatarsTable;
 use Cake\Core\Configure;
 use Cake\Datasource\EntityInterface;
-use Cake\Datasource\ModelAwareTrait;
 use Cake\Log\Log;
+use Cake\ORM\Locator\LocatorAwareTrait;
 use Cake\ORM\Table;
 use Laminas\Diactoros\UploadedFile;
 
@@ -33,7 +33,7 @@ use Laminas\Diactoros\UploadedFile;
  */
 class AvatarsTransferService
 {
-    use ModelAwareTrait;
+    use LocatorAwareTrait;
 
     /**
      * @var \App\Model\Table\AvatarsTable
@@ -80,7 +80,7 @@ class AvatarsTransferService
      *
      * In debug mode, returns the errors and successes in $this->results array.
      *
-     * @return array|array[]
+     * @return array
      */
     public function transfer(): array
     {

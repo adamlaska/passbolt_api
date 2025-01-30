@@ -1,6 +1,6 @@
 {
   "name": "passbolt_api",
-  "version": "3.7.3",
+  "version": "4.11.0",
   "description": "The backend application for the open source password manager for teams",
   "repository": {
     "url": "https://github.com/passbolt/passbolt_api"
@@ -22,7 +22,16 @@
     "grunt-contrib-copy": "^1.0.0",
     "grunt-contrib-watch": "^1.1.0",
     "jquery": "^3.5.1",
-    "openpgp": "5.2.1",
-    "passbolt-styleguide": "^3.7.1"
+    "lockfile-lint": "^4.14.0",
+    "openpgp": "^5.11.1",
+    "passbolt-styleguide": "^4.11.0"
+  },
+  "scripts": {
+    "lint": "npm run lint:lockfile",
+    "lint:lockfile": "lockfile-lint --path package-lock.json --allowed-hosts npm --allowed-schemes \"https:\" --empty-hostname false"
+  },
+  "dependencies": {
+    "micromatch": "^4.0.8",
+    "react-router-dom": "^5.3.4"
   }
 }

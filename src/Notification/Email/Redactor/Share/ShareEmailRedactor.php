@@ -17,7 +17,6 @@ declare(strict_types=1);
 
 namespace App\Notification\Email\Redactor\Share;
 
-use App\Controller\Share\ShareController;
 use App\Model\Entity\Resource;
 use App\Model\Entity\User;
 use App\Model\Table\UsersTable;
@@ -25,16 +24,19 @@ use App\Notification\Email\Email;
 use App\Notification\Email\EmailCollection;
 use App\Notification\Email\SubscribedEmailRedactorInterface;
 use App\Notification\Email\SubscribedEmailRedactorTrait;
+use App\Service\Resources\ResourcesShareService;
 use Cake\Event\Event;
 use Cake\ORM\TableRegistry;
 use Cake\Utility\Hash;
 use Passbolt\Locale\Service\LocaleService;
+use Passbolt\Metadata\Model\Dto\MetadataResourceDto;
 
 class ShareEmailRedactor implements SubscribedEmailRedactorInterface
 {
     use SubscribedEmailRedactorTrait;
 
     public const TEMPLATE = 'LU/resource_share';
+    public const TEMPLATE_V5 = 'Passbolt/Metadata.LU/resource_share_v5';
 
     /**
      * @var \App\Model\Table\UsersTable
@@ -48,7 +50,6 @@ class ShareEmailRedactor implements SubscribedEmailRedactorInterface
     public function __construct(?array $config = [], ?UsersTable $usersTable = null)
     {
         $this->setConfig($config);
-        /** @phpstan-ignore-next-line */
         $this->usersTable = $usersTable ?? TableRegistry::getTableLocator()->get('Users');
     }
 
@@ -60,8 +61,16 @@ class ShareEmailRedactor implements SubscribedEmailRedactorInterface
     public function getSubscribedEvents(): array
     {
         return [
-            ShareController::SHARE_SUCCESS_EVENT_NAME,
+            ResourcesShareService::SHARE_SUCCESS_EVENT_NAME,
         ];
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function getNotificationSettingPath(): ?string
+    {
+        return 'send.password.share';
     }
 
     /**
@@ -73,18 +82,21 @@ class ShareEmailRedactor implements SubscribedEmailRedactorInterface
         $emailCollection = new EmailCollection();
 
         $resource = $event->getData('resource');
-        $changes = $event->getData('changes');
+        $secrets = $event->getData('secrets') ?? [];
         $ownerId = $event->getData('ownerId');
 
         // for now only handle the new share
         // e.g. we don't notify when permission changes or are removed
-        $secrets = $changes['secrets'] ?? [];
         $userIds = Hash::extract($secrets, '{n}.user_id');
         if (!empty($userIds)) {
             // Get the details of whoever did the changes
             $owner = $this->usersTable->findFirstForEmail($ownerId);
             $users = $this->getUserFromIds($userIds);
-            $secrets = Hash::combine($changes['secrets'], '{n}.user_id', '{n}.data');
+
+            if (empty($users)) {
+                return $emailCollection;
+            }
+            $secrets = Hash::combine($secrets, '{n}.user_id', '{n}.data');
 
             foreach ($users as $user) {
                 $emailCollection->addEmail(
@@ -104,22 +116,33 @@ class ShareEmailRedactor implements SubscribedEmailRedactorInterface
      */
     private function getUserFromIds(array $userIds)
     {
-        return $this->usersTable->find('locale')->where(['Users.id IN' => $userIds]);
+        return $this->usersTable
+            ->find('locale')
+            ->find('notDisabled')
+            ->where(['Users.id IN' => $userIds]);
     }
 
     /**
      * @param \App\Model\Entity\User $recipient User to send email to
      * @param \App\Model\Entity\User $owner Owner
-     * @param Resource $resource Resource
+     * @param \App\Model\Entity\Resource $resource Resource
      * @param string   $secret Secret
      * @return \App\Notification\Email\Email
      */
     private function createShareEmail(User $recipient, User $owner, Resource $resource, string $secret): Email
     {
+        $resourceDto = MetadataResourceDto::fromArray($resource->toArray());
+        $isV5 = $resourceDto->isV5();
+
         $subject = (new LocaleService())->translateString(
             $recipient->locale,
-            function () use ($owner, $resource) {
-                return __('{0} shared the password {1}', $owner->profile->first_name, $resource->name);
+            function () use ($owner, $resource, $isV5) {
+                $subject = __('{0} shared the resource {1}', $owner->profile->first_name, $resource->name);
+                if ($isV5) {
+                    $subject = __('{0} shared a resource', $owner->profile->first_name);
+                }
+
+                return $subject;
             }
         );
 
@@ -132,10 +155,13 @@ class ShareEmailRedactor implements SubscribedEmailRedactorInterface
                 'showUri' => $this->getConfig('show.uri'),
                 'showDescription' => $this->getConfig('show.description'),
                 'showSecret' => $this->getConfig('show.secret'),
+                'isV5' => $isV5,
             ],
             'title' => $subject,
         ];
 
-        return new Email($recipient->username, $subject, $data, self::TEMPLATE);
+        $template = $isV5 ? self::TEMPLATE_V5 : self::TEMPLATE;
+
+        return new Email($recipient, $subject, $data, $template);
     }
 }

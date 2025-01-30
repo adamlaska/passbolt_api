@@ -26,8 +26,10 @@ use App\Notification\Email\EmailCollection;
 use App\Notification\Email\SubscribedEmailRedactorInterface;
 use App\Notification\Email\SubscribedEmailRedactorTrait;
 use App\Service\Resources\ResourcesUpdateService;
+use App\Utility\Purifier;
 use Cake\Event\Event;
 use Cake\ORM\TableRegistry;
+use Cake\Utility\Hash;
 use Passbolt\Locale\Service\LocaleService;
 
 class ResourceUpdateEmailRedactor implements SubscribedEmailRedactorInterface
@@ -36,6 +38,8 @@ class ResourceUpdateEmailRedactor implements SubscribedEmailRedactorInterface
 
     public const TEMPLATE = 'LU/resource_update';
 
+    public const TEMPLATE_V5 = 'Passbolt/Metadata.LU/resource_update_v5';
+
     /**
      * @var \App\Model\Table\UsersTable
      */
@@ -43,12 +47,11 @@ class ResourceUpdateEmailRedactor implements SubscribedEmailRedactorInterface
 
     /**
      * @param array|null $config Configuration for the redactor
-     * @param \App\Model\Table\UsersTable $usersTable Users Table
+     * @param \App\Model\Table\UsersTable|null $usersTable Users Table
      */
     public function __construct(?array $config = [], ?UsersTable $usersTable = null)
     {
         $this->setConfig($config);
-        /** @phpstan-ignore-next-line */
         $this->usersTable = $usersTable ?? TableRegistry::getTableLocator()->get('Users');
     }
 
@@ -65,6 +68,14 @@ class ResourceUpdateEmailRedactor implements SubscribedEmailRedactorInterface
     }
 
     /**
+     * @inheritDoc
+     */
+    public function getNotificationSettingPath(): ?string
+    {
+        return 'send.password.update';
+    }
+
+    /**
      * @param \Cake\Event\Event $event Resource update event
      * @return \App\Notification\Email\EmailCollection
      */
@@ -72,17 +83,40 @@ class ResourceUpdateEmailRedactor implements SubscribedEmailRedactorInterface
     {
         $emailCollection = new EmailCollection();
 
-        /** @var Resource $resource */
+        /** @var \App\Model\Entity\Resource $resource */
         $resource = $event->getData('resource');
+        /** @var \App\Model\Entity\Secret[] $secrets */
+        $secrets = $event->getData('secrets');
+        $isV5 = $event->getData('isV5');
+        if (is_null($isV5)) {
+            $isV5 = false;
+        }
 
         // Get the users that can access this resource
         $options = ['contain' => ['role'], 'filter' => ['has-access' => [$resource->id]]];
-        $users = $this->usersTable->findIndex(Role::USER, $options)->find('locale');
+        /** @var \App\Model\Entity\User[] $users */
+        $users = $this->usersTable->findIndex(Role::USER, $options)
+            ->find('locale')
+            ->find('notDisabled');
         $owner = $this->usersTable->findFirstForEmail($resource->modified_by);
+
+        $secretsDataById = [];
+        // Secrets can be empty when only metadata is updated
+        if (!empty($secrets)) {
+            $secretsDataById = Hash::combine($secrets, '{n}.user_id', '{n}.data');
+        }
 
         // Send emails to everybody that can see the resource
         foreach ($users as $user) {
-            $emailCollection->addEmail($this->createUpdateEmail($user, $owner, $resource));
+            $emailCollection->addEmail(
+                $this->createUpdateEmail(
+                    $user,
+                    $owner,
+                    $resource,
+                    $secretsDataById[$user->id] ?? null,
+                    $isV5
+                )
+            );
         }
 
         return $emailCollection;
@@ -91,28 +125,59 @@ class ResourceUpdateEmailRedactor implements SubscribedEmailRedactorInterface
     /**
      * @param \App\Model\Entity\User $recipient Email of the recipient user
      * @param \App\Model\Entity\User $owner User who executed the action
-     * @param Resource $resource Resource
+     * @param \App\Model\Entity\Resource $resource Resource
+     * @param string|null $armoredSecret The secret data string if present
+     * @param bool $isV5 Resource entity format is v5 or not.
      * @return \App\Notification\Email\Email
      */
-    private function createUpdateEmail(User $recipient, User $owner, Resource $resource): Email
-    {
+    private function createUpdateEmail(
+        User $recipient,
+        User $owner,
+        Resource $resource,
+        ?string $armoredSecret,
+        bool $isV5
+    ): Email {
         $subject = (new LocaleService())->translateString(
             $recipient->locale,
-            function () use ($owner, $resource) {
-                return __('{0} edited the password {1}', $owner->profile->first_name, $resource->name);
+            function () use ($recipient, $owner, $resource, $isV5) {
+                $isRecipientPerformingTheAction = $recipient->id === $owner->id;
+                if ($isV5) {
+                    if ($isRecipientPerformingTheAction) {
+                        $subject = __('You edited a resource');
+                    } else {
+                        $subject = __('{0} edited a resource', Purifier::clean($owner->profile->first_name));
+                    }
+                } else {
+                    $resourceName = Purifier::clean($resource->name);
+                    if ($isRecipientPerformingTheAction) {
+                        $subject = __('You edited the resource {0}', $resourceName);
+                    } else {
+                        $subject = __('{0} edited the resource {1}', Purifier::clean($owner->profile->first_name), $resourceName); // phpcs:ignore
+                    }
+                }
+
+                return $subject;
             }
         );
+
         $data = [
             'body' => [
                 'user' => $owner,
                 'resource' => $resource,
+                'armoredSecret' => $armoredSecret,
                 'showUsername' => $this->getConfig('show.username'),
                 'showUri' => $this->getConfig('show.uri'),
                 'showDescription' => $this->getConfig('show.description'),
                 'showSecret' => $this->getConfig('show.secret'),
-            ], 'title' => $subject,
+            ],
+            'title' => $subject,
         ];
 
-        return new Email($recipient->username, $subject, $data, self::TEMPLATE);
+        $template = self::TEMPLATE;
+        if ($isV5) {
+            $template = self::TEMPLATE_V5;
+        }
+
+        return new Email($recipient, $subject, $data, $template);
     }
 }

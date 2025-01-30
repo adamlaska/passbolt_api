@@ -16,23 +16,36 @@ declare(strict_types=1);
  */
 namespace App\Command;
 
+use App\Service\Command\ProcessUserService;
 use App\Utility\OpenPGP\OpenPGPBackendFactory;
 use Cake\Console\Arguments;
 use Cake\Console\ConsoleIo;
-use Cake\Console\ConsoleOptionParser;
 use Cake\Core\Configure;
-use Cake\Core\Exception\Exception;
+use Cake\Core\Exception\CakeException;
 
 class KeyringInitCommand extends PassboltCommand
 {
     /**
+     * @var \App\Service\Command\ProcessUserService
+     */
+    protected ProcessUserService $processUserService;
+
+    /**
+     * @param \App\Service\Command\ProcessUserService $processUserService Process user service.
+     */
+    public function __construct(ProcessUserService $processUserService)
+    {
+        parent::__construct();
+
+        $this->processUserService = $processUserService;
+    }
+
+    /**
      * @inheritDoc
      */
-    public function buildOptionParser(ConsoleOptionParser $parser): ConsoleOptionParser
+    public static function getCommandDescription(): string
     {
-        $parser->setDescription(__('GnuPG Keyring init shell for the passbolt application.'));
-
-        return $parser;
+        return __('GnuPG Keyring init shell for the passbolt application.');
     }
 
     /**
@@ -43,25 +56,23 @@ class KeyringInitCommand extends PassboltCommand
         parent::execute($args, $io);
 
         // Root user is not allowed to execute this command.
-        if (!$this->assertNotRoot($io)) {
-            return $this->errorCode();
-        }
+        $this->assertCurrentProcessUser($io, $this->processUserService);
 
         try {
             $filePath = Configure::read('passbolt.gpg.serverKey.private');
             if (!file_exists($filePath)) {
-                throw new Exception(__('The file does not exist: {0}', $filePath));
+                throw new CakeException(__('The file does not exist: {0}', $filePath));
             }
             $armoredKey = file_get_contents($filePath);
             if ($armoredKey === false) {
-                throw new Exception(__('Could not read the file: {0}', $filePath));
+                throw new CakeException(__('Could not read the file: {0}', $filePath));
             }
             // Import the private key in the OpenPGP keyring
             $gpg = OpenPGPBackendFactory::get();
 
             $io->out('Importing ' . $filePath);
             $gpg->importKeyIntoKeyring($armoredKey);
-        } catch (Exception $e) {
+        } catch (CakeException $e) {
             $this->error($e->getMessage(), $io);
             $this->error('Could not import the server OpenPGP key into the keyring.', $io);
 

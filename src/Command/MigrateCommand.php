@@ -16,6 +16,8 @@ declare(strict_types=1);
  */
 namespace App\Command;
 
+use App\Service\Command\ProcessUserService;
+use App\Service\Subscriptions\SubscriptionCheckInCommandServiceInterface;
 use Cake\Command\CacheClearallCommand;
 use Cake\Console\Arguments;
 use Cake\Console\ConsoleIo;
@@ -28,13 +30,40 @@ class MigrateCommand extends PassboltCommand
 {
     use DatabaseAwareCommandTrait;
 
+    protected ProcessUserService $processUserService;
+
+    protected SubscriptionCheckInCommandServiceInterface $subscriptionCheckInCommandService;
+
+    /**
+     * @param \App\Service\Command\ProcessUserService $processUserService Process user service.
+     * @param \App\Service\Subscriptions\SubscriptionCheckInCommandServiceInterface $subscriptionCheckInCommandService Service checking the subscription validity.
+     */
+    public function __construct(
+        ProcessUserService $processUserService,
+        SubscriptionCheckInCommandServiceInterface $subscriptionCheckInCommandService
+    ) {
+        parent::__construct();
+
+        $this->processUserService = $processUserService;
+        $this->subscriptionCheckInCommandService = $subscriptionCheckInCommandService;
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public static function getCommandDescription(): string
+    {
+        return __('Run database migrations.');
+    }
+
     /**
      * @inheritDoc
      */
     public function buildOptionParser(ConsoleOptionParser $parser): ConsoleOptionParser
     {
+        $parser = parent::buildOptionParser($parser);
+
         $parser
-            ->setDescription(__('Migration shell for the Passbolt application.'))
             ->addOption('backup', [
                 'help' => 'Make a database backup to be used in case something goes wrong.',
                 'boolean' => true,
@@ -60,9 +89,7 @@ class MigrateCommand extends PassboltCommand
 
         // Root user is not allowed to execute this command.
         // This command needs to be executed with the same user as the webserver.
-        if (!$this->assertNotRoot($io)) {
-            return $this->errorCode();
-        }
+        $this->assertCurrentProcessUser($io, $this->processUserService);
 
         // Backup
         if ($this->backup($args, $io)) {
@@ -70,6 +97,9 @@ class MigrateCommand extends PassboltCommand
         } else {
             return $this->errorCode();
         }
+
+        // Normal mode
+        $this->subscriptionCheckInCommandService->check($this, $args, $io);
 
         // Migration task
         $io->out(' ' . __('Running migration scripts.'));
@@ -102,7 +132,7 @@ class MigrateCommand extends PassboltCommand
     protected function backup(Arguments $args, ConsoleIo $io): bool
     {
         if ($args->getOption('backup')) {
-            $result = $this->executeCommand(MysqlExportCommand::class, $this->formatOptions($args, ['--force']), $io);
+            $result = $this->executeCommand(SqlExportCommand::class, $this->formatOptions($args, ['--force']), $io);
 
             return $result === self::CODE_SUCCESS;
         }

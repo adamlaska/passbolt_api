@@ -18,6 +18,7 @@ declare(strict_types=1);
 namespace App\Notification\Email\Redactor\Group;
 
 use App\Model\Entity\Group;
+use App\Model\Entity\GroupsUser;
 use App\Model\Entity\User;
 use App\Model\Table\UsersTable;
 use App\Notification\Email\Email;
@@ -46,7 +47,6 @@ class GroupUpdateAdminSummaryEmailRedactor implements SubscribedEmailRedactorInt
      */
     public function __construct(?UsersTable $usersTable = null)
     {
-        /** @phpstan-ignore-next-line */
         $this->usersTable = $usersTable ?? TableRegistry::getTableLocator()->get('Users');
     }
 
@@ -63,6 +63,14 @@ class GroupUpdateAdminSummaryEmailRedactor implements SubscribedEmailRedactorInt
     }
 
     /**
+     * @inheritDoc
+     */
+    public function getNotificationSettingPath(): ?string
+    {
+        return 'send.group.manager.update';
+    }
+
+    /**
      * @param \Cake\Event\Event $event User delete event
      * @return \App\Notification\Email\EmailCollection
      */
@@ -72,9 +80,11 @@ class GroupUpdateAdminSummaryEmailRedactor implements SubscribedEmailRedactorInt
 
         /** @var \App\Model\Entity\Group $group */
         $group = $event->getData('group');
-        $addedGroupsUsers = $event->getData('addedGroupsUsers');
-        $updatedGroupsUsers = $event->getData('updatedGroupsUsers');
-        $removedGroupsUsers = $event->getData('removedGroupsUsers');
+        /** @var \App\Model\Dto\EntitiesChangesDto $entitiesChanges */
+        $entitiesChanges = $event->getData('entitiesChanges');
+        $addedGroupsUsers = $entitiesChanges->getAddedEntities(GroupsUser::class);
+        $updatedGroupsUsers = $entitiesChanges->getUpdatedEntities(GroupsUser::class);
+        $removedGroupsUsers = $entitiesChanges->getDeletedEntities(GroupsUser::class);
         $modifiedBy = $this->usersTable->findFirstForEmail($event->getData('userId'));
 
         if ((empty($addedGroupsUsers) && empty($updatedGroupsUsers) && empty($removedGroupsUsers))) {
@@ -165,7 +175,7 @@ class GroupUpdateAdminSummaryEmailRedactor implements SubscribedEmailRedactorInt
             'title' => $subject,
         ];
 
-        return new Email($recipient->username, $subject, $data, self::TEMPLATE);
+        return new Email($recipient, $subject, $data, self::TEMPLATE);
     }
 
     /**
@@ -197,7 +207,11 @@ class GroupUpdateAdminSummaryEmailRedactor implements SubscribedEmailRedactorInt
     private function getGroupManagers(Group $group, array $excludeUsersIds): array
     {
         return $this->usersTable->find('locale')
-            ->select(['Users.username'])
+            ->find('notDisabled')
+            ->select([
+                'Users.username',
+                'Users.disabled',
+            ])
             ->innerJoinWith('GroupsUsers')
             ->where(
                 [

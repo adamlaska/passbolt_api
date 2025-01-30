@@ -1,6 +1,19 @@
 <?php
 declare(strict_types=1);
 
+/**
+ * Passbolt ~ Open source password manager for teams
+ * Copyright (c) Passbolt SA (https://www.passbolt.com)
+ *
+ * Licensed under GNU Affero General Public License version 3 of the or any later version.
+ * For full copyright and license information, please see the LICENSE.txt
+ * Redistributions of files must retain the above copyright notice.
+ *
+ * @copyright     Copyright (c) Passbolt SA (https://www.passbolt.com)
+ * @license       https://opensource.org/licenses/AGPL-3.0 AGPL License
+ * @link          https://www.passbolt.com Passbolt(tm)
+ * @since         3.9.0
+ */
 namespace App\Test\Lib\Utility\AuthToken;
 
 use App\Model\Entity\AuthenticationToken;
@@ -18,18 +31,17 @@ class AuthTokenExpiryTest extends TestCase
 
     public function setUp(): void
     {
-        $this->sut = new AuthTokenExpiry();
-
         parent::setUp();
+        $this->sut = new AuthTokenExpiry();
     }
 
-    public function testThatGetExpirationForInvalidTokenTypeThrowAnException()
+    public function testAuthTokenExpiry_GetExpirationForInvalidTokenTypeThrowAnException()
     {
         $this->expectException(InvalidArgumentException::class);
         $this->sut->getExpiryForTokenType('type');
     }
 
-    public function testThatGetExpirationForTokenRetrieveConfigurationForTokenType()
+    public function testAuthTokenExpiry_GetExpirationForTokenRetrieveConfigurationForTokenType()
     {
         $tokenType = AuthenticationToken::TYPE_LOGIN;
         $expectedExpiry = '30 days';
@@ -40,7 +52,7 @@ class AuthTokenExpiryTest extends TestCase
         $this->assertEquals($expectedExpiry, $this->sut->getExpiryForTokenType($tokenType));
     }
 
-    public function testThatGetExpirationForTokenFallbackToDefaultExpiryConfigurationIfExpiryNotDefinedForTokenType()
+    public function testAuthTokenExpiry_GetExpirationForTokenFallbackToDefaultExpiryConfigurationIfExpiryNotDefinedForTokenType()
     {
         $tokenType = AuthenticationToken::TYPE_LOGIN;
         $expectedExpiry = '30 days';
@@ -50,7 +62,7 @@ class AuthTokenExpiryTest extends TestCase
         $this->assertEquals($expectedExpiry, $this->sut->getExpiryForTokenType($tokenType));
     }
 
-    public function testThatGetExpirationForTokenFallbackToDefaultExpiryConfigurationIfExpiryInvalidForTokenType()
+    public function testAuthTokenExpiry_GetExpirationForTokenFallbackToDefaultExpiryConfigurationIfExpiryInvalidForTokenType()
     {
         $tokenType = AuthenticationToken::TYPE_LOGIN;
         $expectedExpiry = '30 days';

@@ -19,6 +19,7 @@ namespace App\Service\Secrets;
 
 use App\Error\Exception\CustomValidationException;
 use App\Error\Exception\ValidationException;
+use App\Model\Dto\EntitiesChangesDto;
 use App\Model\Entity\Secret;
 use App\Service\Permissions\PermissionsGetUsersIdsHavingAccessToService;
 use App\Utility\UserAccessControl;
@@ -49,12 +50,11 @@ class SecretsUpdateSecretsService
     {
         $this->accessService = new PermissionsGetUsersIdsHavingAccessToService();
         $this->secretCreateService = new SecretsCreateService();
-        /** @phpstan-ignore-next-line */
         $this->secretsTable = TableRegistry::getTableLocator()->get('Secrets');
     }
 
     /**
-     * Update a resource' secrets.
+     * Update a resource's secrets.
      *
      * @param \App\Utility\UserAccessControl $uac The operator.
      * @param string $resourceId The resource to update the secrets for.
@@ -66,24 +66,44 @@ class SecretsUpdateSecretsService
      *   ],
      *   ...
      * ]
-     * @return void
+     * @return \App\Model\Dto\EntitiesChangesDto
      * @throws \Exception If something unexpected occurred
      */
-    public function updateSecrets(UserAccessControl $uac, string $resourceId, array $data = [])
+    public function updateSecrets(UserAccessControl $uac, string $resourceId, array $data = []): EntitiesChangesDto
     {
+        $entitiesChanges = new EntitiesChangesDto();
+        $userIds = Hash::extract($data, '{n}.user_id');
+
+        $secrets = [];
+        if (!empty($userIds)) {
+            $secrets = $this->secretsTable
+                ->find()
+                ->select(['id', 'user_id', 'resource_id', 'data'])
+                ->where([
+                    'user_id IN' => $userIds,
+                    'resource_id' => $resourceId,
+                ])
+                ->all()
+                ->indexBy('user_id') // group results by user_id
+                ->toArray();
+        }
+
         foreach ($data as $rowIndex => $row) {
-            $userId = Hash::get($row, 'user_id', null);
-            /** @var \App\Model\Entity\Secret|null $secret */
-            $secret = $this->secretsTable->findByResourceIdAndUserId($resourceId, $userId)->first();
-            if ($secret) {
-                $this->updateSecret($secret, $rowIndex, $row);
+            if (array_key_exists($row['user_id'], $secrets)) {
+                $secret = $secrets[$row['user_id']];
+                $updatedSecret = $this->updateSecret($secret, $rowIndex, $row);
+                $entitiesChanges->pushUpdatedEntity($updatedSecret);
             } else {
-                $this->addSecret($uac, $rowIndex, $resourceId, $row);
+                $addedSecret = $this->addSecret($uac, $rowIndex, $resourceId, $row);
+                $entitiesChanges->pushAddedEntity($addedSecret);
             }
         }
 
-        $this->deleteOrphanSecrets($resourceId);
+        $deletedSecrets = $this->deleteLostAccessSecrets($resourceId);
+        $entitiesChanges->pushDeletedEntities($deletedSecrets);
         $this->assertAllSecretsAreProvided($resourceId);
+
+        return $entitiesChanges;
     }
 
     /**
@@ -159,19 +179,29 @@ class SecretsUpdateSecretsService
     }
 
     /**
-     * Delete the secrets for which the users have no access.
+     * Delete the secrets for which the users have no access anymore.
      *
      * @param string $resourceId The target resource
-     * @return void
+     * @return array<\App\Model\Entity\Secret> The array of deleted secrets
      */
-    private function deleteOrphanSecrets(string $resourceId)
+    private function deleteLostAccessSecrets(string $resourceId): array
     {
         $usersIds = $this->accessService->getUsersIdsHavingAccessTo($resourceId);
+        if (empty($usersIds)) {
+            return [];
+        }
 
-        $this->secretsTable->deleteAll([
+        $lostAccessSecretsConditions = [
             'resource_id' => $resourceId,
             'user_id NOT IN' => $usersIds,
-        ]);
+        ];
+        $lostAccessSecrets = $this->secretsTable->find()
+            ->select(['id', 'resource_id', 'user_id'])
+            ->where($lostAccessSecretsConditions)
+            ->all()->toArray();
+        $this->secretsTable->deleteMany($lostAccessSecrets);
+
+        return $lostAccessSecrets;
     }
 
     /**

@@ -20,14 +20,20 @@ namespace App\Test\TestCase\Service\Resources;
 use App\Error\Exception\ValidationException;
 use App\Model\Entity\Resource;
 use App\Model\Entity\Secret;
+use App\Service\Resources\PasswordExpiryValidationServiceInterface;
 use App\Service\Resources\ResourcesAddService;
-use App\Test\Factory\ResourceTypeFactory;
+use App\Test\Factory\ResourceFactory;
+use App\Test\Factory\SecretFactory;
 use App\Test\Factory\UserFactory;
 use App\Test\Lib\Model\ResourcesModelTrait;
+use App\Utility\Application\FeaturePluginAwareTrait;
 use App\Utility\UuidFactory;
 use Cake\ORM\TableRegistry;
 use Cake\TestSuite\TestCase;
 use CakephpTestSuiteLight\Fixture\TruncateDirtyTables;
+use Passbolt\Metadata\Model\Dto\MetadataResourceDto;
+use Passbolt\ResourceTypes\Model\Table\ResourceTypesTable;
+use Passbolt\ResourceTypes\Test\Factory\ResourceTypeFactory;
 
 /**
  * Part of the logic of this test is handled in the ResourcesAddControllerTest.
@@ -37,6 +43,7 @@ use CakephpTestSuiteLight\Fixture\TruncateDirtyTables;
  */
 class ResourcesAddServiceTest extends TestCase
 {
+    use FeaturePluginAwareTrait;
     use ResourcesModelTrait;
     use TruncateDirtyTables;
 
@@ -50,12 +57,21 @@ class ResourcesAddServiceTest extends TestCase
      */
     private $Secrets;
 
+    private ResourcesAddService $service;
+
     public function setUp(): void
     {
         parent::setUp();
         $this->Resources = TableRegistry::getTableLocator()->get('Resources');
         $this->Secrets = TableRegistry::getTableLocator()->get('Secrets');
         ResourceTypeFactory::make()->default()->persist();
+        $this->service = new ResourcesAddService();
+    }
+
+    public function tearDown(): void
+    {
+        parent::tearDown();
+        unset($this->service);
     }
 
     public function dataForTestResourceAddSuccess(): array
@@ -94,45 +110,33 @@ class ResourcesAddServiceTest extends TestCase
      */
     public function testResourceAddServiceSuccess(array $data)
     {
-        $user = UserFactory::make()->user()->persist();
-        $service = new ResourcesAddService();
-
-        $resource = $service->add($user->id, $data);
+        $uac = UserFactory::make()->persistedUAC();
+        $resource = $this->service->add($uac, new MetadataResourceDto($data));
 
         $this->assertInstanceOf(Resource::class, $resource);
         $this->assertInstanceOf(Secret::class, $resource->secrets[0]);
 
-        $this->assertSame(1, $this->Resources->find()->count());
-        $this->assertSame(1, $this->Secrets->find()->count());
-    }
-
-    public function testResourceAddServiceNoIdUser()
-    {
-        $this->expectException(ValidationException::class);
-        // This UAC does not have an id
-        (new ResourcesAddService())->add('', []);
+        $this->assertSame(1, ResourceFactory::count());
+        $this->assertSame(1, SecretFactory::count());
+        $this->assertSame($data['description'], $resource->get('description'));
     }
 
     public function testResourceAddServiceNoUser()
     {
-        $user = UserFactory::make(['id' => UuidFactory::uuid()])->user()->getEntity();
+        $uac = UserFactory::make()->nonPersistedUAC();
         $this->expectException(ValidationException::class);
         // This UAC is not persisted
-        (new ResourcesAddService())->add($user->id, []);
+        $this->service->add($uac, new MetadataResourceDto());
     }
 
     public function testResourceAddServiceInvalidResourceType()
     {
         $data = $this->getDummyResourcesPostData();
         $data['resource_type_id'] = 'invalid';
-        $user = UserFactory::make()->user()->persist();
-        $service = new ResourcesAddService();
+        $uac = UserFactory::make()->persistedUAC();
 
         $this->expectException(ValidationException::class);
-        $service->add($user->id, $data);
-
-        $this->assertSame(0, $this->Resources->find()->count());
-        $this->assertSame(0, $this->Secrets->find()->count());
+        $this->service->add($uac, new MetadataResourceDto($data));
     }
 
     public function testResourceAddServiceTooManySecrets()
@@ -141,29 +145,64 @@ class ResourcesAddServiceTest extends TestCase
             0 => ['data' => $this->getDummyGpgMessage()],
             1 => ['user_id' => UuidFactory::uuid(), 'data' => $this->getDummyGpgMessage()],
         ]]);
-        $user = UserFactory::make()->user()->persist();
-        $service = new ResourcesAddService();
+        $uac = UserFactory::make()->persistedUAC();
 
         $this->expectException(ValidationException::class);
-        $service->add($user->id, $data);
+        $this->expectExceptionMessage('Could not validate resource data.');
+        $this->service->add($uac, new MetadataResourceDto($data));
+    }
 
-        $this->assertSame(0, $this->Resources->find()->count());
-        $this->assertSame(0, $this->Secrets->find()->count());
+    public function testResourceAddService_Secret_Is_A_String()
+    {
+        $data = $this->getDummyResourcesPostData(['secrets' => $this->getDummyGpgMessage()]);
+        $uac = UserFactory::make()->persistedUAC();
+
+        $this->expectException(ValidationException::class);
+        $this->expectExceptionMessage('Could not validate resource data.');
+        $this->service->add($uac, new MetadataResourceDto($data));
     }
 
     public function testResourceAddServiceSoftDeletedUser()
     {
         $data = $this->getDummyResourcesPostData();
-        $user = UserFactory::make()->user()->patchData(['deleted' => true])->persist();
-        $service = new ResourcesAddService();
+        $uac = UserFactory::make()->user()->deleted()->persistedUAC();
 
         $this->expectException(ValidationException::class);
-        $resource = $service->add($user->id, $data);
+        $resource = $this->service->add($uac, new MetadataResourceDto($data));
 
         $this->assertInstanceOf(Resource::class, $resource);
         $this->assertInstanceOf(Secret::class, $resource->secrets[0]);
 
-        $this->assertSame(0, $this->Resources->find()->count());
-        $this->assertSame(0, $this->Secrets->find()->count());
+        $this->assertSame(0, ResourceFactory::count());
+        $this->assertSame(0, SecretFactory::count());
+    }
+
+    public function testResourceAddService_With_Password_And_Description_Type()
+    {
+        ResourceTypeFactory::make()->passwordAndDescription()->persist();
+        $data = $this->getDummyResourcesPostData();
+        $data['description'] = 'Foo description';
+        $data['resource_type_id'] = ResourceTypesTable::getPasswordAndDescriptionTypeId();
+
+        $uac = UserFactory::make()->user()->persistedUAC();
+
+        $resource = $this->service->add($uac, new MetadataResourceDto($data));
+
+        $this->assertInstanceOf(Resource::class, $resource);
+        $this->assertInstanceOf(Secret::class, $resource->secrets[0]);
+
+        $this->assertSame(1, ResourceFactory::count());
+        $this->assertSame(1, SecretFactory::count());
+
+        $this->assertSame(ResourceTypesTable::getPasswordAndDescriptionTypeId(), $resource->resource_type_id);
+        $this->assertNull($resource->description);
+    }
+
+    public function testResourceAddService_With_Expiry_Date_Should_Not_Throw_Bad_Request_Exception_When_Password_Expiry_Plugin_Is_Not_Enabled()
+    {
+        $uac = UserFactory::make()->persistedUAC();
+        $this->expectExceptionMessage('Could not validate resource data.');
+        $this->expectException(ValidationException::class);
+        $this->service->add($uac, new MetadataResourceDto([PasswordExpiryValidationServiceInterface::PASSWORD_EXPIRED_DATE => 'foo']));
     }
 }

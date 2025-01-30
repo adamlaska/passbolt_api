@@ -29,7 +29,7 @@ use App\Utility\Healthchecks\Healthcheck;
 use Cake\Console\Arguments;
 use Cake\Console\ConsoleIo;
 use Cake\Console\ConsoleOptionParser;
-use Cake\Core\Exception\Exception;
+use Cake\Core\Exception\CakeException;
 use Cake\Utility\Hash;
 
 class DatacheckCommand extends PassboltCommand
@@ -47,13 +47,23 @@ class DatacheckCommand extends PassboltCommand
     /**
      * @inheritDoc
      */
+    public static function getCommandDescription(): string
+    {
+        return __('Re-validate the data of this installation.');
+    }
+
+    /**
+     * @inheritDoc
+     */
     public function buildOptionParser(ConsoleOptionParser $parser): ConsoleOptionParser
     {
+        $parser = parent::buildOptionParser($parser);
+
         // Display options
-        $parser->setDescription(__('Re-validate the data of this installation.'))
+        $parser
             ->addOption('hide-success-details', [
-            'help' => __d('cake_console', 'Hide passing checks details.'),
-            'boolean' => true,
+                'help' => __d('cake_console', 'Hide passing checks details.'),
+                'boolean' => true,
             ])
             ->addOption('hide-error-details', [
                 'help' => __d('cake_console', 'Hide passing checks details.'),
@@ -174,7 +184,7 @@ class DatacheckCommand extends PassboltCommand
      * @param string $msg message
      * @param string $case pass or fail
      * @param int $padding how many space char in front
-     * @throws \Cake\Core\Exception\Exception case is not defined or missing
+     * @throws \Cake\Core\Exception\CakeException case is not defined or missing
      * @return void
      */
     protected function display(string $msg, string $case, int $padding = 0)
@@ -198,7 +208,7 @@ class DatacheckCommand extends PassboltCommand
                 $msg = $pad . ' <info>[' . __('HELP') . ']</info> ' . $msg;
                 break;
             default:
-                throw new Exception('Task output case not defined: ' . $case . ' ' . $msg);
+                throw new CakeException('Task output case not defined: ' . $case . ' ' . $msg);
         }
         $this->io->out($msg);
     }

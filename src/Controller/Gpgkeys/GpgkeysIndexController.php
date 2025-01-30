@@ -19,10 +19,15 @@ namespace App\Controller\Gpgkeys;
 use App\Controller\AppController;
 
 /**
- * @property \App\Model\Table\GpgkeysTable $Gpgkeys
+ * GpgkeysIndexController Class
  */
 class GpgkeysIndexController extends AppController
 {
+    /**
+     * @var \App\Model\Table\GpgkeysTable
+     */
+    protected $Gpgkeys;
+
     /**
      * @inheritDoc
      */
@@ -32,6 +37,7 @@ class GpgkeysIndexController extends AppController
         $this->loadComponent('ApiPagination', [
             'model' => 'Gpgkeys',
         ]);
+        $this->Gpgkeys = $this->fetchTable('Gpgkeys');
     }
 
     public $paginate = [
@@ -47,8 +53,9 @@ class GpgkeysIndexController extends AppController
      */
     public function index()
     {
-        $this->loadModel('Gpgkeys');
-        $whitelist = ['filter' => ['modified-after', 'is-deleted']];
+        $this->assertJson();
+
+        $whitelist = ['filter' => ['modified-after', 'is-deleted', 'has-users']];
         $options = $this->QueryString->get($whitelist);
         $gpgkeys = $this->Gpgkeys->find('index', $options);
         $this->paginate($gpgkeys);

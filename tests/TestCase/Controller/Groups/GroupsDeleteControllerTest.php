@@ -17,6 +17,10 @@ declare(strict_types=1);
 namespace App\Test\TestCase\Controller\Groups;
 
 use App\Model\Entity\Permission;
+use App\Test\Factory\GroupFactory;
+use App\Test\Factory\PermissionFactory;
+use App\Test\Factory\ResourceFactory;
+use App\Test\Factory\UserFactory;
 use App\Test\Lib\AppIntegrationTestCase;
 use App\Test\Lib\Model\GroupsModelTrait;
 use App\Utility\UuidFactory;
@@ -29,12 +33,6 @@ class GroupsDeleteControllerTest extends AppIntegrationTestCase
     public $Groups;
     public $Permissions;
 
-    public $fixtures = [
-        'app.Base/Users', 'app.Base/Groups', 'app.Base/Profiles', 'app.Base/Gpgkeys', 'app.Base/Roles',
-        'app.Base/Resources', 'app.Base/Favorites', 'app.Base/Secrets',
-        'app.Alt0/GroupsUsers', 'app.Alt0/Permissions',
-    ];
-
     public function setUp(): void
     {
         parent::setUp();
@@ -42,30 +40,50 @@ class GroupsDeleteControllerTest extends AppIntegrationTestCase
         $this->Permissions = TableRegistry::getTableLocator()->get('Permissions');
     }
 
-    public function testGroupsDeleteDryRunSuccess()
+    public function testGroupsDeleteDryRunSuccess(): void
     {
-        $this->authenticateAs('admin');
-        $groupId = UuidFactory::uuid('group.id.freelancer');
-        $this->deleteJson('/groups/' . $groupId . '/dry-run.json?api-version=v2');
+        $admin = UserFactory::make()->admin()->persist();
+        $this->loginAs($admin);
+
+        $user = UserFactory::make()->user()->persist();
+        $groupId = GroupFactory::make()->withGroupsManagersFor([$user])->persist()->get('id');
+
+        $this->deleteJson('/groups/' . $groupId . '/dry-run.json');
         $this->assertSuccess();
         $group = $this->Groups->get($groupId);
         $this->assertFalse($group->deleted);
     }
 
-    public function testGroupsDeleteDryRunError_MissingCsrfToken()
+    public function testGroupsDeleteDryRunError_MissingCsrfToken(): void
     {
         $this->disableCsrfToken();
-        $this->authenticateAs('admin');
-        $groupId = UuidFactory::uuid('group.id.freelancer');
-        $this->delete('/groups/' . $groupId . '/dry-run.json?api-version=v2');
+
+        $admin = UserFactory::make()->admin()->persist();
+        $this->loginAs($admin);
+        $user = UserFactory::make()->user()->persist();
+        $groupId = GroupFactory::make()->withGroupsManagersFor([$user])->persist()->get('id');
+
+        $this->delete('/groups/' . $groupId . '/dry-run.json');
         $this->assertResponseCode(403);
     }
 
-    public function testGroupsDeleteDryRunError()
+    public function testGroupsDeleteDryRunError(): void
     {
-        $this->authenticateAs('admin');
-        $groupId = UuidFactory::uuid('group.id.creative');
-        $this->deleteJson('/groups/' . $groupId . '/dry-run.json?api-version=v2');
+        $admin = UserFactory::make()->admin()->persist();
+        $this->loginAs($admin);
+
+        $user = UserFactory::make()->user()->persist();
+        $userCanRead = UserFactory::make()->user()->persist();
+
+        $group = GroupFactory::make()->withGroupsManagersFor([$user])->persist();
+        $groupId = $group->get('id');
+
+        $resource = ResourceFactory::make()
+            ->withPermissionsFor([$group], Permission::OWNER)
+            ->withPermissionsFor([$userCanRead], Permission::READ)
+            ->persist();
+
+        $this->deleteJson('/groups/' . $groupId . '/dry-run.json');
         $this->assertError(400);
         $this->assertStringContainsString(
             'transfer the ownership',
@@ -73,90 +91,117 @@ class GroupsDeleteControllerTest extends AppIntegrationTestCase
         );
     }
 
-    public function testGroupsDeleteNotLoggedInError()
+    public function testGroupsDeleteNotLoggedInError(): void
     {
-        $groupId = UuidFactory::uuid('group.id.freelancer');
-        $this->deleteJson('/groups/' . $groupId . '.json?api-version=v2');
+        $user = UserFactory::make()->user()->persist();
+
+        $groupId = GroupFactory::make()->withGroupsManagersFor([$user])->persist()->get('id');
+
+        $this->deleteJson('/groups/' . $groupId . '.json');
         $this->assertAuthenticationError();
     }
 
-    public function testGroupsDeleteNotAdminError()
+    public function testGroupsDeleteNotAdminError(): void
     {
-        $this->authenticateAs('ada');
-        $groupId = UuidFactory::uuid('group.id.freelancer');
-        $this->deleteJson('/groups/' . $groupId . '.json?api-version=v2');
+        $authentifiedUser = UserFactory::make()->user()->persist();
+        $this->loginAs($authentifiedUser);
+
+        $user = UserFactory::make()->user()->persist();
+        $groupId = GroupFactory::make()->withGroupsManagersFor([$user])->persist()->get('id');
+
+        $this->deleteJson('/groups/' . $groupId . '.json');
         $this->assertForbiddenError('You are not authorized to access that location.');
     }
 
-    public function testGroupsDeleteInvalidGroupError()
+    public function testGroupsDeleteInvalidGroupError(): void
     {
-        $this->authenticateAs('admin');
-        $bogusId = '0';
-        $this->deleteJson('/groups/' . $bogusId . '.json?api-version=v2');
-        $this->assertError(400, 'The group identifier should be a valid UUID.');
+        $admin = UserFactory::make()->admin()->persist();
 
-        $this->authenticateAs('admin');
-        $bogusId = 'true';
-        $this->deleteJson('/groups/' . $bogusId . '.json?api-version=v2');
-        $this->assertError(400, 'The group identifier should be a valid UUID.');
-
-        $this->authenticateAs('admin');
-        $bogusId = 'null';
-        $this->deleteJson('/groups/' . $bogusId . '.json?api-version=v2');
-        $this->assertError(400, 'The group identifier should be a valid UUID.');
-
-        $this->authenticateAs('admin');
-        $bogusId = '🔥';
-        $this->deleteJson('/groups/' . $bogusId . '.json?api-version=v2');
-        $this->assertError(400, 'The group identifier should be a valid UUID.');
-    }
-
-    public function testGroupsDeleteGroupDoesNotExistError()
-    {
-        $this->authenticateAs('admin');
-        $bogusId = UuidFactory::uuid('group.id.bogus');
-        $this->deleteJson('/groups/' . $bogusId . '.json?api-version=v2');
-        $this->assertError(404, 'The group does not exist or has been already deleted.');
-    }
-
-    public function testGroupsDeleteGroupAlreadyDeletedError()
-    {
-        // Delete the group twice
-        $this->authenticateAs('admin');
-        $groupId = UuidFactory::uuid('group.id.freelancer');
+        $this->loginAs($admin);
+        $groupId = '0';
         $this->deleteJson('/groups/' . $groupId . '.json?api-version=v2');
+        $this->assertError(400, 'The group identifier should be a valid UUID.');
+
+        $this->loginAs($admin);
+        $groupId = 'true';
+        $this->deleteJson('/groups/' . $groupId . '.json?api-version=v2');
+        $this->assertError(400, 'The group identifier should be a valid UUID.');
+
+        $this->loginAs($admin);
+        $groupId = 'null';
+        $this->deleteJson('/groups/' . $groupId . '.json?api-version=v2');
+        $this->assertError(400, 'The group identifier should be a valid UUID.');
+
+        $this->loginAs($admin);
+        $groupId = '🔥';
+        $this->deleteJson('/groups/' . $groupId . '.json');
+        $this->assertError(400, 'The group identifier should be a valid UUID.');
+    }
+
+    public function testGroupsDeleteGroupDoesNotExistError(): void
+    {
+        $admin = UserFactory::make()->admin()->persist();
+        $this->loginAs($admin);
+
+        $groupId = UuidFactory::uuid();
+
         $this->deleteJson('/groups/' . $groupId . '.json?api-version=v2');
         $this->assertError(404, 'The group does not exist or has been already deleted.');
     }
 
-    public function testGroupsDeleteSuccess_NoOwnerNoResourcesSharedNoGroupsMember_DelGroupCase0()
+    public function testGroupsDeleteGroupAlreadyDeletedError(): void
     {
-        $this->authenticateAs('admin');
-        $groupId = UuidFactory::uuid('group.id.procurement');
-        $this->deleteJson("/groups/$groupId.json?api-version=v2");
+        $admin = UserFactory::make()->admin()->persist();
+        $this->loginAs($admin);
+
+        $user = UserFactory::make()->user()->persist();
+        $groupId = GroupFactory::make()->withGroupsManagersFor([$user])->persist()->get('id');
+
+        $this->deleteJson('/groups/' . $groupId . '.json');
+        $this->deleteJson('/groups/' . $groupId . '.json');
+        $this->assertError(404, 'The group does not exist or has been already deleted.');
+    }
+
+    public function testGroupsDeleteSuccess_NoOwnerNoResourcesSharedNoGroupsMember_DelGroupCase0(): void
+    {
+        $admin = UserFactory::make()->admin()->persist();
+        $this->loginAs($admin);
+
+        $groupId = GroupFactory::make()->withGroupsManagersFor([$admin])->persist()->get('id');
+
+        $this->deleteJson("/groups/$groupId.json");
         $this->assertSuccess();
         $this->assertGroupIsSoftDeleted($groupId);
     }
 
-    public function testGroupsDeleteSucces_SharedResourceWithMe_DelGroupCase1()
+    public function testGroupsDeleteSucces_SharedResourceWithMe_DelGroupCase1(): void
     {
-        $this->authenticateAs('admin');
-        $groupId = UuidFactory::uuid('group.id.quality_assurance');
-        $this->deleteJson("/groups/$groupId.json?api-version=v2");
+        $admin = UserFactory::make()->admin()->persist();
+        $user = UserFactory::make()->user()->persist();
+        $this->loginAs($admin);
+
+        $groupId = GroupFactory::make()->withGroupsManagersFor([$admin])->persist()->get('id');
+        $resource = ResourceFactory::make()->withCreatorAndPermission($admin)->withPermissionsFor([$user], Permission::READ)->persist();
+
+        $this->deleteJson("/groups/$groupId.json");
         $this->assertSuccess();
         $this->assertGroupIsSoftDeleted($groupId);
     }
 
-    public function testGroupsDeleteSucces_SoleOwnerNotSharedResource_DelGroupCase2()
+    public function testGroupsDeleteSucces_SoleOwnerNotSharedResource_DelGroupCase2(): void
     {
-        $this->authenticateAs('admin');
-        $groupId = UuidFactory::uuid('group.id.resource_planning');
-        $this->deleteJson("/groups/$groupId.json?api-version=v2");
+        $admin = UserFactory::make()->admin()->persist();
+        $this->loginAs($admin);
+
+        $groupId = GroupFactory::make()->withGroupsManagersFor([$admin])->persist()->get('id');
+        $resource = ResourceFactory::make()->withCreatorAndPermission($admin)->persist();
+
+        $this->deleteJson("/groups/$groupId.json");
         $this->assertSuccess();
         $this->assertGroupIsSoftDeleted($groupId);
     }
 
-    private function applyPermissionChangesForCase3($resourceId, $groupId, $userId)
+    private function applyPermissionChangesForCase3($resourceId, $groupId, $userId): void
     {
         $permission = $this->Permissions->find()->select()->where([
             'aro_foreign_key' => $userId,
@@ -167,22 +212,28 @@ class GroupsDeleteControllerTest extends AppIntegrationTestCase
         $permission = $this->Permissions->find()->select()->where([
             'aro_foreign_key' => $groupId,
             'aco_foreign_key' => $resourceId,
-        ])->first();
+            ])->first();
         $permission->type = Permission::OWNER;
         $this->Permissions->save($permission);
     }
 
-    public function testGroupsDeleteError_SoleOwnerSharedResource_DelGroupCase3()
+    public function testGroupsDeleteError_SoleOwnerSharedResource_DelGroupCase3(): void
     {
-        $this->authenticateAs('admin');
-        $groupId = UuidFactory::uuid('group.id.quality_assurance');
-        $resourceId = UuidFactory::uuid('resource.id.nodejs');
-        $userId = UuidFactory::uuid('user.id.marlyn');
+        $admin = UserFactory::make()->admin()->persist();
+        $this->loginAs($admin);
+
+        $group = GroupFactory::make()->withGroupsManagersFor([$admin])->persist();
+        $user = UserFactory::make()->user()->persist();
+        $resource = ResourceFactory::make()->withPermissionsFor([$user, $group], Permission::OWNER)->persist();
+
+        $userId = $user->get('id');
+        $resourceId = $resource->get('id');
+        $groupId = $group->get('id');
 
         // CONTEXTUAL TEST CHANGES Make the group sole owner of the resource
         $this->applyPermissionChangesForCase3($resourceId, $groupId, $userId);
 
-        $this->deleteJson("/groups/$groupId.json?api-version=v2");
+        $this->deleteJson("/groups/$groupId.json");
         $this->assertError(400);
         $this->assertGroupIsNotSoftDeleted($groupId);
         $this->assertStringContainsString('transfer the ownership', $this->_responseJsonHeader->message);
@@ -195,49 +246,76 @@ class GroupsDeleteControllerTest extends AppIntegrationTestCase
         $this->assertEquals($resource->id, $resourceId);
     }
 
-    public function testGroupsDeleteError_TransferOwnersOfAnotherResource_SoleOwnerSharedResource_DelGroupCase3()
+    public function testGroupsDeleteError_TransferOwnersOfAnotherResource_SoleOwnerSharedResource_DelGroupCase3(): void
     {
-        $this->authenticateAs('admin');
-        $groupId = UuidFactory::uuid('group.id.quality_assurance');
-        $resourceId = UuidFactory::uuid('resource.id.nodejs');
-        $resourceSId = UuidFactory::uuid('resource.id.selenium');
-        $userId = UuidFactory::uuid('user.id.marlyn');
+        $admin = UserFactory::make()->admin()->persist();
+        $this->loginAs($admin);
+
+        $group = GroupFactory::make()->withGroupsManagersFor([$admin])->persist();
+        $user = UserFactory::make()->user()->persist();
+        $resourceN = ResourceFactory::make()
+            ->withPermissionsFor([$user], Permission::OWNER)
+            ->withPermissionsFor([$group], Permission::READ)
+            ->persist();
+        $resourceSId = ResourceFactory::make()->withPermissionsFor([$group], Permission::READ)->persist()->get('id');
+
+        $userId = $user->get('id');
+        $resourceId = $resourceN->get('id');
+        $groupId = $group->get('id');
 
         // CONTEXTUAL TEST CHANGES Make the group sole owner of the resource
         $this->applyPermissionChangesForCase3($resourceId, $groupId, $userId);
 
-        $transfer['owners'][] = ['id' => UuidFactory::uuid('permission.id.selenium-margaret'), 'aco_foreign_key' => $resourceSId];
-        $this->deleteJson("/groups/$groupId.json?api-version=v2", ['transfer' => $transfer]);
+        $transfer['owners'][] = ['id' => $userId, 'aco_foreign_key' => $resourceSId];
+        $this->deleteJson("/groups/$groupId.json", ['transfer' => $transfer]);
         $this->assertError(400, 'The transfer is not authorized');
         $this->assertGroupIsNotSoftDeleted($groupId);
     }
 
-    public function testGroupsDeleteError_TransferOwnersBadGroupUserId_SoleOwnerSharedResource_DelGroupCase3()
+    public function testGroupsDeleteError_TransferOwnersBadGroupUserId_SoleOwnerSharedResource_DelGroupCase3(): void
     {
-        $this->authenticateAs('admin');
-        $groupId = UuidFactory::uuid('group.id.quality_assurance');
-        $resourceId = UuidFactory::uuid('resource.id.nodejs');
-        $userId = UuidFactory::uuid('user.id.marlyn');
+        $admin = UserFactory::make()->admin()->persist();
+        $this->loginAs($admin);
+
+        $group = GroupFactory::make()->withGroupsManagersFor([$admin])->persist();
+        $user = UserFactory::make()->user()->persist();
+        $resource = ResourceFactory::make()->withPermissionsFor([$user, $group], Permission::OWNER)->persist();
+
+        $userId = $user->get('id');
+        $resourceId = $resource->get('id');
+        $groupId = $group->get('id');
 
         // CONTEXTUAL TEST CHANGES Make the group sole owner of the resource
         $this->applyPermissionChangesForCase3($resourceId, $groupId, $userId);
 
         $transfer['owners'][] = ['id' => 'invalid-uuid', 'aco_foreign_key' => $resourceId];
-        $this->deleteJson("/groups/$groupId.json?api-version=v2", ['transfer' => $transfer]);
+        $this->deleteJson("/groups/$groupId.json", ['transfer' => $transfer]);
         $this->assertError(400, 'The permissions identifiers must be valid UUID.');
         $this->assertGroupIsNotSoftDeleted($groupId);
     }
 
-    public function testGroupsDeleteSuccess_SoleOwnerSharedResource_DelGroupCase3()
+    #WIP
+
+    public function testGroupsDeleteSuccess_SoleOwnerSharedResource_DelGroupCase3(): void
     {
-        $this->authenticateAs('admin');
-        $groupId = UuidFactory::uuid('group.id.quality_assurance');
-        $resourceId = UuidFactory::uuid('resource.id.nodejs');
-        $userMId = UuidFactory::uuid('user.id.marlyn');
+        // A group which is sole owner of a resource shared with another user
+        // Exc "The group cannot be deleted. The group should not be sole owner of shared content, transfer the ownership to other users."
+        $admin = UserFactory::make()->admin()->persist();
+        $this->loginAs($admin);
+        $user = UserFactory::make()->user()->persist();
+        $userId = $user->get('id');
+
+        $group = GroupFactory::make()->withGroupsManagersFor([$admin])->persist();
+        $groupId = $group->get('id');
+
+        $resource = ResourceFactory::make()->withPermissionsFor([$group], Permission::OWNER)->withPermissionsFor([$user], Permission::READ)->persist();
+        $resourceId = $resource->get('id');
+
+        $permissionUserId = PermissionFactory::make()->aroUser($user)->acoResource($resource)->persist()->get('id');
 
         // CONTEXTUAL TEST CHANGES Make the group sole owner of the resource
         $permission = $this->Permissions->find()->select()->where([
-            'aro_foreign_key' => $userMId,
+            'aro_foreign_key' => $userId,
             'aco_foreign_key' => $resourceId,
         ])->first();
         $permission->type = Permission::READ;
@@ -249,28 +327,48 @@ class GroupsDeleteControllerTest extends AppIntegrationTestCase
         $permission->type = Permission::OWNER;
         $this->Permissions->save($permission);
 
-        $transfer['owners'][] = ['id' => UuidFactory::uuid('permission.id.nodejs-marlyn'), 'aco_foreign_key' => $resourceId];
-        $this->deleteJson("/groups/$groupId.json?api-version=v2", ['transfer' => $transfer]);
+        $transfer['owners'][] = ['id' => $permissionUserId, 'aco_foreign_key' => $resourceId];
+        $this->deleteJson("/groups/$groupId.json", ['transfer' => $transfer]);
         $this->assertSuccess();
         $this->assertGroupIsSoftDeleted($groupId);
-        $this->assertPermission($resourceId, $userMId, Permission::OWNER);
+        $this->assertPermission($resourceId, $userId, Permission::OWNER);
     }
 
-    public function testGroupsSoftDeleteSuccess_OwnerAlongWithAnotherUser_DelGroupCase4()
+    public function testGroupsSoftDeleteSuccess_OwnerAlongWithAnotherUser_DelGroupCase4(): void
+    {
+        $admin = UserFactory::make()->admin()->persist();
+        $this->loginAs($admin);
+
+        $group = GroupFactory::make()->withGroupsManagersFor([$admin])->persist();
+        $resource = ResourceFactory::make()->withPermissionsFor([$admin], Permission::OWNER)->withPermissionsFor([$group], Permission::READ)->persist();
+
+        $groupId = $group->get('id');
+
+        $this->deleteJson("/groups/$groupId.json");
+        $this->assertSuccess();
+        $this->assertGroupIsSoftDeleted($groupId);
+    }
+
+    public function testGroupsDeleteAsGroupOwnerSuccess(): void
+    {
+        $user = UserFactory::make()->user()->persist();
+        $this->loginAs($user);
+
+        $groupId = GroupFactory::make()->withGroupsManagersFor([$user])->persist()->get('id');
+
+        $this->deleteJson('/groups/' . $groupId . '.json');
+        $this->assertSuccess();
+        $this->assertGroupIsSoftDeleted($groupId);
+    }
+
+    /**
+     * Check that calling url without JSON extension throws a 404
+     */
+    public function testGroupsDeleteController_Error_NotJson(): void
     {
         $this->authenticateAs('admin');
-        $groupId = UuidFactory::uuid('group.id.management');
-        $this->deleteJson("/groups/$groupId.json?api-version=v2");
-        $this->assertSuccess();
-        $this->assertGroupIsSoftDeleted($groupId);
-    }
-
-    public function testGroupsDeleteAsGroupOwnerSuccess()
-    {
-        $this->authenticateAs('edith');
-        $groupId = UuidFactory::uuid('group.id.freelancer');
-        $this->deleteJson('/groups/' . $groupId . '.json?api-version=v2');
-        $this->assertSuccess();
-        $this->assertGroupIsSoftDeleted($groupId);
+        $groupId = UuidFactory::uuid('group.id.procurement');
+        $this->delete("/groups/$groupId");
+        $this->assertResponseCode(404);
     }
 }

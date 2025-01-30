@@ -16,11 +16,10 @@ declare(strict_types=1);
  */
 namespace App\Test\TestCase\Command;
 
-use App\Command\KeyringInitCommand;
 use App\Test\Lib\AppTestCase;
 use App\Test\Lib\Utility\PassboltCommandTestTrait;
+use Cake\Console\TestSuite\ConsoleIntegrationTestTrait;
 use Cake\Core\Configure;
-use Cake\TestSuite\ConsoleIntegrationTestTrait;
 use CakephpTestSuiteLight\Fixture\TruncateDirtyTables;
 
 class KeyringInitCommandTest extends AppTestCase
@@ -43,8 +42,8 @@ class KeyringInitCommandTest extends AppTestCase
     {
         parent::setUp();
         $this->useCommandRunner();
-        KeyringInitCommand::$isUserRoot = false;
         $this->key = Configure::read('passbolt.gpg.serverKey.private');
+        $this->mockProcessUserService('www-data');
     }
 
     /**
@@ -65,7 +64,7 @@ class KeyringInitCommandTest extends AppTestCase
      */
     public function testKeyringInitCommandAsRoot()
     {
-        $this->assertCommandCannotBeRunAsRootUser(KeyringInitCommand::class);
+        $this->assertCommandCannotBeRunAsRootUser('keyring_init');
     }
 
     /**

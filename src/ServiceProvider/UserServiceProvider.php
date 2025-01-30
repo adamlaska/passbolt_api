@@ -24,12 +24,16 @@ use App\Service\Users\UserRegisterServiceInterface;
 use Cake\Core\ContainerInterface;
 use Cake\Core\ServiceProvider;
 use Cake\Http\ServerRequest;
+use League\Flysystem\FilesystemAdapter;
+use League\Flysystem\Local\LocalFilesystemAdapter;
+use Passbolt\SelfRegistration\Service\DryRun\SelfRegistrationDryRunServiceInterface;
 
 class UserServiceProvider extends ServiceProvider
 {
     protected $provides = [
         UserRegisterServiceInterface::class,
         UserRecoverServiceInterface::class,
+        FilesystemAdapter::class,
     ];
 
     /**
@@ -42,6 +46,10 @@ class UserServiceProvider extends ServiceProvider
             ->addArgument(ServerRequest::class);
         $container
             ->add(UserRecoverServiceInterface::class, UserRecoverService::class)
-            ->addArgument(ServerRequest::class);
+            ->addArgument(ServerRequest::class)
+            ->addArgument(SelfRegistrationDryRunServiceInterface::class);
+        $container
+            ->add(FilesystemAdapter::class, LocalFilesystemAdapter::class)
+            ->addArgument(TMP . 'avatars');
     }
 }

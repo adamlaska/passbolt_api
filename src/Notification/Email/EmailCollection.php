@@ -28,7 +28,7 @@ class EmailCollection
     /**
      * @var \App\Notification\Email\Email[]
      */
-    private $emails = [];
+    private array $emails = [];
 
     /**
      * @param \App\Notification\Email\Email[] $emails A list of emails
@@ -41,11 +41,17 @@ class EmailCollection
     }
 
     /**
+     * Skip emails which recipient is disabled
+     *
      * @param \App\Notification\Email\Email $email Email object to add to the collection
      * @return $this
      */
     public function addEmail(Email $email)
     {
+        if ($email->isRecipientUserDisabled()) {
+            return $this;
+        }
+
         $this->emails[] = $email;
 
         return $this;
@@ -54,7 +60,7 @@ class EmailCollection
     /**
      * @return \App\Notification\Email\Email[]
      */
-    public function getEmails()
+    public function getEmails(): array
     {
         return $this->emails;
     }

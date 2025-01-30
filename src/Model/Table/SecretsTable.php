@@ -19,11 +19,11 @@ namespace App\Model\Table;
 
 use App\Model\Rule\HasResourceAccessRule;
 use App\Model\Rule\IsNotSoftDeletedRule;
-use App\Model\Traits\Cleanup\PermissionsCleanupTrait;
 use App\Model\Traits\Cleanup\ResourcesCleanupTrait;
 use App\Model\Traits\Cleanup\TableCleanupTrait;
 use App\Model\Traits\Cleanup\UsersCleanupTrait;
 use App\Model\Validation\ArmoredMessage\IsParsableMessageValidationRule;
+use App\Service\Secrets\SecretsCleanupHardDeletedPermissionsService;
 use Cake\ORM\RulesChecker;
 use Cake\ORM\Table;
 use Cake\Validation\Validator;
@@ -45,16 +45,16 @@ use Cake\Validation\Validator;
  * @property \Passbolt\Log\Model\Table\SecretAccessesTable&\Cake\ORM\Association\HasMany $SecretAccesses
  * @method \App\Model\Entity\Secret newEmptyEntity()
  * @method \App\Model\Entity\Secret saveOrFail(\Cake\Datasource\EntityInterface $entity, $options = [])
- * @method \App\Model\Entity\Secret[]|\Cake\Datasource\ResultSetInterface|false saveMany(iterable $entities, $options = [])
- * @method \App\Model\Entity\Secret[]|\Cake\Datasource\ResultSetInterface saveManyOrFail(iterable $entities, $options = [])
- * @method \App\Model\Entity\Secret[]|\Cake\Datasource\ResultSetInterface|false deleteMany(iterable $entities, $options = [])
- * @method \App\Model\Entity\Secret[]|\Cake\Datasource\ResultSetInterface deleteManyOrFail(iterable $entities, $options = [])
+ * @method iterable<\App\Model\Entity\Secret>|iterable<\Cake\Datasource\EntityInterface>|false saveMany(iterable $entities, $options = [])
+ * @method iterable<\App\Model\Entity\Secret>|iterable<\Cake\Datasource\EntityInterface> saveManyOrFail(iterable $entities, $options = [])
+ * @method iterable<\App\Model\Entity\Secret>|iterable<\Cake\Datasource\EntityInterface>|false deleteMany(iterable $entities, $options = [])
+ * @method iterable<\App\Model\Entity\Secret>|iterable<\Cake\Datasource\EntityInterface> deleteManyOrFail(iterable $entities, $options = [])
  * @method \Cake\ORM\Query findByResourceId(string $resourceId)
  * @method \Cake\ORM\Query findByResourceIdAndUserId(string $resourceId, string $userId)
+ * @method \Cake\ORM\Query findByUserId(string $id)
  */
 class SecretsTable extends Table
 {
-    use PermissionsCleanupTrait;
     use ResourcesCleanupTrait;
     use TableCleanupTrait;
     use UsersCleanupTrait;
@@ -187,18 +187,13 @@ class SecretsTable extends Table
     }
 
     /**
-     * Retrieve all the resources secrets that belong to a given user
+     * Delete all records where associated permissions are soft deleted
      *
-     * @param array $resourcesIds The list of resources to find the secrets for
-     * @param string $userId The user to find the secrets for
-     * @return \Cake\ORM\Query
+     * @param bool|null $dryRun default false
+     * @return int number of affected records
      */
-    public function findByResourcesUser(array $resourcesIds, string $userId)
+    public function cleanupHardDeletedPermissions(?bool $dryRun = false): int
     {
-        return $this->find()
-            ->where([
-                'resource_id IN' => $resourcesIds,
-                'user_id' => $userId,
-            ]);
+        return (new SecretsCleanupHardDeletedPermissionsService())->cleanupHardDeletedPermissions($dryRun);
     }
 }

@@ -16,10 +16,9 @@ declare(strict_types=1);
  */
 namespace App\Test\TestCase\Command;
 
-use App\Command\MigrateCommand;
 use App\Test\Lib\AppTestCase;
 use App\Test\Lib\Utility\PassboltCommandTestTrait;
-use Cake\TestSuite\ConsoleIntegrationTestTrait;
+use Cake\Console\TestSuite\ConsoleIntegrationTestTrait;
 use CakephpTestSuiteLight\Fixture\TruncateDirtyTables;
 
 /**
@@ -42,7 +41,7 @@ class MigrateCommandTest extends AppTestCase
     {
         parent::setUp();
         $this->useCommandRunner();
-        MigrateCommand::$isUserRoot = false;
+        $this->mockProcessUserService('www-data');
     }
 
     /**
@@ -52,7 +51,7 @@ class MigrateCommandTest extends AppTestCase
     {
         $this->exec('passbolt migrate -h');
         $this->assertExitSuccess();
-        $this->assertOutputContains('Migration shell for the Passbolt application.');
+        $this->assertOutputContains('Run database migrations.');
         $this->assertOutputContains('cake passbolt migrate');
     }
 
@@ -63,7 +62,7 @@ class MigrateCommandTest extends AppTestCase
      */
     public function testMigrateCommandAsRoot()
     {
-        $this->assertCommandCannotBeRunAsRootUser(MigrateCommand::class);
+        $this->assertCommandCannotBeRunAsRootUser('migrate');
     }
 
     /**

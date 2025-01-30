@@ -27,7 +27,7 @@ use App\Model\Validation\Fingerprint\IsValidFingerprintValidationRule;
 use App\Model\Validation\GpgkeyType\IsValidGpgkeyTypeValidationRule;
 use App\Model\Validation\KeyId\IsValidKeyIdValidationRule;
 use App\Service\OpenPGP\PublicKeyValidationService;
-use Cake\Core\Exception\Exception;
+use Cake\Core\Exception\CakeException;
 use Cake\I18n\FrozenTime;
 use Cake\ORM\Query;
 use Cake\ORM\RulesChecker;
@@ -49,10 +49,10 @@ use Cake\Validation\Validator;
  * @mixin \Cake\ORM\Behavior\TimestampBehavior
  * @method \App\Model\Entity\Gpgkey newEmptyEntity()
  * @method \App\Model\Entity\Gpgkey saveOrFail(\Cake\Datasource\EntityInterface $entity, $options = [])
- * @method \App\Model\Entity\Gpgkey[]|\Cake\Datasource\ResultSetInterface|false saveMany(iterable $entities, $options = [])
- * @method \App\Model\Entity\Gpgkey[]|\Cake\Datasource\ResultSetInterface saveManyOrFail(iterable $entities, $options = [])
- * @method \App\Model\Entity\Gpgkey[]|\Cake\Datasource\ResultSetInterface|false deleteMany(iterable $entities, $options = [])
- * @method \App\Model\Entity\Gpgkey[]|\Cake\Datasource\ResultSetInterface deleteManyOrFail(iterable $entities, $options = [])
+ * @method iterable<\App\Model\Entity\Gpgkey>|iterable<\Cake\Datasource\EntityInterface>|false saveMany(iterable $entities, $options = [])
+ * @method iterable<\App\Model\Entity\Gpgkey>|iterable<\Cake\Datasource\EntityInterface> saveManyOrFail(iterable $entities, $options = [])
+ * @method iterable<\App\Model\Entity\Gpgkey>|iterable<\Cake\Datasource\EntityInterface>|false deleteMany(iterable $entities, $options = [])
+ * @method iterable<\App\Model\Entity\Gpgkey>|iterable<\Cake\Datasource\EntityInterface> deleteManyOrFail(iterable $entities, $options = [])
  */
 class GpgkeysTable extends Table
 {
@@ -170,8 +170,8 @@ class GpgkeysTable extends Table
      *
      * @param \Cake\ORM\Query $query a query instance
      * @param array $options options
-     * @throws \Cake\Core\Exception\Exception if no role is specified
      * @return \Cake\ORM\Query
+     * @throws \Cake\Core\Exception\CakeException if no role is specified
      */
     public function findIndex(Query $query, array $options): Query
     {
@@ -182,6 +182,10 @@ class GpgkeysTable extends Table
 
         $query->where(['deleted' => $options['filter']['is-deleted'] ?? false]);
 
+        if (isset($options['filter']['has-users']) && is_array($options['filter']['has-users'])) {
+            $query->where(['user_id IN' => $options['filter']['has-users']]);
+        }
+
         return $query;
     }
 
@@ -190,14 +194,14 @@ class GpgkeysTable extends Table
      *
      * @param \Cake\ORM\Query $query a query instance
      * @param array $options options
-     * @throws \Cake\Core\Exception\Exception if no id is specified
      * @return \Cake\ORM\Query
+     * @throws \Cake\Core\Exception\CakeException if no id is specified
      */
     public function findView(Query $query, array $options): Query
     {
         // Options must contain an id
         if (!isset($options['id'])) {
-            throw new Exception('Gpgkey table findView should have an id set in options.');
+            throw new CakeException('Gpgkey table findView should have an id set in options.');
         }
         // Same rule than index apply
         // with a specific id requested
@@ -205,6 +209,29 @@ class GpgkeysTable extends Table
         $query->where(['id' => $options['id']]);
 
         return $query;
+    }
+
+    /**
+     * Find current gpgkey to use
+     *
+     * @param \Cake\ORM\Query $query a query instance
+     * @param array $options options
+     * @return \Cake\ORM\Query
+     * @throws \Cake\Core\Exception\CakeException if no user_id is specified
+     */
+    public function findCurrent(Query $query, array $options): Query
+    {
+        // Options must contain a user_id
+        if (!isset($options['user_id']) || !Validation::uuid($options['user_id'])) {
+            throw new CakeException('Gpgkey table findCurrent should have a user_id set in options.');
+        }
+
+        // Same rule than index apply
+        // with a specific id requested
+        return $query
+            ->where(['user_id' => $options['user_id'], 'deleted' => false])
+            ->order('created DESC')
+            ->limit(1);
     }
 
     /**

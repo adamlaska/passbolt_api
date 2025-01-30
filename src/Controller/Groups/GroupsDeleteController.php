@@ -21,37 +21,59 @@ use App\Error\Exception\CustomValidationException;
 use App\Model\Entity\Group;
 use App\Model\Entity\Permission;
 use App\Model\Entity\Role;
+use App\Model\Entity\Secret;
 use App\Model\Table\PermissionsTable;
+use App\Service\Resources\ResourcesExpireResourcesServiceInterface;
+use Cake\Core\Configure;
 use Cake\Event\Event;
 use Cake\Http\Exception\BadRequestException;
 use Cake\Http\Exception\ForbiddenException;
 use Cake\Http\Exception\InternalErrorException;
 use Cake\Http\Exception\NotFoundException;
 use Cake\ORM\RulesChecker;
+use Cake\ORM\TableRegistry;
 use Cake\Utility\Hash;
 use Cake\Validation\Validation;
+use Passbolt\Metadata\Model\Dto\MetadataResourceDto;
+use Passbolt\Metadata\Service\MetadataResourcesRenderService;
 
 /**
- * @property \App\Model\Table\GroupsTable $Groups
- * @property \App\Model\Table\GroupsUsersTable $GroupsUsers
- * @property \App\Model\Table\PermissionsTable $Permissions
- * @property \App\Model\Table\ResourcesTable $Resources
+ * GroupsDeleteController Class
  */
 class GroupsDeleteController extends AppController
 {
     public const DELETE_SUCCESS_EVENT_NAME = 'GroupsDeleteController.delete.success';
 
     /**
+     * @var \App\Model\Table\GroupsTable
+     */
+    protected $Groups;
+
+    /**
+     * @var \App\Model\Table\GroupsUsersTable
+     */
+    protected $GroupsUsers;
+
+    /**
+     * @var \App\Model\Table\PermissionsTable
+     */
+    protected $Permissions;
+
+    /**
+     * @var \App\Model\Table\ResourcesTable
+     */
+    protected $Resources;
+
+    /**
      * @inheritDoc
      */
-    public function beforeFilter(\Cake\Event\EventInterface $event)
+    public function initialize(): void
     {
-        $this->loadModel('Groups');
-        $this->loadModel('GroupsUsers');
-        $this->loadModel('Permissions');
-        $this->loadModel('Resources');
-
-        return parent::beforeFilter($event);
+        parent::initialize();
+        $this->Groups = $this->fetchTable('Groups');
+        $this->GroupsUsers = $this->fetchTable('GroupsUsers');
+        $this->Permissions = $this->fetchTable('Permissions');
+        $this->Resources = $this->fetchTable('Resources');
     }
 
     /**
@@ -62,9 +84,12 @@ class GroupsDeleteController extends AppController
      */
     public function dryRun(string $id): void
     {
+        $this->assertJson();
+
         $group = $this->_validateRequestData($id);
         $this->_validateDelete($group);
         $resources = $this->Resources->findAllByGroupAccess($id);
+        $resources = $this->formatResources($resources->toArray());
         $this->success(__('The group can be deleted.'), $resources);
     }
 
@@ -72,22 +97,31 @@ class GroupsDeleteController extends AppController
      * Group delete action
      *
      * @param string $id group uuid
-     * @throws \Cake\Http\Exception\InternalErrorException if group cannot be deleted
-     * @throws \Exception
+     * @param \App\Service\Resources\ResourcesExpireResourcesServiceInterface $resourcesExpireResourcesService Service to expire resources that were consumed by users who lost access to them.
      * @return void
+     * @throws \Exception
      */
-    public function delete(string $id)
-    {
-        $this->GroupsUsers->getConnection()->transactional(function () use ($id) {
+    public function delete(
+        string $id,
+        ResourcesExpireResourcesServiceInterface $resourcesExpireResourcesService
+    ) {
+        $this->assertJson();
+        $group = null;
+
+        $this->GroupsUsers->getConnection()->transactional(function () use ($id, &$group, $resourcesExpireResourcesService) { //phpcs:ignore
             $group = $this->_validateRequestData($id);
             $this->_transferContentOwners($group);
             $this->_validateDelete($group);
-            if (!$this->Groups->softDelete($group, ['checkRules' => false])) {
+            $entitiesChanges = $this->Groups->softDelete($group, ['checkRules' => false]);
+            if (!$entitiesChanges) {
                 throw new InternalErrorException('Could not delete the group, please try again later.');
             }
-            $this->_notifyUsers($group);
-            $this->success(__('The group was deleted successfully.'));
+            $deletedSecrets = $entitiesChanges->getDeletedEntities(Secret::class);
+            $resourcesExpireResourcesService->expireResourcesForSecrets($deletedSecrets);
         });
+
+        $this->_notifyUsers($group);
+        $this->success(__('The group was deleted successfully.'));
     }
 
     /**
@@ -149,8 +183,28 @@ class GroupsDeleteController extends AppController
                     $findResourcesOptions['contain']['permissions.user.profile'] = true;
                     $findResourcesOptions['contain']['permissions.group'] = true;
                     $resources = $this->Resources->findAllByIds($group->id, $resourcesIds, $findResourcesOptions);
+                    $resources = $this->formatResources($resources->toArray());
                     $body['errors']['resources']['sole_owner'] = $resources;
                     $msg .= $errors['id']['soleOwnerOfSharedContent'];
+                }
+
+                if (Configure::read('passbolt.plugins.folders.enabled')) {
+                    $foldersIds = $this->Permissions
+                        ->findSharedAcosByAroIsSoleOwner(PermissionsTable::FOLDER_ACO, $group->id)
+                        ->all()
+                        ->extract('aco_foreign_key')
+                        ->toArray();
+                    if ($foldersIds) {
+                        $findFoldersOptions = [];
+                        $findFoldersOptions['contain']['permissions.user.profile'] = true;
+                        $findFoldersOptions['contain']['permissions.group'] = true;
+                        $findFoldersOptions['filter']['has-id'] = $foldersIds;
+                        /** @var \Passbolt\Folders\Model\Table\FoldersTable $foldersTable */
+                        $foldersTable = TableRegistry::getTableLocator()->get('Passbolt/Folders.Folders');
+                        $folders = $foldersTable->findIndex($group->id, $findFoldersOptions);
+                        $body['errors']['folders']['sole_owner'] = $folders;
+                        $msg .= $errors['id']['soleOwnerOfSharedContent'];
+                    }
                 }
                 throw new CustomValidationException($msg, $body);
             }
@@ -186,6 +240,14 @@ class GroupsDeleteController extends AppController
             ->all()
             ->extract('aco_foreign_key')
             ->toArray();
+        if (Configure::read('passbolt.plugins.folders.enabled')) {
+            $foldersIdsBlockingDelete = $this->Permissions
+                ->findSharedAcosByAroIsSoleOwner(PermissionsTable::FOLDER_ACO, $group->id)
+                ->all()
+                ->extract('aco_foreign_key')
+                ->toArray();
+            $contentIdBlockingDelete = array_merge($contentIdBlockingDelete, $foldersIdsBlockingDelete);
+        }
         sort($contentIdBlockingDelete);
 
         // If all the resources that are requiring a change are not satisfied, throw an exception.
@@ -216,5 +278,25 @@ class GroupsDeleteController extends AppController
             'userId' => $this->User->id(),
         ]);
         $this->getEventManager()->dispatch($event);
+    }
+
+    /**
+     * Formats resource array fields according to V4/V5.
+     *
+     * @param \App\Model\Entity\Resource[] $resources Resources array to format.
+     * @return array
+     */
+    private function formatResources(array $resources): array
+    {
+        $metadataResourcesRenderService = new MetadataResourcesRenderService();
+        $result = [];
+
+        foreach ($resources as $resource) {
+            $resource = $resource->toArray();
+            $dto = MetadataResourceDto::fromArray($resource);
+            $result[] = $metadataResourcesRenderService->renderResource($resource, $dto->isV5());
+        }
+
+        return $result;
     }
 }

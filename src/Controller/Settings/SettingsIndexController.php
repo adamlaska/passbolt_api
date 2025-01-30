@@ -19,16 +19,20 @@ namespace App\Controller\Settings;
 
 use App\Controller\AppController;
 use App\Model\Entity\Role;
+use App\Model\Table\UsersTable;
+use App\Model\Validation\EmailValidationRule;
 use Cake\Core\Configure;
 use Cake\Routing\Router;
 use Cake\Utility\Hash;
 use Passbolt\Locale\Service\GetOrgLocaleService;
 
 /**
- * @property \App\Model\Table\UsersTable $Users
+ * SettingsIndexController Class
  */
 class SettingsIndexController extends AppController
 {
+    protected UsersTable $Users;
+
     /**
      * Settings visibility key.
      *
@@ -38,10 +42,8 @@ class SettingsIndexController extends AppController
 
     /**
      * Keys that will be always whitelisted, in addition to the ones defined in config. (once logged in).
-     *
-     * @var array
      */
-    protected $alwaysWhiteListed = [
+    protected array $alwaysWhiteListed = [
         'version',
         'enabled',
     ];
@@ -51,7 +53,7 @@ class SettingsIndexController extends AppController
      */
     public function beforeFilter(\Cake\Event\EventInterface $event)
     {
-        $this->loadModel('Users');
+        $this->Users = $this->fetchTable('Users');
         $this->Authentication->allowUnauthenticated(['index']);
 
         return parent::beforeFilter($event);
@@ -64,6 +66,8 @@ class SettingsIndexController extends AppController
      */
     public function index()
     {
+        $this->assertJson();
+
         $role = $this->User->role();
         // Retrieve and sanity the query options.
         $whitelist = [
@@ -99,11 +103,15 @@ class SettingsIndexController extends AppController
             'passbolt' => [
                 'legal' => Configure::read('passbolt.legal'),
                 'edition' => Configure::read('passbolt.edition'),
-                'registration' => [
-                    'public' => Configure::read('passbolt.registration.public'),
-                ],
             ],
         ];
+        if (is_string(Configure::read(EmailValidationRule::REGEX_CHECK_KEY))) {
+            $baseSettings = Hash::insert(
+                $baseSettings,
+                'passbolt.email.validate.regex',
+                Configure::read(EmailValidationRule::REGEX_CHECK_KEY)
+            );
+        }
         if ($role !== Role::GUEST) {
             // Build settings array.
             $settings = [
@@ -145,7 +153,7 @@ class SettingsIndexController extends AppController
      * @param bool $public for public visibility or not (require log in).
      * @return array list of
      */
-    protected function _getPluginWhiteList($public = false)
+    protected function _getPluginWhiteList(bool $public = false): array
     {
         $confKey = $public === true ? 'whiteListPublic' : 'whiteList';
         $pluginsConf = Configure::read('passbolt.plugins', []);

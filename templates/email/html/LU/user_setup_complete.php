@@ -15,8 +15,8 @@
  */
 
 use App\Model\Entity\User;
-use App\Notification\Email\Redactor\AdminUserSetupCompleteEmailRedactor;
 use App\Utility\Purifier;
+use App\View\Helper\AvatarHelper;
 use Cake\Routing\Router;
 
 if (PHP_SAPI === 'cli') {
@@ -33,16 +33,14 @@ $invitedWhen = $body['invitedWhen'];
 /** @var bool $invitedByYou */
 $invitedByYou = $body['invitedByYou'];
 
-$avatar = 'img/avatar/user.png';
-
-echo $this->element('Email/module/avatar',[
-    'url' => Router::url($avatar, true),
+echo $this->element('Email/module/avatar', [
+    'url' => AvatarHelper::getAvatarUrl(),
     'text' => $this->element('Email/module/avatar_text', [
         'user' => $user,
         'datetime' => $user['modified'],
         'text' => __(
             '{0} just activated their account on passbolt!',
-            $user['profile']['first_name']
+            Purifier::clean($user['profile']['first_name']),
         )
     ])
 ]);
@@ -54,9 +52,14 @@ if ($invitedByYou) {
 } else if ($user['username'] === $invitedBy['username']) {
     $text .= __('This user signed up themselves, since the public registration is enabled.');
 } else {
-    $text .= __('This user was invited by {0} {1}.', $invitedBy['profile']['first_name'], $invitedWhen);
+    $text .= __('This user was invited by {0} {1}.', Purifier::clean($invitedBy['profile']['first_name']), $invitedWhen);
 }
 $text .= '<br/>';
+
+if (isset($missingMetadataKey) && $missingMetadataKey) {
+    $text .= __('This user is missing the encryption key for the shared resource metadata. Please log in and go the user workspace and share the key with them manually.');
+}
+
 echo $this->element('Email/module/text', [
     'text' => $text
 ]);

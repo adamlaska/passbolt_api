@@ -21,6 +21,7 @@ use App\Test\Factory\ResourceFactory;
 use App\Test\Factory\UserFactory;
 use App\Test\Lib\AppIntegrationTestCase;
 use App\Test\Lib\Utility\PaginationTestTrait;
+use Passbolt\Folders\FoldersPlugin;
 
 class ResourcesIndexControllerPaginationTest extends AppIntegrationTestCase
 {
@@ -35,6 +36,7 @@ class ResourcesIndexControllerPaginationTest extends AppIntegrationTestCase
     {
         parent::setUp();
         $this->defaultSortField = 'Resources.name';
+        $this->enableFeaturePlugin(FoldersPlugin::class);
     }
 
     /**
@@ -78,7 +80,7 @@ class ResourcesIndexControllerPaginationTest extends AppIntegrationTestCase
      * @return void
      * @throws \Exception
      */
-    public function testResourcesIndexPagination(?string $sortedField = null, string $direction = 'asc', ?string $path = null)
+    public function testResourcesIndexController_SuccessPagination(?string $sortedField = null, string $direction = 'asc', ?string $path = null)
     {
         $numberOfResources = 19;
         $limit = 10;
@@ -86,7 +88,7 @@ class ResourcesIndexControllerPaginationTest extends AppIntegrationTestCase
         $expectedCurrent = 9;
 
         $user = UserFactory::make()->user()->persist();
-        ResourceFactory::make($numberOfResources)
+        ResourceFactory::make($this->getArrayOfDistinctRandomPastDates($numberOfResources, 'modified'))
             ->withCreatorAndPermission($user)
             ->with('Modifier')
             ->persist();
@@ -112,14 +114,13 @@ class ResourcesIndexControllerPaginationTest extends AppIntegrationTestCase
         $this->assertBodyContentIsSorted($path ?? 'name', $direction);
     }
 
-    public function testResourcesIndexWithLegacyOrderPagination()
+    public function testResourcesIndexController_SuccessPaginationWithLegacyOrder(): void
     {
         $numberOfResources = 11;
         $limit = 10;
-        $expectedCurrent = $limit;
 
         $user = UserFactory::make()->user()->persist();
-        ResourceFactory::make($numberOfResources)
+        ResourceFactory::make($this->getArrayOfDistinctRandomPastDates($numberOfResources, 'modified'))
             ->withCreatorAndPermission($user)
             ->with('Modifier')
             ->persist();
@@ -135,18 +136,17 @@ class ResourcesIndexControllerPaginationTest extends AppIntegrationTestCase
         $this->getJson("/resources.json?$paginationParameter&api-version=2");
 
         $this->assertSuccess();
-        $this->assertCountPaginatedEntitiesEquals($expectedCurrent);
+        $this->assertCountPaginatedEntitiesEquals($limit);
         $this->assertBodyContentIsSorted('modified', 'desc');
     }
 
-    public function testResourcesIndexWithLegacyOrderAndApiComponentPagination()
+    public function testResourcesIndexController_SuccessPaginationWithLegacyOrderAndApiComponent(): void
     {
         $numberOfResources = 11;
         $limit = 10;
-        $expectedCurrent = $limit;
 
         $user = UserFactory::make()->user()->persist();
-        ResourceFactory::make($numberOfResources)
+        ResourceFactory::make($this->getArrayOfDistinctRandomPastDates($numberOfResources, 'modified'))
             ->withCreatorAndPermission($user)
             ->with('Modifier')
             ->persist();
@@ -164,7 +164,7 @@ class ResourcesIndexControllerPaginationTest extends AppIntegrationTestCase
         $this->getJson("/resources.json?$paginationParameter&api-version=2");
 
         $this->assertSuccess();
-        $this->assertCountPaginatedEntitiesEquals($expectedCurrent);
+        $this->assertCountPaginatedEntitiesEquals($limit);
         $this->assertBodyContentIsSorted('modified');
     }
 }

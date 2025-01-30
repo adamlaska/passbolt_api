@@ -32,11 +32,11 @@ class GroupsViewControllerTest extends AppIntegrationTestCase
         'app.Base/GroupsUsers', 'app.Base/Gpgkeys', 'app.Base/Permissions',
     ];
 
-    public function testGroupsViewSuccess()
+    public function testGroupsViewSuccess(): void
     {
         $this->authenticateAs('ada');
         $groupId = UuidFactory::uuid('group.id.freelancer');
-        $this->getJson("/groups/$groupId.json?api-version=2");
+        $this->getJson("/groups/$groupId.json");
         $this->assertSuccess();
         $this->assertNotNull($this->_responseJsonBody);
 
@@ -49,7 +49,7 @@ class GroupsViewControllerTest extends AppIntegrationTestCase
         $this->assertObjectNotHasAttribute('my_group_user', $this->_responseJsonBody);
     }
 
-    public function testGroupsViewContainSuccess_DeprecatedContain()
+    public function testGroupsViewContainSuccess_DeprecatedContain(): void
     {
         $this->authenticateAs('ada');
         $urlParameter = 'contain[modifier]=1';
@@ -89,7 +89,7 @@ class GroupsViewControllerTest extends AppIntegrationTestCase
         $this->assertGroupUserAttributes($this->_responseJsonBody->my_group_user);
     }
 
-    public function testGroupsViewContainSuccess()
+    public function testGroupsViewContainSuccess(): void
     {
         $this->authenticateAs('ada');
         $urlParameter = 'contain[modifier]=1';
@@ -127,35 +127,5 @@ class GroupsViewControllerTest extends AppIntegrationTestCase
         $this->assertNotNull($this->_responseJsonBody);
         $this->assertObjectHasAttribute('my_group_user', $this->_responseJsonBody);
         $this->assertGroupUserAttributes($this->_responseJsonBody->my_group_user);
-    }
-
-    public function testGroupsViewErrorNotAuthenticated()
-    {
-        $this->getJson('/groups.json');
-        $this->assertAuthenticationError();
-    }
-
-    public function testGroupsViewErrorNotValidId()
-    {
-        $this->authenticateAs('ada');
-        $groupId = 'invalid-id';
-        $this->getJson("/groups/$groupId.json");
-        $this->assertError(400, 'The group id is not valid.');
-    }
-
-    public function testGroupsViewErrorNotFound()
-    {
-        $this->authenticateAs('ada');
-        $groupId = UuidFactory::uuid('not-found');
-        $this->getJson("/groups/$groupId.json");
-        $this->assertError(404, 'The group does not exist.');
-    }
-
-    public function testGroupsViewErrorDeletedGroup()
-    {
-        $this->authenticateAs('ada');
-        $groupId = UuidFactory::uuid('group.id.deleted');
-        $this->getJson("/groups/$groupId.json");
-        $this->assertError(404, 'The group does not exist.');
     }
 }

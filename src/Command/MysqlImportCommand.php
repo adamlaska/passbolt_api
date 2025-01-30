@@ -28,9 +28,17 @@ class MysqlImportCommand extends PassboltCommand
     /**
      * @inheritDoc
      */
+    public static function getCommandDescription(): string
+    {
+        return __('Utility to import mysql database backups.');
+    }
+
+    /**
+     * @inheritDoc
+     */
     public function buildOptionParser(ConsoleOptionParser $parser): ConsoleOptionParser
     {
-        $parser->setDescription(__('Utility to import a mysql database backups.'));
+        $parser = parent::buildOptionParser($parser);
 
         $this
             ->addDatasourceOption($parser, false)
@@ -69,7 +77,7 @@ class MysqlImportCommand extends PassboltCommand
         try {
             $datasource = $args->getOption('datasource');
             $connection = ConnectionManager::get($datasource);
-            $connection->query($sql);
+            $connection->execute($sql);
         } catch (\Exception $e) {
             $this->error('Error: Something went wrong when importing the SQL file', $io);
             $this->error($e->getMessage(), $io);
@@ -139,6 +147,7 @@ class MysqlImportCommand extends PassboltCommand
                 return null;
             }
 
+            /** @phpstan-ignore-next-line */
             return array_values($files)[0];
         }
     }

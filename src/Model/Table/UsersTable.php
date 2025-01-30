@@ -17,6 +17,7 @@ declare(strict_types=1);
 namespace App\Model\Table;
 
 use App\Error\Exception\ValidationException;
+use App\Model\Dto\EntitiesChangesDto;
 use App\Model\Entity\AuthenticationToken;
 use App\Model\Entity\Avatar;
 use App\Model\Entity\Role;
@@ -24,8 +25,10 @@ use App\Model\Entity\User;
 use App\Model\Rule\IsNotSoleManagerOfNonEmptyGroupRule;
 use App\Model\Rule\IsNotSoleOwnerOfSharedResourcesRule;
 use App\Model\Traits\Users\UsersFindersTrait;
+use App\Model\Validation\EmailValidationRule;
 use App\Utility\UserAccessControl;
 use Cake\Core\Configure;
+use Cake\Event\Event;
 use Cake\Http\Exception\InternalErrorException;
 use Cake\ORM\RulesChecker;
 use Cake\ORM\Table;
@@ -55,10 +58,10 @@ use Cake\Validation\Validator;
  * @property \Passbolt\Log\Model\Table\ActionLogsTable&\Cake\ORM\Association\HasMany $ActionLogs
  * @method \App\Model\Entity\User newEmptyEntity()
  * @method \App\Model\Entity\User saveOrFail(\Cake\Datasource\EntityInterface $entity, $options = [])
- * @method \App\Model\Entity\User[]|\Cake\Datasource\ResultSetInterface|false saveMany(iterable $entities, $options = [])
- * @method \App\Model\Entity\User[]|\Cake\Datasource\ResultSetInterface saveManyOrFail(iterable $entities, $options = [])
- * @method \App\Model\Entity\User[]|\Cake\Datasource\ResultSetInterface|false deleteMany(iterable $entities, $options = [])
- * @method \App\Model\Entity\User[]|\Cake\Datasource\ResultSetInterface deleteManyOrFail(iterable $entities, $options = [])
+ * @method iterable<\App\Model\Entity\User>|iterable<\Cake\Datasource\EntityInterface>|false saveMany(iterable $entities, $options = [])
+ * @method iterable<\App\Model\Entity\User>|iterable<\Cake\Datasource\EntityInterface> saveManyOrFail(iterable $entities, $options = [])
+ * @method iterable<\App\Model\Entity\User>|iterable<\Cake\Datasource\EntityInterface>|false deleteMany(iterable $entities, $options = [])
+ * @method iterable<\App\Model\Entity\User>|iterable<\Cake\Datasource\EntityInterface> deleteManyOrFail(iterable $entities, $options = [])
  * @method \Cake\ORM\Query findById(string $id)
  * @method \Cake\ORM\Query findByUsername(string $username)
  */
@@ -67,6 +70,9 @@ class UsersTable extends Table
     use UsersFindersTrait;
 
     public const AFTER_REGISTER_SUCCESS_EVENT_NAME = 'Model.Users.afterRegister.success';
+    public const AFTER_SELF_REGISTER_SUCCESS_EVENT_NAME = 'Model.Users.afterSelfRegister.success';
+    public const PASSBOLT_SECURITY_USERNAME_CASE_SENSITIVE = 'passbolt.security.username.caseSensitive';
+    public const PASSBOLT_SECURITY_USERNAME_LOWER_CASE = 'passbolt.security.username.lowerCase';
 
     /**
      * Initialize method
@@ -136,11 +142,9 @@ class UsersTable extends Table
         $validator
             ->requirePresence('username', 'create', __('A username is required.'))
             ->maxLength('username', 255, __('The username length should be maximum {0} characters.', 255))
-            ->email(
-                'username',
-                Configure::read('passbolt.email.validate.mx'),
-                __('The username should be a valid email address.')
-            );
+            ->add('username', 'email', new EmailValidationRule([
+                'message' => __('The username should be a valid email address.'),
+            ]));
 
         $validator
             ->boolean('active', __('The active status should be a valid boolean.'));
@@ -151,6 +155,10 @@ class UsersTable extends Table
 
         $validator
             ->boolean('deleted', __('The deleted status should be a valid boolean.'));
+
+        $validator
+            ->dateTime('disabled', ['ymd'], __('The disabled date should be a valid date.'))
+            ->allowEmptyDateTime('disabled');
 
         $validator
             ->requirePresence('profile', 'create', 'A profile is required.')
@@ -166,7 +174,7 @@ class UsersTable extends Table
      * @param \Cake\Validation\Validator $validator Validator instance.
      * @return \Cake\Validation\Validator
      */
-    public function validationRegister(Validator $validator)
+    public function validationRegister(Validator $validator): Validator
     {
         return $this->validationDefault($validator);
     }
@@ -177,9 +185,20 @@ class UsersTable extends Table
      * @param \Cake\Validation\Validator $validator Validator instance.
      * @return \Cake\Validation\Validator
      */
-    public function validationUpdate(Validator $validator)
+    public function validationUpdate(Validator $validator): Validator
     {
         return $this->validationDefault($validator);
+    }
+
+    /**
+     * Healthcheck validation rules.
+     *
+     * @param \Cake\Validation\Validator $validator Validator instance.
+     * @return \Cake\Validation\Validator
+     */
+    public function validationHealthcheck(Validator $validator): Validator
+    {
+        return $this->validationDefault($validator)->remove('profile');
     }
 
     /**
@@ -188,17 +207,15 @@ class UsersTable extends Table
      * @param \Cake\Validation\Validator $validator Validator instance.
      * @return \Cake\Validation\Validator
      */
-    public function validationRecover(Validator $validator)
+    public function validationRecover(Validator $validator): Validator
     {
         $validator
             ->requirePresence('username', 'create', __('A username is required.'))
             ->notEmptyString('username', __('The username should not be empty.'))
             ->maxLength('username', 255, __('The username length should be maximum 255 characters.'))
-            ->email(
-                'username',
-                Configure::read('passbolt.email.validate.mx'),
-                __('The username should be a valid email address.')
-            );
+            ->add('username', 'email', new EmailValidationRule([
+                'message' => __('The username should be a valid email address.'),
+            ]));
 
         return $validator;
     }
@@ -213,7 +230,8 @@ class UsersTable extends Table
     public function buildRules(RulesChecker $rules): RulesChecker
     {
         // Add rule
-        $rules->add($rules->isUnique(['username', 'deleted']), 'uniqueUsername', [
+        $rules->add([$this, 'isUniqueUsername'], 'uniqueUsername', [
+            'errorField' => 'username',
             'message' => __('The username is already in use.'),
         ]);
         $rules->add($rules->existsIn(['role_id'], 'Roles'), 'validRole', [
@@ -236,13 +254,72 @@ class UsersTable extends Table
     }
 
     /**
+     * Lower case the username if the username is not case-sensitive
+     *
+     * @param \Cake\Event\Event $event Event
+     * @param \ArrayObject $data data
+     * @param \ArrayObject $options options
+     * @return void
+     */
+    public function beforeMarshal(Event $event, \ArrayObject $data, \ArrayObject $options): void
+    {
+        if ($this->isUsernameLowerCase() && is_string($data['username'] ?? null)) {
+            $data['username'] = mb_strtolower($data['username']);
+        }
+    }
+
+    /**
+     * If false (default), username are not case-sensitive: john@passbolt.com and John@passbolt.com cannot be both not-deleted
+     * If true, username is case-sensitive: john@passbolt.com and John@passbolt.com can both be not-deleted
+     *
+     * @return bool
+     */
+    public function isUsernameCaseSensitive(): bool
+    {
+        return Configure::read(self::PASSBOLT_SECURITY_USERNAME_CASE_SENSITIVE);
+    }
+
+    /**
+     * Lower case username before marshaling if true
+     *
+     * @return bool
+     */
+    public function isUsernameLowerCase(): bool
+    {
+        return Configure::read(self::PASSBOLT_SECURITY_USERNAME_LOWER_CASE, true);
+    }
+
+    /**
+     * Assert that the username is unique among all non-deleted users
+     *
+     * @param \App\Model\Entity\User $user user being saved
+     * @return bool
+     * @throws \Cake\Http\Exception\InternalErrorException if the username field is not accessible
+     */
+    public function isUniqueUsername(User $user): bool
+    {
+        if (!$user->isNew() && !$user->isDirty('username')) {
+            return true;
+        }
+        if (is_null($user->username)) {
+            throw new InternalErrorException('The field username is not accessible.');
+        }
+        $userExists = $this
+                ->findByUsernameCaseAware($user->username)
+                ->where(['deleted' => false])
+                ->all()->count() > 0;
+
+        return $userExists === false;
+    }
+
+    /**
      * Return a user entity
      *
      * @param array $data the request data
      * @throws \InvalidArgumentException if role name is not valid
      * @return \App\Model\Entity\User
      */
-    public function buildEntity(array $data)
+    public function buildEntity(array $data): User
     {
         return $this->newEntity(
             $data,
@@ -251,6 +328,7 @@ class UsersTable extends Table
                 'accessibleFields' => [
                     'username' => true,
                     'deleted' => true,
+                    'disabled' => false,
                     'profile' => true,
                     'role_id' => true,
                 ],
@@ -268,30 +346,35 @@ class UsersTable extends Table
     }
 
     /**
-     * Edit a given entity with the prodived data according to the permission of the current user role
+     * Edit a given entity with the provided data according to the permission of the current user role
      * Only allow editing the first_name and last_name
      * Also allow editing the role_id but only if admin
      * Other changes such as active or username are not permitted
      *
      * @param \App\Model\Entity\User $user User
      * @param array $data request data
-     * @param string $roleName role name for example Role::User or Role::ADMIN
+     * @param \App\Utility\UserAccessControl $uac user performing the action
      * @return \App\Model\Entity\User the patched user entity
      */
-    public function editEntity(User $user, array $data, string $roleName)
+    public function editEntity(User $user, array $data, UserAccessControl $uac): User
     {
         $accessibleUserFields = [
             'active' => false,
             'deleted' => false,
             'created' => false,
+            'disabled' => false,
             'username' => false,
             'role_id' => false,
             'profile' => true,
             'gpgkey' => false,
         ];
         // only admins can set roles
-        if ($roleName === Role::ADMIN) {
+        if ($uac->isAdmin()) {
             $accessibleUserFields['role_id'] = true;
+        }
+        // only admins can disable users - though not themselves
+        if ($uac->isAdmin() && $uac->getId() !== $user->id) {
+            $accessibleUserFields['disabled'] = true;
         }
 
         $accessibleProfileFields = [
@@ -339,7 +422,7 @@ class UsersTable extends Table
      *
      * @param \App\Model\Entity\User $user entity
      * @param array|null $options additional delete options such as ['checkRules' => true]
-     * @return bool status
+     * @return \App\Model\Dto\EntitiesChangesDto|bool The list of entities changes, false if a validation error occurred.
      */
     public function softDelete(User $user, ?array $options = null)
     {
@@ -353,6 +436,8 @@ class UsersTable extends Table
             }
         }
 
+        $entitiesChanges = new EntitiesChangesDto();
+
         // find all the resources that only belongs to the user and mark them as deleted
         // Note: all resources that cannot be deleted should have been
         // transferred to other people already (ref. checkRules)
@@ -365,6 +450,27 @@ class UsersTable extends Table
             /** @var \App\Model\Table\ResourcesTable $Resources */
             $Resources = TableRegistry::getTableLocator()->get('Resources');
             $Resources->softDeleteAll($resourceIds);
+        }
+
+        if (Configure::read('passbolt.plugins.folders.enabled')) {
+            // Find all the folders that only belongs to the deleted user and delete them.
+            // Note: all folders that cannot be deleted should have been transferred to other people already.
+            $foldersIds = $this->Permissions
+                ->findAcosOnlyAroCanAccess(PermissionsTable::FOLDER_ACO, $user->id, ['checkGroupsUsers' => true])
+                ->all()
+                ->extract('aco_foreign_key')
+                ->toArray();
+            if (!empty($foldersIds)) {
+                $foldersTable = TableRegistry::getTableLocator()->get('Passbolt/Folders.Folders');
+                $foldersRelationsTable = TableRegistry::getTableLocator()->get('Passbolt/Folders.FoldersRelations');
+                $foldersTable->deleteAll(['id IN' => $foldersIds]);
+                $foldersRelationsTable->deleteAll(['foreign_id IN' => $foldersIds]);
+                $foldersRelationsTable
+                    ->updateAll(['folder_parent_id' => null], ['folder_parent_id IN ' => $foldersIds]);
+            }
+            // Remove all the folders relations of the users.
+            $foldersRelationsTable = TableRegistry::getTableLocator()->get('Passbolt/Folders.FoldersRelations');
+            $foldersRelationsTable->deleteAll(['user_id' => $user->id]);
         }
 
         // We do not want empty groups
@@ -387,7 +493,12 @@ class UsersTable extends Table
 
         // Delete all secrets
         $Secrets = TableRegistry::getTableLocator()->get('Secrets');
-        $Secrets->deleteAll(['user_id' => $user->id]);
+        $secretsToDelete = $Secrets->find()
+            ->select(['id', 'user_id', 'resource_id'])
+            ->where(['user_id' => $user->id])
+            ->all()->toArray();
+        $Secrets->deleteMany($secretsToDelete);
+        $entitiesChanges->pushDeletedEntities($secretsToDelete);
 
         // Delete all favorites
         $Favorites = TableRegistry::getTableLocator()->get('Favorites');
@@ -403,7 +514,7 @@ class UsersTable extends Table
             throw new InternalErrorException($msg);
         }
 
-        return true;
+        return $entitiesChanges;
     }
 
     /**
@@ -429,13 +540,13 @@ class UsersTable extends Table
 
         // Check validation rules
         $user = $this->buildEntity($data);
-        if (!empty($user->getErrors())) {
+        if ($user->getErrors()) {
             throw new ValidationException(__('Could not validate user data.'), $user, $this);
         }
 
         // Check business rules
         $this->checkRules($user);
-        if (!empty($user->getErrors())) {
+        if ($user->getErrors()) {
             throw new ValidationException(__('Could not validate user data.'), $user, $this);
         }
 
@@ -452,10 +563,12 @@ class UsersTable extends Table
 
         // Generate event data
         $eventData = ['user' => $user, 'token' => $token];
-        if (isset($control) && !empty($control->getId())) {
+        if ($control && $control->getId()) {
             $eventData['adminId'] = $control->getId();
+            $this->dispatchEvent(static::AFTER_REGISTER_SUCCESS_EVENT_NAME, $eventData, $this);
+        } else {
+            $this->dispatchEvent(self::AFTER_SELF_REGISTER_SUCCESS_EVENT_NAME, $eventData, $this);
         }
-        $this->dispatchEvent(static::AFTER_REGISTER_SUCCESS_EVENT_NAME, $eventData, $this);
 
         return $user;
     }

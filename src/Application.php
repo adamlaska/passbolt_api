@@ -19,29 +19,43 @@ namespace App;
 use App\Authenticator\SessionAuthenticationService;
 use App\Authenticator\SessionIdentificationService;
 use App\Authenticator\SessionIdentificationServiceInterface;
+use App\Command\PassboltBuildCommandsListener;
+use App\Command\SqlExportCommand;
+use App\Middleware\ApiVersionMiddleware;
 use App\Middleware\ContainerInjectorMiddleware;
 use App\Middleware\ContentSecurityPolicyMiddleware;
 use App\Middleware\CsrfProtectionMiddleware;
 use App\Middleware\GpgAuthHeadersMiddleware;
-use App\Middleware\SessionAuthPreventDeletedUsersMiddleware;
+use App\Middleware\HttpProxyMiddleware;
+use App\Middleware\PreventHostHeaderFallbackMiddleware;
+use App\Middleware\SessionAuthPreventDeletedOrDisabledUsersMiddleware;
 use App\Middleware\SessionPreventExtensionMiddleware;
+use App\Middleware\SslForceMiddleware;
+use App\Middleware\UuidParserMiddleware;
+use App\Middleware\ValidCookieNameMiddleware;
 use App\Notification\Email\EmailSubscriptionDispatcher;
 use App\Notification\Email\Redactor\CoreEmailRedactorPool;
-use App\Notification\EmailDigest\DigestRegister\GroupDigests;
-use App\Notification\EmailDigest\DigestRegister\ResourceDigests;
 use App\Notification\NotificationSettings\CoreNotificationSettingsDefinition;
 use App\Service\Avatars\AvatarsConfigurationService;
+use App\Service\Cookie\AbstractSecureCookieService;
+use App\Service\Cookie\DefaultSecureCookieService;
+use App\ServiceProvider\CommandServiceProvider;
+use App\ServiceProvider\HealthcheckServiceProvider;
+use App\ServiceProvider\ResourceServiceProvider;
 use App\ServiceProvider\SetupServiceProvider;
+use App\ServiceProvider\TestEmailServiceProvider;
 use App\ServiceProvider\UserServiceProvider;
 use App\Utility\Application\FeaturePluginAwareTrait;
 use Authentication\AuthenticationServiceInterface;
 use Authentication\AuthenticationServiceProviderInterface;
 use Authentication\Middleware\AuthenticationMiddleware;
+use Cake\Console\CommandCollection;
 use Cake\Core\Configure;
 use Cake\Core\ContainerInterface;
 use Cake\Core\Exception\MissingPluginException;
 use Cake\Error\Middleware\ErrorHandlerMiddleware;
 use Cake\Http\BaseApplication;
+use Cake\Http\Client;
 use Cake\Http\Middleware\BodyParserMiddleware;
 use Cake\Http\Middleware\SecurityHeadersMiddleware;
 use Cake\Http\MiddlewareQueue;
@@ -49,13 +63,20 @@ use Cake\Http\ServerRequest;
 use Cake\Routing\Middleware\AssetMiddleware;
 use Cake\Routing\Middleware\RoutingMiddleware;
 use Cake\Routing\Router;
-use Passbolt\WebInstaller\Middleware\WebInstallerMiddleware;
-use Psr\Http\Message\ResponseInterface;
+use EmailQueue\Shell\SenderShell;
+use Passbolt\EmailDigest\EmailDigestPlugin;
+use Passbolt\SelfRegistration\Service\DryRun\SelfRegistrationDefaultDryRunService;
+use Passbolt\SelfRegistration\Service\DryRun\SelfRegistrationDryRunServiceInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
 class Application extends BaseApplication implements AuthenticationServiceProviderInterface
 {
     use FeaturePluginAwareTrait;
+
+    /**
+     * @var \App\BaseSolutionBootstrapper|null
+     */
+    private $solutionBootstrapper;
 
     /**
      * Setup the PSR-7 middleware passbolt application will use.
@@ -82,17 +103,26 @@ class Application extends BaseApplication implements AuthenticationServiceProvid
          * - Apply CSRF protection
          */
         $middlewareQueue
+            ->add(ValidCookieNameMiddleware::class)
             ->prepend(new ContainerInjectorMiddleware($this->getContainer()))
             ->add(new ContentSecurityPolicyMiddleware())
             ->add(new ErrorHandlerMiddleware(Configure::read('Error')))
+            ->add(new PreventHostHeaderFallbackMiddleware())
+            ->add(SslForceMiddleware::class)
             ->add(new AssetMiddleware(['cacheTime' => Configure::read('Asset.cacheTime')]))
             ->add(new RoutingMiddleware($this))
+            ->insertAfter(RoutingMiddleware::class, ApiVersionMiddleware::class)
+            ->insertAfter(RoutingMiddleware::class, UuidParserMiddleware::class)
             ->add(new SessionPreventExtensionMiddleware())
             ->add(new BodyParserMiddleware())
-            ->add(SessionAuthPreventDeletedUsersMiddleware::class)
-            ->insertAfter(SessionAuthPreventDeletedUsersMiddleware::class, new AuthenticationMiddleware($this))
+            ->add(SessionAuthPreventDeletedOrDisabledUsersMiddleware::class)
+            ->insertAfter(
+                SessionAuthPreventDeletedOrDisabledUsersMiddleware::class,
+                new AuthenticationMiddleware($this)
+            )
             ->add(new GpgAuthHeadersMiddleware())
-            ->add($csrf);
+            ->add($csrf)
+            ->add(new HttpProxyMiddleware());
 
         /*
          * Additional security headers
@@ -119,18 +149,6 @@ class Application extends BaseApplication implements AuthenticationServiceProvid
     }
 
     /**
-     * @inheritDoc
-     */
-    public function handle(
-        ServerRequestInterface $request
-    ): ResponseInterface {
-        // TODO: remove this line when migrating to CakePHP 4.4 (https://github.com/cakephp/cakephp/pull/16180)
-        $this->getContainer()->add(ServerRequest::class, $request);
-
-        return parent::handle($request);
-    }
-
-    /**
      * Load all the application configuration and bootstrap logic.
      *
      * Override this method to add additional bootstrap logic for your application.
@@ -142,15 +160,42 @@ class Application extends BaseApplication implements AuthenticationServiceProvid
         parent::bootstrap();
 
         $this->addCorePlugins()
-            ->addVendorPlugins()
-            ->addPassboltPlugins();
+            ->addVendorPlugins();
+
+        // Load feature plugins
+        $this->getSolutionBootstrapper()->addFeaturePlugins($this);
 
         if (PHP_SAPI === 'cli') {
-            $this->addCliPlugins();
+            $this->addCliDevelopmentPlugins();
         }
 
         $this->initEmails();
         (new AvatarsConfigurationService())->loadConfiguration();
+    }
+
+    /**
+     * This enables to inject a different main plugin name as the default one
+     * defined in config/default.php
+     *
+     * @param \App\BaseSolutionBootstrapper $solutionBootstrapper Class loading all the plugins
+     * @return void
+     */
+    public function setSolutionBootstrapper(BaseSolutionBootstrapper $solutionBootstrapper): void
+    {
+        $this->solutionBootstrapper = $solutionBootstrapper;
+    }
+
+    /**
+     * @return \App\BaseSolutionBootstrapper
+     */
+    public function getSolutionBootstrapper(): BaseSolutionBootstrapper
+    {
+        if (is_null($this->solutionBootstrapper)) {
+            $className = Configure::readOrFail('passbolt.featurePluginAdder');
+            $this->solutionBootstrapper = new $className();
+        }
+
+        return $this->solutionBootstrapper;
     }
 
     /**
@@ -159,21 +204,11 @@ class Application extends BaseApplication implements AuthenticationServiceProvid
      *
      * @return void
      */
-    public function initEmails()
+    public function initEmails(): void
     {
-        // Gather
-        if (WebInstallerMiddleware::isConfigured()) {
-            $this->getEventManager()
-                ->on(new CoreEmailRedactorPool())
-                ->on(new CoreNotificationSettingsDefinition());
-        }
-
-        if (PHP_SAPI === 'cli' || (Configure::read('debug') && Configure::read('passbolt.selenium.active'))) {
-            // Core email digests
-            $this->getEventManager()
-                ->on(new GroupDigests())
-                ->on(new ResourceDigests());
-        }
+        $this->getEventManager()
+            ->on(new CoreEmailRedactorPool())
+            ->on(new CoreNotificationSettingsDefinition());
     }
 
     /**
@@ -226,56 +261,20 @@ class Application extends BaseApplication implements AuthenticationServiceProvid
     }
 
     /**
-     * Add passbolt plugins
-     *
-     * @return $this
-     */
-    protected function addPassboltPlugins()
-    {
-        if (Configure::read('debug') && Configure::read('passbolt.selenium.active')) {
-            $this->addPlugin('PassboltSeleniumApi', ['bootstrap' => true, 'routes' => true]);
-            $this->addPlugin('PassboltTestData', ['bootstrap' => true, 'routes' => false]);
-        }
-
-        // Add Common plugins.
-        $this->addPlugin('Passbolt/AccountSettings', ['bootstrap' => true, 'routes' => true]);
-        $this->addPlugin('Passbolt/Import', ['bootstrap' => true, 'routes' => true]);
-        $this->addPlugin('Passbolt/InFormIntegration', ['bootstrap' => true, 'routes' => false]);
-        $this->addPlugin('Passbolt/Locale', ['bootstrap' => true, 'routes' => true]);
-        $this->addPlugin('Passbolt/Export', ['bootstrap' => true, 'routes' => false]);
-        $this->addPlugin('Passbolt/ResourceTypes', ['bootstrap' => true, 'routes' => false]);
-        $this->addPlugin('Passbolt/RememberMe', ['bootstrap' => true, 'routes' => false]);
-        $this->addPlugin('Passbolt/EmailNotificationSettings', ['bootstrap' => true, 'routes' => true]);
-        $this->addPlugin('Passbolt/EmailDigest', ['bootstrap' => true, 'routes' => true]);
-        $this->addPlugin('Passbolt/Reports', ['bootstrap' => true, 'routes' => true]);
-        $this->addFeaturePluginIfEnabled($this, 'Mobile');
-        $this->addFeaturePluginIfEnabled($this, 'JwtAuthentication');
-        $this->addPlugin('Passbolt/PasswordGenerator', ['routes' => true]);
-
-        if (!WebInstallerMiddleware::isConfigured()) {
-            $this->addPlugin('Passbolt/WebInstaller', ['bootstrap' => true, 'routes' => true]);
-        } else {
-            $logEnabled = Configure::read('passbolt.plugins.log.enabled');
-            if (!isset($logEnabled) || $logEnabled) {
-                $this->addPlugin('Passbolt/Log', ['bootstrap' => true, 'routes' => false]);
-            }
-        }
-
-        return $this;
-    }
-
-    /**
-     * Add plugins relevant in CLI mode
+     * Add plugins relevant in CLI development mode
      * - Bake
      * - Migrations
      *
      * @return $this
      */
-    protected function addCliPlugins()
+    protected function addCliDevelopmentPlugins()
     {
+        if (!Configure::read('debug')) {
+            return $this;
+        }
         try {
-            Application::addPlugin('Bake');
             $this
+                ->addPlugin('Bake')
                 ->addPlugin('CakephpFixtureFactories')
                 ->addPlugin('IdeHelper');
         } catch (MissingPluginException $e) {
@@ -292,8 +291,17 @@ class Application extends BaseApplication implements AuthenticationServiceProvid
     {
         $container->add(AuthenticationServiceInterface::class, SessionAuthenticationService::class);
         $container->add(SessionIdentificationServiceInterface::class, SessionIdentificationService::class);
+        $container->add(SelfRegistrationDryRunServiceInterface::class, SelfRegistrationDefaultDryRunService::class);
+        $container->add(AbstractSecureCookieService::class, DefaultSecureCookieService::class);
+        $container->add(Client::class);
+        $container->addServiceProvider(new TestEmailServiceProvider());
         $container->addServiceProvider(new SetupServiceProvider());
+        $container->addServiceProvider(new ResourceServiceProvider());
         $container->addServiceProvider(new UserServiceProvider());
+        if (PHP_SAPI === 'cli') {
+            $container->addServiceProvider(new CommandServiceProvider());
+        }
+        $container->addServiceProvider(new HealthcheckServiceProvider());
     }
 
     /**
@@ -325,5 +333,24 @@ class Application extends BaseApplication implements AuthenticationServiceProvid
         }
 
         return $auth;
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function console(CommandCollection $commands): CommandCollection
+    {
+        parent::console($commands);
+        $this->getEventManager()->on(new PassboltBuildCommandsListener());
+
+        // If the email digest plugin is disabled, fallback on the sender shell
+        if (!$this->isFeaturePluginEnabled(EmailDigestPlugin::class)) {
+            $commands->add('passbolt email_digest send', SenderShell::class);
+        }
+
+        // Alias sql_export to mysql_export, this is to keep BC
+        $commands->add('passbolt mysql_export', SqlExportCommand::class);
+
+        return $commands;
     }
 }

@@ -17,9 +17,9 @@ declare(strict_types=1);
 
 namespace App\Test\TestCase\Model\Table\Users;
 
+use App\Model\Validation\EmailValidationRule;
 use App\Test\Lib\AppTestCase;
 use App\Test\Lib\Model\FormatValidationTrait;
-use App\Utility\PassboltText;
 use Cake\Core\Configure;
 use Cake\ORM\TableRegistry;
 
@@ -45,6 +45,7 @@ class SaveTest extends AppTestCase
                 'username' => true,
                 'role_id' => true,
                 'deleted' => true,
+                'disabled' => true,
                 'active' => true,
                 'profile' => true,
             ],
@@ -81,8 +82,8 @@ class SaveTest extends AppTestCase
         $this->assertEquals($testUser['deleted'], $addedUser->deleted);
         $this->assertEquals($testUser['active'], $addedUser->active);
 
-        $this->assertEquals(PassboltText::ucfirst($testUser['profile']['first_name']), $addedUser->profile->first_name);
-        $this->assertEquals(PassboltText::ucfirst($testUser['profile']['last_name']), $addedUser->profile->last_name);
+        $this->assertEquals($testUser['profile']['first_name'], $addedUser->profile->first_name);
+        $this->assertEquals($testUser['profile']['last_name'], $addedUser->profile->last_name);
     }
 
     public function testUsersSaveUpdateSuccess()
@@ -109,13 +110,13 @@ class SaveTest extends AppTestCase
         $this->assertEquals($updateData['deleted'], $fetchedUser->deleted);
         $this->assertEquals($updateData['active'], $fetchedUser->active);
 
-        $this->assertEquals(PassboltText::ucfirst($updateData['profile']['first_name']), $fetchedUser->profile->first_name);
-        $this->assertEquals(PassboltText::ucfirst($updateData['profile']['last_name']), $fetchedUser->profile->last_name);
+        $this->assertEquals($updateData['profile']['first_name'], $fetchedUser->profile->first_name);
+        $this->assertEquals($updateData['profile']['last_name'], $fetchedUser->profile->last_name);
     }
 
     public function testUsersSaveValidationEmailError()
     {
-        Configure::write('passbolt.email.validate.mx', true);
+        Configure::write(EmailValidationRule::MX_CHECK_KEY, true);
         $user = self::getDummyUser();
         $testCases = [
             'email' => self::getEmailTestCases(true),
@@ -125,7 +126,7 @@ class SaveTest extends AppTestCase
 
     public function testUsersSaveValidationEmailNoMxError()
     {
-        Configure::write('passbolt.email.validate.mx', false);
+        Configure::write(EmailValidationRule::MX_CHECK_KEY, false);
         $user = self::getDummyUser();
         $testCases = [
             'email' => self::getEmailTestCases(false),
@@ -153,7 +154,7 @@ class SaveTest extends AppTestCase
 
     public function testValidationUsername()
     {
-        $checkMx = Configure::read('passbolt.email.validate.mx');
+        $checkMx = Configure::read(EmailValidationRule::MX_CHECK_KEY);
 
         $testCases = [
             'requirePresence' => self::getRequirePresenceTestCases(),
@@ -168,7 +169,7 @@ class SaveTest extends AppTestCase
             $testCases
         );
 
-        Configure::write('passbolt.email.validate.mx', !$checkMx);
+        Configure::write(EmailValidationRule::MX_CHECK_KEY, !$checkMx);
 
         $this->_reloadValidationRules($this->Users);
 

@@ -21,7 +21,6 @@ use App\Model\Entity\AuthenticationToken;
 use App\Model\Rule\IsNotSoftDeletedRule;
 use App\Utility\AuthToken\AuthTokenExpiry;
 use App\Utility\UuidFactory;
-use Cake\Http\Exception\InternalErrorException;
 use Cake\I18n\FrozenTime;
 use Cake\ORM\Query;
 use Cake\ORM\RulesChecker;
@@ -40,13 +39,14 @@ use Cake\Validation\Validator;
  * @method \App\Model\Entity\AuthenticationToken patchEntity(\Cake\Datasource\EntityInterface $entity, array $data, array $options = [])
  * @method \App\Model\Entity\AuthenticationToken[] patchEntities(iterable $entities, array $data, array $options = [])
  * @method \App\Model\Entity\AuthenticationToken findOrCreate($search, ?callable $callback = null, $options = [])
+ * @method \App\Model\Entity\AuthenticationToken firstOrFail()
  * @mixin \Cake\ORM\Behavior\TimestampBehavior
  * @method \App\Model\Entity\AuthenticationToken newEmptyEntity()
  * @method \App\Model\Entity\AuthenticationToken saveOrFail(\Cake\Datasource\EntityInterface $entity, $options = [])
- * @method \App\Model\Entity\AuthenticationToken[]|\Cake\Datasource\ResultSetInterface|false saveMany(iterable $entities, $options = [])
- * @method \App\Model\Entity\AuthenticationToken[]|\Cake\Datasource\ResultSetInterface saveManyOrFail(iterable $entities, $options = [])
- * @method \App\Model\Entity\AuthenticationToken[]|\Cake\Datasource\ResultSetInterface|false deleteMany(iterable $entities, $options = [])
- * @method \App\Model\Entity\AuthenticationToken[]|\Cake\Datasource\ResultSetInterface deleteManyOrFail(iterable $entities, $options = [])
+ * @method iterable<\App\Model\Entity\AuthenticationToken>|iterable<\Cake\Datasource\EntityInterface>|false saveMany(iterable $entities, $options = [])
+ * @method iterable<\App\Model\Entity\AuthenticationToken>|iterable<\Cake\Datasource\EntityInterface> saveManyOrFail(iterable $entities, $options = [])
+ * @method iterable<\App\Model\Entity\AuthenticationToken>|iterable<\Cake\Datasource\EntityInterface>|false deleteMany(iterable $entities, $options = [])
+ * @method iterable<\App\Model\Entity\AuthenticationToken>|iterable<\Cake\Datasource\EntityInterface> deleteManyOrFail(iterable $entities, $options = [])
  */
 class AuthenticationTokensTable extends Table
 {
@@ -55,6 +55,8 @@ class AuthenticationTokensTable extends Table
         AuthenticationToken::TYPE_RECOVER,
         AuthenticationToken::TYPE_LOGIN,
         AuthenticationToken::TYPE_MFA,
+        AuthenticationToken::TYPE_MFA_SETUP,
+        AuthenticationToken::TYPE_MFA_VERIFY,
         AuthenticationToken::TYPE_MOBILE_TRANSFER,
         AuthenticationToken::TYPE_REFRESH_TOKEN,
         AuthenticationToken::TYPE_VERIFY_TOKEN,
@@ -66,6 +68,22 @@ class AuthenticationTokensTable extends Table
     private $authTokenExpiry;
 
     /**
+     * @return array self::ALLOWED_TYPES
+     */
+    public function getAllowedTypes(): array
+    {
+        return self::ALLOWED_TYPES;
+    }
+
+    /**
+     * @return \App\Utility\AuthToken\AuthTokenExpiry
+     */
+    public function tokenExpiryFactory(): AuthTokenExpiry
+    {
+        return new AuthTokenExpiry();
+    }
+
+    /**
      * Initialize method
      *
      * @param array $config The configuration for the Table.
@@ -75,7 +93,7 @@ class AuthenticationTokensTable extends Table
     {
         parent::initialize($config);
 
-        $this->authTokenExpiry = new AuthTokenExpiry();
+        $this->authTokenExpiry = $this->tokenExpiryFactory();
 
         $this->setTable('authentication_tokens');
         $this->setDisplayField('id');
@@ -111,7 +129,7 @@ class AuthenticationTokensTable extends Table
                 'rule' => [$this, 'isValidAuthenticationTokenType'],
                 'message' => __(
                     'The type should be one of the following: {0}.',
-                    implode(', ', self::ALLOWED_TYPES)
+                    implode(', ', $this->getAllowedTypes())
                 ),
             ]])
             ->requirePresence('type', 'create', __('A type is required.'))
@@ -138,7 +156,7 @@ class AuthenticationTokensTable extends Table
      */
     public function isValidAuthenticationTokenType($check, array $context)
     {
-        return is_string($check) && (in_array($check, self::ALLOWED_TYPES));
+        return is_string($check) && (in_array($check, $this->getAllowedTypes()));
     }
 
     /**
@@ -177,8 +195,8 @@ class AuthenticationTokensTable extends Table
      *
      * @param string $userId uuid
      * @param string $type AuthenticationToken::TYPE_*
-     * @param ?string $token token value (optional)
-     * @param ?array $data data value (optional)
+     * @param string|null $token token value (optional)
+     * @param array|null $data data value (optional)
      * @throws \App\Error\Exception\ValidationException is the user is not a valid uuid
      * @throws \App\Error\Exception\ValidationException is the user is not found
      * @throws \App\Error\Exception\ValidationException is the user is deleted
@@ -207,12 +225,11 @@ class AuthenticationTokensTable extends Table
             ]]
         );
         $errors = $token->getErrors();
+        $msg = __('It is not possible to create an authentication token for this user.');
         if (!empty($errors)) {
-            $msg = __('It is not possible to create an authentication token for this user.');
             throw new ValidationException($msg);
         }
         if (!$this->save($token)) {
-            $msg = __('It is not possible to create an authentication token for this user.');
             throw new ValidationException($msg);
         }
 
@@ -230,12 +247,10 @@ class AuthenticationTokensTable extends Table
      * @param string $token uuid of the token to check
      * @param string $userId uuid of the user
      * @param string|null $type token type
-     * @param string|int $expiry the numeric value with space then time type.
-     *    Example of valid types: 6 hours, 2 days, 1 minute.
      * @return bool true if it is valid
      * @deprecated use AuthenticationTokenGetService
      */
-    public function isValid(string $token, string $userId, ?string $type = null, $expiry = null): bool
+    public function isValid(string $token, string $userId, ?string $type = null): bool
     {
         // Are ids valid uuid?
         if (!Validation::uuid($token) || !Validation::uuid($userId)) {
@@ -257,7 +272,7 @@ class AuthenticationTokensTable extends Table
         }
 
         // Is it expired
-        if ($this->isExpired($token, $expiry)) {
+        if ($token->isExpired()) {
             // update the token to inactive
             $token->set('active', false);
             $this->save($token);
@@ -272,13 +287,11 @@ class AuthenticationTokensTable extends Table
      * Check if a token is expired
      *
      * @param \App\Model\Entity\AuthenticationToken $token uuid
-     * @param string|int $expiry the numeric value with space then time type.
-     *    Example of valid types: 6 hours, 2 days, 1 minute.
      * @return bool
      */
-    public function isExpired(AuthenticationToken $token, $expiry = null): bool
+    public function isExpired(AuthenticationToken $token): bool
     {
-        return $token->isExpired($expiry);
+        return $token->isExpired();
     }
 
     /**
@@ -313,7 +326,7 @@ class AuthenticationTokensTable extends Table
      * Get a token entity using a user id
      *
      * @param string $userId uuid
-     * @param string $type token type
+     * @param string|null $type token type
      * @throws \InvalidArgumentException is the token is not a valid uuid
      * @return array|\Cake\Datasource\EntityInterface|null
      */
@@ -343,10 +356,6 @@ class AuthenticationTokensTable extends Table
     private function getExpiryDate(string $type)
     {
         $expiryPeriod = $this->authTokenExpiry->getExpiryForTokenType($type);
-        if (!isset($expiryPeriod) || empty($expiryPeriod)) {
-            $msg = 'AuthenticationTokensTable::findExpiredByType no expiry in config for token type ' . $type;
-            throw new InternalErrorException($msg);
-        }
 
         return new FrozenTime($expiryPeriod . ' ago');
     }
@@ -396,7 +405,7 @@ class AuthenticationTokensTable extends Table
      */
     public function setActiveExpiredTokenToInactive(string $type): void
     {
-        $this->query()
+        $this->updateQuery()
             ->update()
             ->set(['active' => false])
             ->where([

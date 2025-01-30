@@ -16,21 +16,22 @@ declare(strict_types=1);
  */
 namespace App\Command;
 
+use App\Service\Command\ProcessUserService;
 use Cake\Command\Command;
 use Cake\Console\Arguments;
+use Cake\Console\BaseCommand;
+use Cake\Console\CommandCollection;
 use Cake\Console\ConsoleIo;
 use Cake\Console\ConsoleOptionParser;
 use Cake\Core\Configure;
+use Cake\Event\EventDispatcherTrait;
 
 /**
  * Passbolt command.
  */
-class PassboltCommand extends Command
+class PassboltCommand extends Command implements PassboltCommandInterface
 {
-    /**
-     * @var bool
-     */
-    public static $isUserRoot = false;
+    use EventDispatcherTrait;
 
     /**
      * The Passbolt welcome banner should be shown only once.
@@ -41,6 +42,30 @@ class PassboltCommand extends Command
     public static $welcomeBannerWasAlreadyShown = false;
 
     /**
+     * List of popular webserver usernames.
+     *
+     * @var string[]
+     */
+    public const KNOWN_WEBSERVER_USERS = [
+        'www-data',
+        'nginx',
+        'apache',
+        'http',
+    ];
+
+    private ?CommandCollection $passboltCommandCollection;
+
+    /**
+     * @param \Cake\Console\CommandCollection|null $passboltCommandCollection Collection of commands used to display the list of passbolt commands
+     * @see PassboltBuildCommandsListener
+     */
+    public function __construct(?CommandCollection $passboltCommandCollection = null)
+    {
+        parent::__construct();
+        $this->passboltCommandCollection = $passboltCommandCollection;
+    }
+
+    /**
      * @inheritDoc
      */
     public function initialize(): void
@@ -48,10 +73,6 @@ class PassboltCommand extends Command
         parent::initialize();
 
         CommandBootstrap::init();
-
-        if (!isset(self::$isUserRoot)) {
-            self::$isUserRoot = (PROCESS_USER === 'root');
-        }
     }
 
     /**
@@ -72,6 +93,14 @@ class PassboltCommand extends Command
     }
 
     /**
+     * @inheritDoc
+     */
+    public static function getCommandDescription(): string
+    {
+        return __('The Passbolt CLI offers an access to the passbolt API directly from the console.');
+    }
+
+    /**
      * Hook method for defining this command's option parser.
      *
      * @see https://book.cakephp.org/4/en/console-commands/commands.html#defining-arguments-and-options
@@ -80,67 +109,29 @@ class PassboltCommand extends Command
      */
     public function buildOptionParser(ConsoleOptionParser $parser): ConsoleOptionParser
     {
-        $parser->setDescription(
-            __('The Passbolt CLI offers an access to the passbolt API directly from the console.')
-        );
+        $parser->setDescription($this->getCommandDescription());
 
-        $parser->addArgument('cleanup', [
-            'help' => __d('cake_console', 'Identify and fix database relational integrity issues.'),
-        ]);
-
-        $parser->addArgument('drop_tables', [
-            'help' => __d('cake_console', 'Drop all the tables. Dangerous but useful for a full reinstall.'),
-        ]);
-
-        $parser->addArgument('healthcheck', [
-            'help' => __d('cake_console', 'Run a healthcheck for this passbolt instance.'),
-        ]);
-
-        $parser->addArgument('install', [
-            'help' => __d('cake_console', 'Installation shell for the passbolt application.'),
-        ]);
-
-        $parser->addArgument('keyring_init', [
-            'help' => __d('cake_console', 'Init the GnuPG keyring.'),
-        ]);
-
-        if (Configure::read('passbolt.plugins.license')) {
-            $parser->addArgument('license_check', [
-                'help' => __d('cake_console', 'Check the license.'),
-            ]);
+        if (!isset($this->passboltCommandCollection)) {
+            return $parser;
         }
 
-        $parser->addArgument('migrate', [
-            'help' => __d('cake_console', 'Run database migrations.'),
-        ]);
-
-        $parser->addArgument('mysql_export', [
-            'help' => __d('cake_console', 'Utility to export mysql database backups.'),
-        ]);
-
-        $parser->addArgument('mysql_import', [
-            'help' => __d('cake_console', 'Utility to import mysql database backups.'),
-        ]);
-
-        $parser->addArgument('register_user', [
-            'help' => __d('cake_console', 'Register a new user.'),
-        ]);
-
-        $parser->addArgument('send_test_email', [
-            'help' => __d('cake_console', 'Try to send a test email and display debug information.'),
-        ]);
-
-        $parser->addArgument('datacheck', [
-            'help' => __d('cake_console', 'Revalidate the data of the passbolt installation.'),
-        ]);
-
-        $parser->addArgument('show_logs_path', [
-            'help' => __d('cake_console', 'Show application logs.'),
-        ]);
-
-        $parser->addArgument('version', [
-            'help' => __d('cake_console', 'Provide version number'),
-        ]);
+        // Append the help message as options of all the passbolt commands
+        foreach ($this->passboltCommandCollection as $name => $commandFQN) {
+            if (is_a($commandFQN, PassboltCommandInterface::class, true)) {
+                /** @var \App\Command\PassboltCommandInterface $commandFQN */
+                $help = $commandFQN::getCommandDescription();
+            } elseif (is_a($commandFQN, BaseCommand::class, true)) {
+                /** @var \Cake\Console\BaseCommand $command */
+                $command = new $commandFQN();
+                $parser = $command->getOptionParser();
+                $help = $parser->getDescription();
+            } else {
+                continue;
+            }
+            $parser->addArgument($name, [
+                'help' => $help,
+            ]);
+        }
 
         return $parser;
     }
@@ -182,7 +173,7 @@ class PassboltCommand extends Command
      * @param array $options Options to append.
      * @return array
      */
-    protected function formatOptions(Arguments $args, array $options = []): array
+    public function formatOptions(Arguments $args, array $options = []): array
     {
         if ($args->getOption('quiet') && !in_array('-q', $options)) {
             $options[] = '-q';
@@ -198,7 +189,7 @@ class PassboltCommand extends Command
      * @param \Cake\Console\ConsoleIo $io Console IO.
      * @return void
      */
-    protected function error(string $msg, ConsoleIo $io): void
+    public function error(string $msg, ConsoleIo $io): void
     {
         $io->out('<error>' . $msg . '</error>');
     }
@@ -216,27 +207,74 @@ class PassboltCommand extends Command
     }
 
     /**
+     * Checks if user running the command is valid or not. If not, aborts or shows warning depending on severity.
+     *
+     * @param \Cake\Console\ConsoleIo $io IO object.
+     * @param \App\Service\Command\ProcessUserService $processUserService process user service
+     * @return void
+     */
+    protected function assertCurrentProcessUser(ConsoleIo $io, ProcessUserService $processUserService)
+    {
+        if (!$this->assertNotRoot($processUserService, $io)) {
+            $this->error(__('aborting'), $io);
+            $this->abort();
+        }
+
+        $isWebserverUser = in_array($processUserService->getName(), self::KNOWN_WEBSERVER_USERS);
+        if (!$isWebserverUser) {
+            $io->out();
+            $io->warning(__('Passbolt commands should only be executed as the web server user.'));
+            $io->out();
+            $io->info(__('The command should be executed with the same user as your web server. By instance:'));
+            $io->info('su -s /bin/bash -c "' . ROOT . '/bin/cake COMMAND" HTTP_USER');
+            $io->info(
+                __(
+                    'where HTTP_USER match your web server user: {0}',
+                    implode(', ', self::KNOWN_WEBSERVER_USERS)
+                )
+            );
+            $io->out();
+        }
+    }
+
+    /**
      * Some of the passbolt commands shouldn't be executed as root.
      * By instance it's the case of the healthcheck command that needs to be executed with the same user as your web server.
      *
+     * @param \App\Service\Command\ProcessUserService $processUserService Process user service.
      * @param \Cake\Console\ConsoleIo $io Console IO.
      * @return bool true if user is root
      */
-    protected function assertNotRoot(ConsoleIo $io): bool
+    protected function assertNotRoot(ProcessUserService $processUserService, ConsoleIo $io): bool
     {
-        if (self::$isUserRoot) {
+        if ($processUserService->getName() === 'root') {
             $io->out();
             $this->error('Passbolt commands cannot be executed as root.', $io);
             $io->out();
             $io->out('The command should be executed with the same user as your web server. By instance:');
             $io->out('su -s /bin/bash -c "' . ROOT . '/bin/cake COMMAND" HTTP_USER');
-            $io->out('where HTTP_USER match your web server user: www-data, nginx, http');
+            $io->out(
+                __(
+                    'where HTTP_USER match your web server user: {0}',
+                    implode(', ', self::KNOWN_WEBSERVER_USERS)
+                )
+            );
             $io->out();
 
             return false;
         }
 
         return true;
+    }
+
+    /**
+     * Checks if current process user is known webserver user or not.
+     *
+     * @return bool Returns `true` if known webserver user, `false` otherwise.
+     */
+    protected function isWebserverUser(): bool
+    {
+        return in_array(PROCESS_USER, self::KNOWN_WEBSERVER_USERS);
     }
 
     /**
@@ -303,5 +341,13 @@ class PassboltCommand extends Command
             $io->error('This command is available in debug mode only.');
             $this->abort();
         }
+    }
+
+    /**
+     * @return \Cake\Console\CommandCollection|null
+     */
+    public function getPassboltCommandCollection(): ?CommandCollection
+    {
+        return $this->passboltCommandCollection;
     }
 }

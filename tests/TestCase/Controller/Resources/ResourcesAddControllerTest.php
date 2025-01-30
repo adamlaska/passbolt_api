@@ -20,7 +20,6 @@ namespace App\Test\TestCase\Controller\Resources;
 use App\Model\Entity\Permission;
 use App\Notification\Email\Redactor\Resource\ResourceCreateEmailRedactor;
 use App\Service\Resources\ResourcesAddService;
-use App\Test\Factory\ResourceTypeFactory;
 use App\Test\Factory\UserFactory;
 use App\Test\Lib\AppIntegrationTestCase;
 use App\Test\Lib\Model\EmailQueueTrait;
@@ -29,8 +28,10 @@ use App\Utility\UuidFactory;
 use Cake\Event\EventList;
 use Cake\ORM\TableRegistry;
 use Cake\Utility\Hash;
-use Passbolt\JwtAuthentication\Service\AccessToken\JwtKeyPairService;
+use Passbolt\Folders\FoldersPlugin;
 use Passbolt\JwtAuthentication\Test\Utility\JwtAuthTestTrait;
+use Passbolt\ResourceTypes\ResourceTypesPlugin;
+use Passbolt\ResourceTypes\Test\Factory\ResourceTypeFactory;
 
 class ResourcesAddControllerTest extends AppIntegrationTestCase
 {
@@ -56,27 +57,26 @@ class ResourcesAddControllerTest extends AppIntegrationTestCase
     public function setUp(): void
     {
         parent::setUp();
+        $this->enableFeaturePlugin(FoldersPlugin::class);
         $this->Resources = TableRegistry::getTableLocator()->get('Resources');
         $this->Secrets = TableRegistry::getTableLocator()->get('Secrets');
         $this->Permissions = TableRegistry::getTableLocator()->get('Permissions');
         $this->Resources->getEventManager()->setEventList(new EventList());
         ResourceTypeFactory::make()->default()->persist();
-        (new JwtKeyPairService())->createKeyPair();
         $this->enableFeaturePlugin('JwtAuthentication');
         $this->setEmailNotificationsSetting('password.create', true);
     }
 
     public function tearDown(): void
     {
-        parent::tearDown();
-        $this->disableFeaturePlugin('JwtAuthentication');
         $this->restoreEmailNotificationsSettings();
         unset($this->Resources);
         unset($this->Permissions);
         unset($this->Resources);
+        parent::tearDown();
     }
 
-    public function testResourcesAddSuccess()
+    public function testResourcesAddController_Success(): void
     {
         $user = UserFactory::make()->user()->persist();
         $this->logInAs($user);
@@ -88,7 +88,7 @@ class ResourcesAddControllerTest extends AppIntegrationTestCase
             'description' => '新的資源描述',
         ]);
 
-        $this->postJson('/resources.json?api-version=2', $data);
+        $this->postJson('/resources.json', $data);
         $this->assertSuccess();
 
         // Check the server response.
@@ -141,7 +141,7 @@ class ResourcesAddControllerTest extends AppIntegrationTestCase
         $this->assertEventFired(ResourcesAddService::ADD_SUCCESS_EVENT_NAME, $this->Resources->getEventManager());
     }
 
-    public function testResourcesAddSuccessWithJWT()
+    public function testResourcesAddController_SuccessWithJWT(): void
     {
         $user = UserFactory::make()->user()->persist();
         $this->createJwtTokenAndSetInHeader($user->id);
@@ -153,7 +153,7 @@ class ResourcesAddControllerTest extends AppIntegrationTestCase
             'description' => '新的資源描述',
         ]);
 
-        $this->postJson('/resources.json?api-version=2', $data);
+        $this->postJson('/resources.json', $data);
         $this->assertSuccess();
 
         // Check the server response.
@@ -206,7 +206,7 @@ class ResourcesAddControllerTest extends AppIntegrationTestCase
         $this->assertEventFired(ResourcesAddService::ADD_SUCCESS_EVENT_NAME, $this->Resources->getEventManager());
     }
 
-    public function testResourcesAddCsrfTokenError()
+    public function testResourcesAddController_Error_CsrfToken(): void
     {
         $this->disableCsrfToken();
         $this->logInAsUser();
@@ -220,15 +220,16 @@ class ResourcesAddControllerTest extends AppIntegrationTestCase
     }
 
     /**
-     * @dataProvider dataForTestResourcesAddValidationErrors
-     * @dataProvider dataForTestResourcesAddBuildRulesErrors
+     * @dataProvider dataFortestResourcesAddController_ValidationErrors
+     * @dataProvider dataFortestResourcesAddController_BuildRulesErrors
      */
-    public function testResourcesAddValidationErrors(string $caseLabel, array $case)
+    public function testResourcesAddController_Error_Validation(string $caseLabel, array $case)
     {
+        $this->enableFeaturePlugin(ResourceTypesPlugin::class);
         $this->logInAsUser();
-        $this->postJson('/resources.json?api-version=v2', $case['data']);
+        $this->postJson('/resources.json', $case['data']);
         $this->assertError(400, 'Could not validate resource data');
-        $arr = json_decode(json_encode($this->_responseJsonBody), true);
+        $arr = $this->getResponseBodyAsArray();
         $error = Hash::get($arr, $case['errorField']);
         $this->assertNotNull($error, "The case \"$caseLabel\" should fail");
         $this->assertSame(0, $this->Resources->find()->count());
@@ -237,7 +238,7 @@ class ResourcesAddControllerTest extends AppIntegrationTestCase
         $this->assertEmailQueueIsEmpty();
     }
 
-    public function dataForTestResourcesAddValidationErrors(): array
+    public function dataFortestResourcesAddController_ValidationErrors(): array
     {
         return [
             ['resource name is missing', [
@@ -278,7 +279,7 @@ class ResourcesAddControllerTest extends AppIntegrationTestCase
         ];
     }
 
-    public function dataForTestResourcesAddBuildRulesErrors(): array
+    public function dataFortestResourcesAddController_BuildRulesErrors(): array
     {
         return [
             ['non-existing resource type', [
@@ -294,17 +295,36 @@ class ResourcesAddControllerTest extends AppIntegrationTestCase
         ];
     }
 
-    public function testResourcesAddNonValidUserUuid()
+    public function testResourcesAddController_Error_NonValidUserUuid(): void
     {
         $user = UserFactory::make(['id' => 'Not a valid UUID'])->getEntity();
         $this->logInAs($user);
-        $this->postJson('/resources.json?api-version=v2');
-        $this->assertResponseFailure('The user identifier should be a valid UUID.');
+        $this->postJson('/resources.json');
+        $this->assertAuthenticationError();
     }
 
-    public function testResourcesAddErrorNotAuthenticated()
+    public function testResourcesAddController_Error_NotAuthenticated(): void
     {
-        $this->postJson('/resources.json?api-version=v2');
+        $this->postJson('/resources.json');
         $this->assertAuthenticationError();
+    }
+
+    /**
+     * Check that calling url without JSON extension throws a 404
+     */
+    public function testResourcesAddController_Error_NotJson(): void
+    {
+        $user = UserFactory::make()->user()->persist();
+        $this->logInAs($user);
+
+        $data = $this->getDummyResourcesPostData([
+            'name' => 'test',
+            'username' => 'username@domain.com',
+            'uri' => 'https://www.test.com',
+            'description' => 'test',
+        ]);
+
+        $this->post('/resources', $data);
+        $this->assertResponseCode(404);
     }
 }

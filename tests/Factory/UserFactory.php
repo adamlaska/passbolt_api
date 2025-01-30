@@ -20,7 +20,9 @@ use App\Model\Entity\Role;
 use App\Model\Entity\User;
 use App\Test\Factory\Traits\FactoryDeletedTrait;
 use App\Utility\UserAccessControl;
+use App\Utility\UuidFactory;
 use Cake\I18n\FrozenDate;
+use Cake\I18n\FrozenTime;
 use CakephpFixtureFactories\Factory\BaseFactory as CakephpBaseFactory;
 use Faker\Generator;
 use Passbolt\AccountSettings\Test\Factory\AccountSettingFactory;
@@ -33,6 +35,7 @@ use Passbolt\Log\Test\Factory\ActionLogFactory;
  * @method \App\Model\Entity\User getEntity()
  * @method \App\Model\Entity\User[] getEntities()
  * @method static \App\Model\Entity\User get($primaryKey, array $options = [])
+ * @method static \App\Model\Entity\User firstOrFail($conditions = null)
  */
 class UserFactory extends CakephpBaseFactory
 {
@@ -62,8 +65,8 @@ class UserFactory extends CakephpBaseFactory
                 'role_id' => $faker->uuid(),
                 'active' => true,
                 'deleted' => false,
-                'created' => FrozenDate::now()->subDay($faker->randomNumber(4)),
-                'modified' => FrozenDate::now()->subDay($faker->randomNumber(4)),
+                'created' => FrozenDate::now()->subDays($faker->randomNumber(4)),
+                'modified' => FrozenDate::now()->subDays($faker->randomNumber(4)),
             ];
         });
 
@@ -121,6 +124,38 @@ class UserFactory extends CakephpBaseFactory
     }
 
     /**
+     * @return $this
+     */
+    public function notDisabled()
+    {
+        return $this->patchData(['disabled' => null]);
+    }
+
+    /**
+     * @return $this
+     */
+    public function disabled()
+    {
+        return $this->patchData(['disabled' => FrozenTime::yesterday()]);
+    }
+
+    /**
+     * @return $this
+     */
+    public function created(FrozenTime $created)
+    {
+        return $this->setField('created', $created);
+    }
+
+    /**
+     * @return $this
+     */
+    public function willDisable()
+    {
+        return $this->patchData(['disabled' => FrozenTime::tomorrow()]);
+    }
+
+    /**
      * @param int $n
      * @return self
      */
@@ -169,7 +204,11 @@ class UserFactory extends CakephpBaseFactory
      */
     private function makeUserAccessControl(User $user): UserAccessControl
     {
-        return new UserAccessControl($user->role->name, $user->get('id'), $user->get('username'));
+        return new UserAccessControl(
+            $user->role->name,
+            $user->get('id') ?? UuidFactory::uuid(),
+            $user->get('username')
+        );
     }
 
     /**
@@ -190,5 +229,44 @@ class UserFactory extends CakephpBaseFactory
         return $this->with('Profiles.Avatars', [
             'data' => file_get_contents($filename),
         ]);
+    }
+
+    /**
+     * @return UserFactory this
+     */
+    public function withAvatarNull(): self
+    {
+        return $this->with('Profiles.Avatars', [
+            'data' => null,
+        ]);
+    }
+
+    /**
+     * @param string $firstname Profile first name
+     * @param string $lastname Profile last name
+     * @return self
+     */
+    public function withProfileName(string $firstname, string $lastname): self
+    {
+        return $this->with('Profiles', [
+            'first_name' => $firstname,
+            'last_name' => $lastname,
+        ]);
+    }
+
+    /**
+     * @return $this
+     */
+    public function withValidGpgKey()
+    {
+        return $this->with('Gpgkeys', GpgkeyFactory::make()->withValidOpenPGPKey());
+    }
+
+    /**
+     * @return $this
+     */
+    public function withAdaKey()
+    {
+        return $this->with('Gpgkeys', GpgkeyFactory::make()->withAdaKey());
     }
 }

@@ -17,11 +17,10 @@ declare(strict_types=1);
 namespace App\Service\OpenPGP;
 
 use App\Error\Exception\CustomValidationException;
+use App\Model\Validation\EmailValidationRule;
 use App\Utility\OpenPGP\OpenPGPBackendFactory;
-use Cake\Core\Configure;
 use Cake\Http\Exception\InternalErrorException;
 use Cake\I18n\FrozenTime;
-use Cake\Validation\Validation;
 
 /**
  * Public Key Validation Service
@@ -56,6 +55,13 @@ class PublicKeyValidationService
     // On API and Webext we use the first public key package found and ignore the rest and a user
     // can only have one key. Its probably better to just break and refuse the key.
     public const HAS_MULTIPLE_MAIN_PACKETS_RULE = 'hasMultipleMainPacketsRule';
+
+    /**
+     * Used to cache public key information saving us from parsing it each and everytime.
+     *
+     * @var array
+     */
+    private static $publicKeyInfo = [];
 
     /**
      * This is the historical set of rules used for user public keys
@@ -110,7 +116,15 @@ class PublicKeyValidationService
      */
     public static function getRevokedKeyRules(): array
     {
-        return array_merge(self::getHistoricalRules(), [
+        return array_merge([
+            // historical rules
+            self::IS_VALID_ALGORITHM_RULE,
+            self::IS_VALID_FINGERPRINT_RULE,
+            self::IS_VALID_KEY_ID_RULE,
+            self::IS_VALID_KEY_SIZE_RULE,
+            self::IS_NOT_CREATED_IN_THE_FUTURE_RULE,
+            //self::IS_NOT_EXPIRED_RULE, // allow expired keys
+        ], [
             self::IS_VALID_KEY_SIZE_STRICT_RULE,
             self::HAS_NO_EXTRA_BREAK_LINE_RULE,
             self::IS_REVOKED_RULE,
@@ -243,7 +257,7 @@ class PublicKeyValidationService
 
         $frozenTime = new FrozenTime($datetimeString);
 
-        return $frozenTime->gt(FrozenTime::now());
+        return $frozenTime->greaterThan(FrozenTime::now());
     }
 
     /**
@@ -341,11 +355,21 @@ class PublicKeyValidationService
      *
      * @param string $armoredKey user provided data
      * @return array see OpenPGPBackendInterface::getKeyInfo
-     * @throws \Cake\Core\Exception\Exception if the armored key cannot be parsed
+     * @throws \Cake\Core\Exception\CakeException if the armored key cannot be parsed
      */
     public static function getPublicKeyInfo(string $armoredKey): array
     {
-        return OpenPGPBackendFactory::get()->getPublicKeyInfo($armoredKey);
+        $key = hash('sha256', $armoredKey);
+
+        if (array_key_exists($key, self::$publicKeyInfo) && !empty(self::$publicKeyInfo[$key])) {
+            return self::$publicKeyInfo[$key];
+        }
+
+        $keyInfo = OpenPGPBackendFactory::get()->getPublicKeyInfo($armoredKey);
+        // Cache key info, so it can be fetched fast next time
+        self::$publicKeyInfo[$key] = $keyInfo;
+
+        return $keyInfo;
     }
 
     /**
@@ -372,7 +396,7 @@ class PublicKeyValidationService
         }
         preg_match('/<(\S+@\S+)>$/', $value, $matches);
         if (isset($matches[1])) {
-            return Validation::email($matches[1], Configure::read('passbolt.email.validate.mx'));
+            return EmailValidationRule::check($matches[1]);
         }
 
         return false;
@@ -406,7 +430,7 @@ class PublicKeyValidationService
      */
     public static function isEmailInUid(?string $email, ?string $uid): bool
     {
-        if (!empty($email) && Validation::email($email, Configure::read('passbolt.email.validate.mx'))) {
+        if (!empty($email) && EmailValidationRule::check($email)) {
             $uidEmail = self::getEmailFromUid($uid);
             if ($uidEmail !== false) {
                 return $email == $uidEmail;

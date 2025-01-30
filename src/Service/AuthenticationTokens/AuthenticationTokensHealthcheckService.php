@@ -41,7 +41,6 @@ class AuthenticationTokensHealthcheckService extends AbstractHealthcheckService
     public function __construct(?AuthenticationTokensTable $table = null)
     {
         parent::__construct(self::NAME, self::CATEGORY);
-        /** @phpstan-ignore-next-line */
         $this->AuthenticationTokens = $table ?? TableRegistry::getTableLocator()->get('AuthenticationTokens');
         $this->checks[self::CHECK_VALIDATES] = $this->healthcheckFactory(self::CHECK_VALIDATES, true);
     }
@@ -51,7 +50,10 @@ class AuthenticationTokensHealthcheckService extends AbstractHealthcheckService
      */
     public function check(): array
     {
-        $records = $this->AuthenticationTokens->find()->all();
+        $records = $this->AuthenticationTokens
+            ->find()
+            ->where(['type IN ' => AuthenticationTokensTable::ALLOWED_TYPES])
+            ->all();
 
         foreach ($records as $i => $record) {
             $this->canValidate($record);

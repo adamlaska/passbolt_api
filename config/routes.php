@@ -164,10 +164,13 @@ $routes->scope('/healthcheck', function ($routes) {
     $routes->setExtensions(['json']);
 
     $routes->connect('/status', ['prefix' => 'Healthcheck', 'controller' => 'HealthcheckStatus', 'action' => 'status'])
-        ->setMethods(['GET']);
+        ->setMethods(['GET', 'HEAD']);
 
     $routes->connect('/', ['prefix' => 'Healthcheck', 'controller' => 'HealthcheckIndex', 'action' => 'index'])
         ->setMethods(['GET']);
+
+    $routes->connect('/error', ['prefix' => 'Healthcheck', 'controller' => 'HealthcheckError', 'action' => 'internal'])
+        ->setMethods(['GET','POST', 'PUT', 'DELETE']);
 });
 
 /**
@@ -204,20 +207,6 @@ $routes->scope('/resources', function ($routes) {
     $routes->connect('/{id}', ['prefix' => 'Resources', 'controller' => 'ResourcesDelete', 'action' => 'delete'])
         ->setPass(['id'])
         ->setMethods(['DELETE']);
-});
-
-/**
- * Resources types prefixed routes
- */
-$routes->scope('/resource-types', function ($routes) {
-    $routes->setExtensions(['json']);
-
-    $routes->connect('/', ['prefix' => 'ResourceTypes', 'controller' => 'ResourceTypesIndex', 'action' => 'index'])
-        ->setMethods(['GET']);
-
-    $routes->connect('/{id}', ['prefix' => 'ResourceTypes', 'controller' => 'ResourceTypesView', 'action' => 'view'])
-        ->setPass(['id'])
-        ->setMethods(['GET']);
 });
 
 /**
@@ -367,10 +356,6 @@ $routes->scope('/setup', function ($routes) {
     $routes->connect('/recover/{userId}/{tokenId}', ['prefix' => 'Setup', 'controller' => 'RecoverStart', 'action' => 'start'])
         ->setPass(['userId', 'tokenId'])
         ->setMethods(['GET']);
-
-    $routes->connect('/completeRecovery/{userId}', ['prefix' => 'Setup', 'controller' => 'RecoverComplete', 'action' => 'complete'])
-        ->setPass(['userId'])
-        ->setMethods(['PUT', 'POST']);
 });
 
 /**
@@ -378,6 +363,6 @@ $routes->scope('/setup', function ($routes) {
  */
 $routes->scope('/app', function ($routes) {
     $routes->connect('/administration/*', ['prefix' => 'Pages', 'controller' => 'Home', 'action' => 'apiApp']);
-    $routes->connect('/settings/mfa', ['prefix' => 'Pages', 'controller' => 'Home', 'action' => 'apiApp']);
+    $routes->connect('/settings/mfa/*', ['prefix' => 'Pages', 'controller' => 'Home', 'action' => 'apiApp']);
     $routes->connect('/*', ['prefix' => 'Pages', 'controller' => 'Home', 'action' => 'apiExtApp']);
 });

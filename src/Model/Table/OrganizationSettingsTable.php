@@ -41,10 +41,10 @@ use Cake\Validation\Validator;
  * @method \App\Model\Entity\OrganizationSetting[] patchEntities(iterable $entities, array $data, array $options = [])
  * @method \App\Model\Entity\OrganizationSetting|false save(\Cake\Datasource\EntityInterface $entity, $options = [])
  * @method \App\Model\Entity\OrganizationSetting saveOrFail(\Cake\Datasource\EntityInterface $entity, $options = [])
- * @method \App\Model\Entity\OrganizationSetting[]|\Cake\Datasource\ResultSetInterface|false saveMany(iterable $entities, $options = [])
- * @method \App\Model\Entity\OrganizationSetting[]|\Cake\Datasource\ResultSetInterface saveManyOrFail(iterable $entities, $options = [])
- * @method \App\Model\Entity\OrganizationSetting[]|\Cake\Datasource\ResultSetInterface|false deleteMany(iterable $entities, $options = [])
- * @method \App\Model\Entity\OrganizationSetting[]|\Cake\Datasource\ResultSetInterface deleteManyOrFail(iterable $entities, $options = [])
+ * @method iterable<\App\Model\Entity\OrganizationSetting>|iterable<\Cake\Datasource\EntityInterface>|false saveMany(iterable $entities, $options = [])
+ * @method iterable<\App\Model\Entity\OrganizationSetting>|iterable<\Cake\Datasource\EntityInterface> saveManyOrFail(iterable $entities, $options = [])
+ * @method iterable<\App\Model\Entity\OrganizationSetting>|iterable<\Cake\Datasource\EntityInterface>|false deleteMany(iterable $entities, $options = [])
+ * @method iterable<\App\Model\Entity\OrganizationSetting>|iterable<\Cake\Datasource\EntityInterface> deleteManyOrFail(iterable $entities, $options = [])
  * @mixin \Cake\ORM\Behavior\TimestampBehavior
  */
 class OrganizationSettingsTable extends Table
@@ -141,9 +141,9 @@ class OrganizationSettingsTable extends Table
      * Get an entry for a given user and property
      *
      * @param string $property user property
-     * @return \Cake\Datasource\EntityInterface|array|null The first result from the ResultSet.
+     * @return \App\Model\Entity\OrganizationSetting|null The first result from the ResultSet.
      */
-    public function getByProperty(string $property)
+    public function getByProperty(string $property): ?OrganizationSetting
     {
         try {
             return $this->getFirstSettingOrFail($property);
@@ -156,15 +156,15 @@ class OrganizationSettingsTable extends Table
      * Create (or update) an organization setting
      *
      * @param string $property The property name
-     * @param string $value The property value
+     * @param string|array $value The property value
      * @param \App\Utility\UserAccessControl $control user access control object
      * @return \App\Model\Entity\OrganizationSetting
+     * @throws \Cake\Http\Exception\UnauthorizedException When user role is not admin.
+     * @throws \App\Error\Exception\CustomValidationException When there are validation errors.
+     * @throws \Cake\Http\Exception\InternalErrorException|\Exception When unable to save the entity.
      */
-    public function createOrUpdateSetting(
-        string $property,
-        string $value,
-        UserAccessControl $control
-    ): OrganizationSetting {
+    public function createOrUpdateSetting(string $property, $value, UserAccessControl $control): OrganizationSetting
+    {
         if (!$control->isAdmin()) {
             throw new UnauthorizedException(__('Only admin can create or update organization settings.'));
         }
@@ -221,8 +221,9 @@ class OrganizationSettingsTable extends Table
      *
      * @param string $property property name
      * @return string (uuid) property id
+     * @throws \Exception if cannot generate a random UUID
      */
-    protected function _getSettingPropertyId(string $property)
+    protected function _getSettingPropertyId(string $property): string
     {
         $settingNamespace = OrganizationSetting::UUID_NAMESPACE . $property;
 

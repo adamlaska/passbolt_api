@@ -27,10 +27,24 @@ use Cake\Validation\Validation;
 use Exception;
 
 /**
- * @property \App\Model\Table\SecretsTable $Secrets
+ * SecretsViewController Class
  */
 class SecretsViewController extends AppController
 {
+    /**
+     * @var \App\Model\Table\SecretsTable
+     */
+    protected $Secrets;
+
+    /**
+     * @inheritDoc
+     */
+    public function initialize(): void
+    {
+        parent::initialize();
+        $this->Secrets = $this->fetchTable('Secrets');
+    }
+
     /**
      * Secret View action
      *
@@ -41,11 +55,12 @@ class SecretsViewController extends AppController
      */
     public function view(string $resourceId)
     {
+        $this->assertJson();
+
         // Check request sanity
         if (!Validation::uuid($resourceId)) {
             throw new BadRequestException(__('The resource identifier should be a valid UUID.'));
         }
-        $this->loadModel('Secrets');
 
         // Retrieve the secret.
         $uac = $this->User->getAccessControl();
@@ -69,10 +84,10 @@ class SecretsViewController extends AppController
     {
         try {
             if ($this->Secrets->hasAssociation('SecretAccesses')) {
-                $this->Secrets->SecretAccesses->create($secret, $uac);
+                $this->Secrets->SecretAccesses->createFromSecretEntity($uac, $secret);
             }
         } catch (Exception $e) {
-            throw new InternalErrorException('Could not log secret access entry.');
+            throw new InternalErrorException('Could not log secret access entry.', 500, $e);
         }
     }
 }

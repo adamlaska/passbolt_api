@@ -17,6 +17,7 @@ declare(strict_types=1);
 
 namespace App\Model\Entity;
 
+use App\Model\Table\PermissionsTable;
 use Cake\ORM\Entity;
 
 /**
@@ -51,7 +52,7 @@ class Permission extends Entity
      * be mass assigned. For security purposes, it is advised to set '*' to false
      * (or remove it), and explicitly make individual fields accessible as needed.
      *
-     * @var array
+     * @var array<string, bool>
      */
     protected $_accessible = [
         'aco' => false,
@@ -66,4 +67,12 @@ class Permission extends Entity
         'group' => false,
         'user' => false,
     ];
+
+    /**
+     * @return bool
+     */
+    public function isAroGroup(): bool
+    {
+        return $this->aro === PermissionsTable::GROUP_ARO;
+    }
 }

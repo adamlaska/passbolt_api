@@ -21,15 +21,30 @@ use App\Model\Entity\Permission;
 use App\Model\Entity\Resource;
 use App\Model\Entity\Role;
 use App\Model\Rule\IsNotSoftDeletedRule;
+use App\Model\Rule\IsNotV5PasswordStringType;
 use App\Model\Traits\Resources\ResourcesFindersTrait;
+use App\Model\Validation\ArmoredMessage\IsParsableMessageValidationRule;
+use App\Model\Validation\DateTime\IsParsableDateTimeValidationRule;
 use App\Utility\Application\FeaturePluginAwareTrait;
+use App\Utility\UuidFactory;
 use Cake\Event\Event;
+use Cake\I18n\FrozenTime;
 use Cake\ORM\RulesChecker;
 use Cake\ORM\Table;
 use Cake\ORM\TableRegistry;
 use Cake\Utility\Hash;
 use Cake\Validation\Validation;
 use Cake\Validation\Validator;
+use Passbolt\Metadata\Model\Dto\MetadataResourceDto;
+use Passbolt\Metadata\Model\Rule\IsMetadataKeyTypeAllowedBySettingsRule;
+use Passbolt\Metadata\Model\Rule\IsMetadataKeyTypeSharedOnSharedItemRule;
+use Passbolt\Metadata\Model\Rule\IsResourceV5ToV4DowngradeAllowedRule;
+use Passbolt\Metadata\Model\Rule\IsV4ToV5UpgradeAllowedRule;
+use Passbolt\Metadata\Model\Rule\IsValidEncryptedMetadataRule;
+use Passbolt\Metadata\Model\Rule\MetadataKeyIdExistsInRule;
+use Passbolt\Metadata\Model\Rule\MetadataKeyIdNotExpiredRule;
+use Passbolt\ResourceTypes\Model\Entity\ResourceType;
+use Passbolt\ResourceTypes\Model\Table\ResourceTypesTable;
 
 /**
  * Resources Model
@@ -47,15 +62,15 @@ use Cake\Validation\Validator;
  * @mixin \Cake\ORM\Behavior\TimestampBehavior
  * @property \App\Model\Table\FavoritesTable&\Cake\ORM\Association\HasOne $Favorites
  * @property \App\Model\Table\PermissionsTable&\Cake\ORM\Association\HasOne $Permission
- * @property \App\Model\Table\ResourceTypesTable&\Cake\ORM\Association\BelongsTo $ResourceTypes
+ * @property \Passbolt\ResourceTypes\Model\Table\ResourceTypesTable&\Cake\ORM\Association\BelongsTo $ResourceTypes
  * @property \Passbolt\Log\Model\Table\EntitiesHistoryTable&\Cake\ORM\Association\BelongsTo $EntitiesHistory
  * @method \App\Model\Entity\Resource newEmptyEntity()
  * @method \App\Model\Entity\Resource newEntity(array $data, array $options = [])
  * @method \App\Model\Entity\Resource saveOrFail(\Cake\Datasource\EntityInterface $entity, $options = [])
- * @method \App\Model\Entity\Resource[]|\Cake\Datasource\ResultSetInterface|false saveMany(iterable $entities, $options = [])
- * @method \App\Model\Entity\Resource[]|\Cake\Datasource\ResultSetInterface saveManyOrFail(iterable $entities, $options = [])
- * @method \App\Model\Entity\Resource[]|\Cake\Datasource\ResultSetInterface|false deleteMany(iterable $entities, $options = [])
- * @method \App\Model\Entity\Resource[]|\Cake\Datasource\ResultSetInterface deleteManyOrFail(iterable $entities, $options = [])
+ * @method iterable<\App\Model\Entity\Resource>|iterable<\Cake\Datasource\EntityInterface>|false saveMany(iterable $entities, $options = [])
+ * @method iterable<\App\Model\Entity\Resource>|iterable<\Cake\Datasource\EntityInterface> saveManyOrFail(iterable $entities, $options = [])
+ * @method iterable<\App\Model\Entity\Resource>|iterable<\Cake\Datasource\EntityInterface>|false deleteMany(iterable $entities, $options = [])
+ * @method iterable<\App\Model\Entity\Resource>|iterable<\Cake\Datasource\EntityInterface> deleteManyOrFail(iterable $entities, $options = [])
  * @method \Cake\ORM\Query findByIdAndDeleted(string $id, bool $delete)
  */
 class ResourcesTable extends Table
@@ -113,18 +128,13 @@ class ResourcesTable extends Table
             'saveStrategy' => 'replace',
         ]);
 
-        $this->belongsTo('ResourceTypes');
+        $this->belongsTo('ResourceTypes', [
+            'className' => 'Passbolt/ResourceTypes.ResourceTypes',
+        ]);
 
-        if ($this->isFeaturePluginEnabled('Folders')) {
-            $this->hasMany('Passbolt/Folders.FoldersRelations', [
-                'className' => 'Passbolt/Folders.FoldersRelations',
-                'foreignKey' => 'foreign_id',
-                'conditions' => [
-                    'FoldersRelations.foreign_model' => 'Resource',
-                ],
-                'dependent' => true,
-            ]);
-        }
+        $this->belongsTo('MetadataKeys', [
+            'className' => 'Passbolt/Metadata.MetadataKeys',
+        ]);
     }
 
     /**
@@ -181,6 +191,10 @@ class ResourcesTable extends Table
             ->allowEmptyString('deleted', __('The deleted status should not be empty'), false);
 
         $validator
+            ->allowEmptyDateTime('expired')
+            ->add('expired', 'expired', new IsParsableDateTimeValidationRule());
+
+        $validator
             ->uuid('created_by', __('The identifier of the user who created the resource should be a valid UUID.'))
             ->requirePresence(
                 'created_by',
@@ -211,12 +225,15 @@ class ResourcesTable extends Table
 
         $validator
             ->uuid('resource_type_id', __('The resource type identifier should be a valid UUID.'))
-            ->requirePresence('resource_type_id', 'create', __('A resource type identifier is required.'));
+            ->requirePresence('resource_type_id', 'create', __('A resource type identifier is required.'))
+            ->inList('resource_type_id', ResourceType::getV4ResourceTypes(), __(
+                'The resource type should be one of the following: {0}.',
+                implode(', ', ResourceType::V4_RESOURCE_TYPE_SLUGS)
+            ));
 
         // Associated fields
         $validator
             ->requirePresence('permissions', 'create', __('The permissions are required.'))
-            // @todo Secrets is an array
             ->allowEmptyString('permissions', __('The permissions should not be empty.'), false)
             ->hasAtMost(
                 'permissions',
@@ -227,9 +244,53 @@ class ResourcesTable extends Table
 
         $validator
             ->requirePresence('secrets', 'create', __('The owner secret is required.'))
-            // @todo Secrets is an array
             ->allowEmptyString('secrets', __('The secrets should not be empty.'), false)
             ->hasAtMost('secrets', 1, __('The secrets should contain only the secret of the owner.'), 'create');
+
+        return $validator;
+    }
+
+    /**
+     * V5 validation rules.
+     *
+     * @param \Cake\Validation\Validator $validator Validator instance.
+     * @return \Cake\Validation\Validator
+     */
+    public function validationV5(Validator $validator): Validator
+    {
+        $validator = $this->validationDefault($validator);
+
+        // Remove all validation on the v4 meta properties
+        // Enforce all v4 fields to be empty
+        foreach (MetadataResourceDto::V4_META_PROPS as $v4Fields) {
+            $validator->remove($v4Fields);
+        }
+
+        $validator
+            ->uuid('metadata_key_id', __('The metadata key ID should be a valid UUID.'))
+            ->allowEmptyString('metadata_key_id');
+
+        $validator
+            ->ascii('metadata', __('The metadata should be a valid ASCII string.'))
+            ->requirePresence('metadata', 'create', __('An armored key is required.'))
+            ->notEmptyString('metadata', __('The metadata should not be empty.'))
+            ->add('metadata', 'isMetadataParsable', new IsParsableMessageValidationRule());
+
+        $validator
+            ->utf8Extended('metadata_key_type', __('The metadata key type should be a valid UTF8 string.'))
+            ->allowEmptyString('metadata_key_type')
+            ->inList('metadata_key_type', ['user_key', 'shared_key'], __(
+                'The metadata key type should be one of the following: {0}.',
+                implode(', ', ['user_key', 'shared_key'])
+            ));
+
+        $validator
+            ->uuid('resource_type_id', __('The resource type identifier should be a valid UUID.'))
+            ->requirePresence('resource_type_id', 'create', __('A resource type identifier is required.'))
+            ->inList('resource_type_id', ResourceType::getV5ResourceTypes(), __(
+                'The resource type should be one of the following: {0}.',
+                implode(', ', ResourceType::V5_RESOURCE_TYPE_SLUGS)
+            ));
 
         return $validator;
     }
@@ -272,14 +333,97 @@ class ResourcesTable extends Table
             'errorField' => 'permissions',
             'message' => __('The permissions should contain at least the owner permission.'),
         ]);
+        $rules->addUpdate(new IsResourceV5ToV4DowngradeAllowedRule(), 'v5_to_v4_downgrade_allowed', [
+            'errorField' => 'resource_type_id',
+            'message' => __('The settings selected by your administrator prevent from downgrading resource type.'),
+        ]);
 
         return $rules;
     }
 
     /**
+     * Rule checker for v5 properties
+     *
+     * @param \Cake\ORM\RulesChecker $rules The rules object to be modified.
+     * @return \Cake\ORM\RulesChecker
+     */
+    public function buildRulesV5(RulesChecker $rules): RulesChecker
+    {
+        $rules->add(new IsMetadataKeyTypeAllowedBySettingsRule(), 'isMetadataKeyTypeAllowedBySettings', [
+            'errorField' => 'metadata_key_type',
+            'message' => __('The settings selected by your administrator prevent from using that key type.'),
+        ]);
+
+        $rules->add(new MetadataKeyIdExistsInRule(), 'metadata_key_exists', [
+            'errorField' => 'metadata_key_id',
+            'message' => __('The metadata key does not exist or was deleted.'),
+        ]);
+
+        $rules->add(new MetadataKeyIdNotExpiredRule(), 'isMetadataKeyNotExpired', [
+            'errorField' => 'metadata_key_id',
+            'message' => __('The metadata key is marked as expired.'),
+        ]);
+
+        $rules->addCreate(new IsNotV5PasswordStringType(), 'isNotV5PasswordStringType', [
+            'errorField' => 'resource_type_id',
+            'message' => __('It is not allowed to create v5-password-string resource types.'),
+        ]);
+
+        $rules->add(new IsNotSoftDeletedRule(), 'resource_type_is_not_soft_deleted', [
+            'table' => 'Passbolt/ResourceTypes.ResourceTypes',
+            'errorField' => 'resource_type_id',
+            'message' => __('The resource type should not be deleted.'),
+        ]);
+
+        $rules->add(new IsValidEncryptedMetadataRule(), 'isValidEncryptedResourceMetadata', [
+            'errorField' => 'metadata',
+            'message' => __('The resource metadata provided can not be decrypted.'),
+        ]);
+
+        $rules->addUpdate(
+            new IsMetadataKeyTypeSharedOnSharedItemRule(),
+            'isMetadataKeyTypeSharedOnSharedItem',
+            [
+                'errorField' => 'metadata_key_type',
+                'message' => __('A resource of type personal cannot be shared with other users or a group.'),
+            ]
+        );
+
+        $rules->addUpdate(new IsV4ToV5UpgradeAllowedRule(), 'v4_to_v5_upgrade_allowed', [
+            'errorField' => 'metadata',
+            'message' => __('The settings selected by your administrator prevent from upgrading v4 to v5.'),
+        ]);
+
+        return $rules;
+    }
+
+    /**
+     * @param \Cake\Event\Event $event event
+     * @param \ArrayObject $data data
+     * @param \ArrayObject $options options
+     * @return void
+     * @deprecated can be removed once isDescriptionEmptyOnPasswordAndDescriptionResourceType is a rule
+     */
+    public function beforeMarshal(Event $event, \ArrayObject $data, \ArrayObject $options): void
+    {
+        if (!$this->isDescriptionEmptyOnPasswordAndDescriptionResourceType($data)) {
+            $data['description'] = null;
+        }
+        if (isset($data['expired']) && !empty($data['expired'])) {
+            // Parse the expired date into a time object
+            try {
+                $data['expired'] = FrozenTime::parse($data['expired']);
+            } catch (\Throwable $e) {
+                // If the expired date cannot be parsed, let the validation
+                // handle the fail
+            }
+        }
+    }
+
+    /**
      * Validate that the entity has at least one owner
      *
-     * @param Resource $entity The entity that will be created or updated.
+     * @param \App\Model\Entity\Resource $entity The entity that will be created or updated.
      * @param array|null $options options
      * @return bool
      */
@@ -296,9 +440,31 @@ class ResourcesTable extends Table
     }
 
     /**
-     * Validate that the a resource can be created only if the secret of the owner is provided.
+     * Validate that the entity description is empty if the resource type is password and description
+     * This can be refactored as a rule after 4.0.0
      *
-     * @param Resource $entity The entity that will be created.
+     * @param \ArrayObject $data data
+     * @return bool
+     * @todo refactor this as a rule after 4.0.0
+     */
+    public function isDescriptionEmptyOnPasswordAndDescriptionResourceType(\ArrayObject $data): bool
+    {
+        $resourceTypeId = $data['resource_type_id'] ?? null;
+        $description = $data['description'] ?? null;
+        $resourceTypePasswordAndDescriptionId = UuidFactory::uuid('resource-types.id.password-and-description');
+        $isResourceTypePasswordAndDescription = $resourceTypeId === $resourceTypePasswordAndDescriptionId;
+
+        if ($isResourceTypePasswordAndDescription && !empty($description)) {
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Validate that a resource can be created only if the secret of the owner is provided.
+     *
+     * @param \App\Model\Entity\Resource $entity The entity that will be created.
      * @param array|null $options options
      * @return bool
      */
@@ -310,7 +476,7 @@ class ResourcesTable extends Table
     /**
      * Validate that the secrets of all the allowed users are provided if the secret changed.
      *
-     * @param Resource $entity The entity that will be created.
+     * @param \App\Model\Entity\Resource $entity The entity that will be created.
      * @param array|null $options options
      * @return bool
      */
@@ -350,7 +516,7 @@ class ResourcesTable extends Table
      * Soft delete a resource.
      *
      * @param string $userId The user who perform the delete.
-     * @param Resource $resource The resource to delete.
+     * @param \App\Model\Entity\Resource $resource The resource to delete.
      * @throws \InvalidArgumentException if the user id is not a uuid
      * @return bool true if success
      */

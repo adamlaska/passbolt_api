@@ -1,7 +1,11 @@
 <?php
 return [
     'passbolt' => [
-        'version' => '3.7.3',
-        'name' => 'Breathing'
-    ]
+        'version' => '4.11.0',
+        'name' => 'Fortunate Son',
+    ],
+    'php' => [
+        'minVersion' => '7.4',
+        'nextMinVersion' => '8.1',
+    ],
 ];

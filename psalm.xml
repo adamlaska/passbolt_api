@@ -8,6 +8,9 @@
     autoloader="config/bootstrap.php"
     usePhpDocMethodsWithoutMagicCall="true"
     usePhpDocPropertiesWithoutMagicCall="true"
+    findUnusedBaselineEntry="true"
+    findUnusedCode="false"
+    errorBaseline="psalm-baseline-v5-upgrade.xml"
 >
     <projectFiles>
         <directory name="src" />
@@ -16,10 +19,20 @@
             <directory name="vendor" />
             <directory name="templates" />
             <directory name="tests" />
-            <directory name="plugins/Passbolt/Reports/templates" />
-            <directory name="plugins/Passbolt/WebInstaller/templates" />
-            <directory name="plugins/Passbolt/JwtAuthentication/templates" />
-            <directory name="plugins/Passbolt/EmailDigest/tests/Fixture/templates/" />
+            <directory name="plugins/PassboltCe/Reports/templates" />
+            <directory name="plugins/PassboltCe/WebInstaller/templates" />
+            <directory name="plugins/PassboltCe/JwtAuthentication/templates" />
+            <directory name="plugins/PassboltCe/EmailDigest/templates/" />
+            <directory name="plugins/PassboltCe/EmailDigest/tests/Fixture/templates/" />
+            <directory name="plugins/PassboltCe/MultiFactorAuthentication/templates/" />
+            <directory name="plugins/PassboltCe/PasswordExpiry/templates/" />
+            <directory name="plugins/PassboltCe/SelfRegistration/templates/" />
+            <directory name="plugins/PassboltCe/Folders/templates/" />
+            <directory name="plugins/PassboltCe/Metadata/templates/" />
         </ignoreFiles>
     </projectFiles>
+
+    <issueHandlers>
+        <MissingTemplateParam errorLevel="suppress"/>
+    </issueHandlers>
 </psalm>

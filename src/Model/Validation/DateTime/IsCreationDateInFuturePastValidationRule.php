@@ -47,8 +47,10 @@ class IsCreationDateInFuturePastValidationRule extends PassboltValidationRule
         if (!($value instanceof ChronosInterface)) {
             return false;
         }
+
+        /** @var \Cake\Chronos\ChronosInterface $nowWithMargin */
         $nowWithMargin = FrozenTime::now()->modify('+12 hours');
 
-        return $value->lt($nowWithMargin);
+        return $value->lessThan($nowWithMargin);
     }
 }

@@ -16,20 +16,25 @@ declare(strict_types=1);
  */
 namespace App\Test\TestCase\Command;
 
-use App\Command\InstallCommand;
 use App\Model\Entity\Role;
+use App\Service\Subscriptions\DefaultSubscriptionCheckInCommandService;
+use App\Service\Subscriptions\SubscriptionCheckInCommandServiceInterface;
 use App\Test\Lib\AppTestCase;
 use App\Test\Lib\Model\EmailQueueTrait;
+use App\Test\Lib\Utility\HealthcheckRequestTestTrait;
 use App\Test\Lib\Utility\PassboltCommandTestTrait;
+use Cake\Console\TestSuite\ConsoleIntegrationTestTrait;
+use Cake\Core\Configure;
+use Cake\Http\Client;
 use Cake\ORM\Query;
 use Cake\ORM\TableRegistry;
-use Cake\TestSuite\ConsoleIntegrationTestTrait;
 use Faker\Factory;
 use Passbolt\EmailNotificationSettings\Test\Lib\EmailNotificationSettingsTestTrait;
 
 class InstallCommandTest extends AppTestCase
 {
     use ConsoleIntegrationTestTrait;
+    use HealthcheckRequestTestTrait;
     use EmailNotificationSettingsTestTrait;
     use EmailQueueTrait;
     use PassboltCommandTestTrait;
@@ -43,16 +48,12 @@ class InstallCommandTest extends AppTestCase
     {
         parent::setUp();
         $this->useCommandRunner();
-        InstallCommand::$isUserRoot = false;
         $this->emptyDirectory(CACHE . 'database' . DS);
-        $this->enableFeaturePlugin('JwtAuthentication');
         $this->loadNotificationSettings();
-    }
-
-    public function tearDown(): void
-    {
-        parent::tearDown();
-        $this->disableFeaturePlugin('JwtAuthentication');
+        $this->mockService(Client::class, function () {
+            return $this->getMockedHealthcheckStatusRequest();
+        });
+        $this->mockProcessUserService('www-data');
     }
 
     /**
@@ -73,7 +74,7 @@ class InstallCommandTest extends AppTestCase
      */
     public function testInstallCommandAsRoot()
     {
-        $this->assertCommandCannotBeRunAsRootUser(InstallCommand::class);
+        $this->assertCommandCannotBeRunAsRootUser('install');
     }
 
     /**
@@ -142,6 +143,28 @@ class InstallCommandTest extends AppTestCase
         $this->assertExitSuccess();
     }
 
+    public function testInstallCommandNormalNoForce_Will_Fail()
+    {
+        $this->mockService(SubscriptionCheckInCommandServiceInterface::class, function () {
+            return new DefaultSubscriptionCheckInCommandService();
+        });
+        $this->exec('passbolt install -d test');
+        $this->assertExitError();
+        $this->assertOutputContains('<error>Some tables are already present in the database. A new installation would override existing data.</error>');
+        $this->assertOutputContains('<error>Please use --force to proceed anyway.</error>');
+    }
+
+    public function testInstallCommandForce_Will_Fail_If_BaseUrlIsNotValid()
+    {
+        $this->mockService(SubscriptionCheckInCommandServiceInterface::class, function () {
+            return new DefaultSubscriptionCheckInCommandService();
+        });
+        Configure::write('App.fullBaseUrl', 'foo');
+        $this->exec('passbolt install --force -d test');
+        $this->assertExitError();
+        $this->assertOutputContains('<error>App.fullBaseUrl does not validate. foo.</error>');
+    }
+
     /**
      * Normal installation force with admin data
      *
@@ -174,7 +197,7 @@ class InstallCommandTest extends AppTestCase
         $this->assertSame($firstName, $admin->profile->first_name);
         $this->assertSame($lastName, $admin->profile->last_name);
         $this->assertFalse($admin->get('active'));
-//         TODO: fix this line in the CI
-//        $this->assertEmailQueueCount(1);
+        $this->assertEmailQueueCount(1);
+        $this->assertEmailInBatchContains("Welcome to passbolt, $firstName!", $userName);
     }
 }

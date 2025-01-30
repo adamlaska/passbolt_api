@@ -19,6 +19,7 @@ namespace App\Command;
 use App\Error\Exception\ValidationException;
 use App\Model\Entity\Role;
 use App\Model\Entity\User;
+use App\Service\Command\ProcessUserService;
 use App\Utility\UserAccessControl;
 use Cake\Console\Arguments;
 use Cake\Console\ConsoleIo;
@@ -28,9 +29,7 @@ use Cake\Routing\Router;
 use Passbolt\EmailNotificationSettings\Utility\EmailNotificationSettings;
 
 /**
- * @property \App\Model\Table\UsersTable $Users
- * @property \App\Model\Table\RolesTable $Roles
- * @property \App\Model\Table\AuthenticationTokensTable $AuthenticationTokens
+ * RegisterUserCommand class
  */
 class RegisterUserCommand extends PassboltCommand
 {
@@ -38,6 +37,36 @@ class RegisterUserCommand extends PassboltCommand
      * Number of interaction with the console.
      */
     public const DEFAULT_INTERACTIVE_LOOP = 3;
+
+    /**
+     * @var \App\Model\Table\UsersTable
+     */
+    protected $Users;
+
+    /**
+     * @var \App\Model\Table\RolesTable
+     */
+    protected $Roles;
+
+    /**
+     * @var \App\Model\Table\AuthenticationTokensTable
+     */
+    protected $AuthenticationTokens;
+
+    /**
+     * @var \App\Service\Command\ProcessUserService
+     */
+    protected ProcessUserService $processUserService;
+
+    /**
+     * @param \App\Service\Command\ProcessUserService $processUserService Process user service.
+     */
+    public function __construct(ProcessUserService $processUserService)
+    {
+        parent::__construct();
+
+        $this->processUserService = $processUserService;
+    }
 
     /**
      * Initializes the Shell
@@ -50,9 +79,17 @@ class RegisterUserCommand extends PassboltCommand
     public function initialize(): void
     {
         parent::initialize();
-        $this->loadModel('Users');
-        $this->loadModel('Roles');
-        $this->loadModel('AuthenticationTokens');
+        $this->Users = $this->fetchTable('Users');
+        $this->Roles = $this->fetchTable('Roles');
+        $this->AuthenticationTokens = $this->fetchTable('AuthenticationTokens');
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public static function getCommandDescription(): string
+    {
+        return __('Register a new user.');
     }
 
     /**
@@ -60,8 +97,9 @@ class RegisterUserCommand extends PassboltCommand
      */
     public function buildOptionParser(ConsoleOptionParser $parser): ConsoleOptionParser
     {
+        $parser = parent::buildOptionParser($parser);
+
         $parser
-            ->setDescription(__('Register a new user.'))
             ->addOption('interactive', [
                 'short' => 'i',
                 'boolean' => true,
@@ -99,9 +137,7 @@ class RegisterUserCommand extends PassboltCommand
         parent::execute($args, $io);
 
         // Root user is not allowed to execute this command.
-        if (!$this->assertNotRoot($io)) {
-            return $this->errorCode();
-        }
+        $this->assertCurrentProcessUser($io, $this->processUserService);
 
         // Who is creating the user?
         // use the oldest admin or temporary non existing one
@@ -229,12 +265,12 @@ class RegisterUserCommand extends PassboltCommand
         if (EmailNotificationSettings::get('send.user.create')) {
             $message = __(
                 "To start registration follow the link provided in your mailbox or here: \n{0}",
-                Router::url('/setup/install/' . $user->id . '/' . $token->get('token'), true)
+                Router::url('/setup/start/' . $user->id . '/' . $token->get('token'), true)
             );
         } else {
             $message = __(
                 "To start registration follow the link provided here: \n{0}",
-                Router::url('/setup/install/' . $user->id . '/' . $token->get('token'), true)
+                Router::url('/setup/start/' . $user->id . '/' . $token->get('token'), true)
             );
         }
 

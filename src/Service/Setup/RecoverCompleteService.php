@@ -58,6 +58,8 @@ class RecoverCompleteService extends AbstractCompleteService implements RecoverC
         $this->dispatchEvent(RecoverCompleteServiceInterface::COMPLETE_SUCCESS_EVENT_NAME, [
             'user' => $user,
             'data' => $this->request->getData(),
+            'clientIp' => $this->request->clientIp(),
+            'userAgent' => $this->request->getEnv('HTTP_USER_AGENT'),
         ]);
     }
 
@@ -109,7 +111,7 @@ class RecoverCompleteService extends AbstractCompleteService implements RecoverC
     protected function getAndAssertUser(string $userId): User
     {
         try {
-            return (new UserGetService())->getActiveNotDeletedOrFail($userId);
+            return (new UserGetService())->getActiveNotDeletedNotDisabledOrFail($userId);
         } catch (NotFoundException $exception) {
             $msg = __('The user does not exist, has not completed the setup or was deleted.');
             throw new BadRequestException($msg);

@@ -22,7 +22,6 @@ use App\Model\Rule\IsActiveRule;
 use App\Model\Rule\IsNotSoftDeletedRule;
 use App\Model\Traits\Cleanup\TableCleanupTrait;
 use App\Model\Traits\Permissions\PermissionsFindersTrait;
-use Cake\Core\Configure;
 use Cake\Datasource\EntityInterface;
 use Cake\ORM\RulesChecker;
 use Cake\ORM\Table;
@@ -46,10 +45,10 @@ use Cake\Validation\Validator;
  * @property \Passbolt\Log\Model\Table\PermissionsHistoryTable&\Cake\ORM\Association\BelongsTo $PermissionsHistory
  * @method \App\Model\Entity\Permission newEmptyEntity()
  * @method \App\Model\Entity\Permission saveOrFail(\Cake\Datasource\EntityInterface $entity, $options = [])
- * @method \App\Model\Entity\Permission[]|\Cake\Datasource\ResultSetInterface|false saveMany(iterable $entities, $options = [])
- * @method \App\Model\Entity\Permission[]|\Cake\Datasource\ResultSetInterface saveManyOrFail(iterable $entities, $options = [])
- * @method \App\Model\Entity\Permission[]|\Cake\Datasource\ResultSetInterface|false deleteMany(iterable $entities, $options = [])
- * @method \App\Model\Entity\Permission[]|\Cake\Datasource\ResultSetInterface deleteManyOrFail(iterable $entities, $options = [])
+ * @method iterable<\App\Model\Entity\Permission>|iterable<\Cake\Datasource\EntityInterface>|false saveMany(iterable $entities, $options = [])
+ * @method iterable<\App\Model\Entity\Permission>|iterable<\Cake\Datasource\EntityInterface> saveManyOrFail(iterable $entities, $options = [])
+ * @method iterable<\App\Model\Entity\Permission>|iterable<\Cake\Datasource\EntityInterface>|false deleteMany(iterable $entities, $options = [])
+ * @method iterable<\App\Model\Entity\Permission>|iterable<\Cake\Datasource\EntityInterface> deleteManyOrFail(iterable $entities, $options = [])
  * @method \Cake\ORM\Query findByAcoForeignKeyAndType(string $acoForeignKey, int $type)
  * @method \Cake\ORM\Query findByAroAndAcoForeignKey(string $aro, string $acoForeignKey)
  * @method \Cake\ORM\Query findByIdAndAcoForeignKey(string $id, string $acoForeignKey)
@@ -111,12 +110,6 @@ class PermissionsTable extends Table
         $this->belongsTo('Resources', [
             'foreignKey' => 'aco_foreign_key',
         ]);
-
-        if (Configure::read('passbolt.plugins.folders.enabled')) {
-            $this->belongsTo('Passbolt/Folders.Folders', [
-                'foreignKey' => 'aco_foreign_key',
-            ]);
-        }
 
         $this->belongsTo('Users', [
             'foreignKey' => 'aro_foreign_key',
@@ -322,7 +315,7 @@ class PermissionsTable extends Table
      */
     public function cleanupSoftDeletedAro(string $modelName, $dryRun = false): int
     {
-        $query = $this->query()
+        $query = $this->selectQuery()
             ->select(['id'])
             ->leftJoinWith($modelName)
             ->where([
@@ -342,7 +335,7 @@ class PermissionsTable extends Table
      */
     public function cleanupHardDeletedAro(string $modelName, $dryRun = false): int
     {
-        $query = $this->query()
+        $query = $this->selectQuery()
             ->select(['id'])
             ->leftJoinWith($modelName)
             ->where(function ($exp, $q) use ($modelName) {
@@ -363,7 +356,7 @@ class PermissionsTable extends Table
      */
     public function cleanupSoftDeletedAco(string $modelName, $dryRun = false): int
     {
-        $query = $this->query()
+        $query = $this->selectQuery()
             ->select(['id'])
             ->leftJoinWith($modelName)
             ->where([
@@ -383,7 +376,7 @@ class PermissionsTable extends Table
      */
     public function cleanupHardDeletedAco(string $modelName, $dryRun = false): int
     {
-        $query = $this->query()
+        $query = $this->selectQuery()
             ->select(['id'])
             ->leftJoinWith($modelName)
             ->where(function ($exp, $q) use ($modelName) {
@@ -464,7 +457,7 @@ class PermissionsTable extends Table
     /**
      * Delete duplicated permissions
      *
-     * @param bool $dryRun false
+     * @param bool|null $dryRun false
      * @return int of affected records
      */
     public function cleanupDuplicatedPermissions(?bool $dryRun = false): int

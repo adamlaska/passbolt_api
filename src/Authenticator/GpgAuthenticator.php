@@ -35,9 +35,20 @@ use Psr\Http\Message\ServerRequestInterface;
 
 class GpgAuthenticator extends SessionAuthenticator
 {
-    public const HTTP_HEADERS_WHITELIST = 'X-GPGAuth-Verify-Response, X-GPGAuth-Progress, X-GPGAuth-User-Auth-Token, ' .
-        'X-GPGAuth-Authenticated, X-GPGAuth-Refer, X-GPGAuth-Debug, X-GPGAuth-Error, X-GPGAuth-Pubkey, ' .
-        'X-GPGAuth-Logout-Url, X-GPGAuth-Version';
+    use GpgAuthenticatorTrait;
+
+    public const HTTP_HEADERS_WHITELIST = [
+        'X-GPGAuth-Verify-Response',
+        'X-GPGAuth-Progress',
+        'X-GPGAuth-User-Auth-Token',
+        'X-GPGAuth-Authenticated',
+        'X-GPGAuth-Refer',
+        'X-GPGAuth-Debug',
+        'X-GPGAuth-Error',
+        'X-GPGAuth-Pubkey',
+        'X-GPGAuth-Logout-Url',
+        'X-GPGAuth-Version',
+    ];
 
     public const AUTHENTICATION_REQUIRED_MESSAGE = 'You need to login to access this location.';
 
@@ -172,8 +183,17 @@ class GpgAuthenticator extends SessionAuthenticator
      */
     private function _stage0()
     {
+        // Sanity check
+        $serverVerifyToken = $this->_data['server_verify_token'] ?? '';
+        $this->assertGpgMessageIsValid(
+            $this->_gpg,
+            $serverVerifyToken,
+            __('The server verify token is missing or invalid.')
+        );
+
+        // Decrypt and verify nonce
         try {
-            $nonce = $this->_gpg->decrypt($this->_data['server_verify_token']);
+            $nonce = $this->_gpg->decrypt($serverVerifyToken);
             // check if the nonce is in valid format to avoid returning something sensitive decrypted
             if ($this->_checkNonce($nonce)) {
                 $this->addHeader('X-GPGAuth-Verify-Response', $nonce);
@@ -315,7 +335,7 @@ class GpgAuthenticator extends SessionAuthenticator
             } catch (Exception $exception) {
                 $msg = __('The OpenPGP server key defined in the config cannot be used to decrypt.') . ' ';
                 $msg .= $exception->getMessage();
-                throw new InternalErrorException($msg);
+                throw new InternalErrorException($msg, 500, $exception);
             }
         }
     }
@@ -338,7 +358,7 @@ class GpgAuthenticator extends SessionAuthenticator
                 $this->_gpg->setEncryptKeyFromFingerprint($fingerprint);
             } catch (Exception $exception) {
                 $msg = __('Could not import the user OpenPGP key.');
-                throw new InternalErrorException($msg);
+                throw new InternalErrorException($msg, 500, $exception);
             }
         }
     }
@@ -371,7 +391,7 @@ class GpgAuthenticator extends SessionAuthenticator
 
         /** @var \App\Model\Entity\User $user */
         $user = $Users->find('auth', ['fingerprint' => $fingerprint])->first();
-        if (empty($user)) {
+        if (empty($user) || $user->isDisabled()) {
             $this->_debug('User not found.');
 
             return null;
@@ -411,11 +431,15 @@ class GpgAuthenticator extends SessionAuthenticator
     /**
      * Validate the format of the nonce
      *
-     * @param string $nonce for example: 'gpgauthv1.3.0|36|de305d54-75b4-431b-adb2-eb6b9e546014|gpgauthv1.3.0'
+     * @param mixed $nonce Valid nonce example: 'gpgauthv1.3.0|36|de305d54-75b4-431b-adb2-eb6b9e546014|gpgauthv1.3.0'
      * @return bool true if valid, false otherwise
      */
-    private function _checkNonce(string $nonce): bool
+    private function _checkNonce($nonce): bool
     {
+        if (!is_string($nonce)) {
+            return $this->_error(__('Invalid verify token type.'));
+        }
+
         $result = explode('|', $nonce);
         $errorMsg = __('Invalid verify token format, ');
         if (count($result) != 4) {
@@ -450,7 +474,7 @@ class GpgAuthenticator extends SessionAuthenticator
         if (isset($data['data'])) {
             $data = $data['data'];
         }
-        if (isset($data['gpg_auth'])) {
+        if (isset($data['gpg_auth']) && is_array($data['gpg_auth'])) {
             $this->_data = $data['gpg_auth'];
         } else {
             $this->_data = null;

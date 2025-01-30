@@ -19,7 +19,6 @@ namespace App\Notification\Email\Redactor;
 
 use App\Controller\Setup\SetupCompleteController;
 use App\Model\Entity\User;
-use App\Model\Table\UsersTable;
 use App\Notification\Email\Email;
 use App\Notification\Email\EmailCollection;
 use App\Notification\Email\SubscribedEmailRedactorInterface;
@@ -31,10 +30,11 @@ use Cake\ORM\Query;
 use Cake\ORM\TableRegistry;
 use Passbolt\Locale\Service\LocaleService;
 use Passbolt\Log\Model\Entity\EntityHistory;
+use Passbolt\Metadata\Service\MetadataKeysSettingsGetService;
 use RuntimeException;
 
 /**
- * Send an email to the admins when an user completes the setup
+ * Send an email to the admins when a user completes the setup
  */
 class AdminUserSetupCompleteEmailRedactor implements SubscribedEmailRedactorInterface
 {
@@ -43,17 +43,10 @@ class AdminUserSetupCompleteEmailRedactor implements SubscribedEmailRedactorInte
     public const TEMPLATE = 'LU/user_setup_complete';
 
     /**
-     * @var \App\Model\Table\UsersTable
+     * Check if the log plugin is enabled
      */
-    private $usersTable;
-
-    /**
-     * @param \App\Model\Table\UsersTable|null $usersTable Users Table instance
-     */
-    public function __construct(?UsersTable $usersTable = null)
+    public function __construct()
     {
-        /** @phpstan-ignore-next-line */
-        $this->usersTable = $usersTable ?? TableRegistry::getTableLocator()->get('Users');
         if (!Configure::read('passbolt.plugins.log.enabled')) {
             // Check if plugin log is enabled because this redactor uses on ActionLog tables
             throw new RuntimeException(sprintf('%s requires Passbolt/Log plugin', self::class));
@@ -68,6 +61,14 @@ class AdminUserSetupCompleteEmailRedactor implements SubscribedEmailRedactorInte
         return [
             SetupCompleteController::COMPLETE_SUCCESS_EVENT_NAME,
         ];
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function getNotificationSettingPath(): ?string
+    {
+        return 'send.admin.user.setup.completed';
     }
 
     /**
@@ -87,8 +88,10 @@ class AdminUserSetupCompleteEmailRedactor implements SubscribedEmailRedactorInte
     {
         $emailCollection = new EmailCollection();
 
+        /** @var \App\Model\Table\UsersTable $UsersTable */
+        $UsersTable = TableRegistry::getTableLocator()->get('Users');
         /** @var \App\Model\Entity\User $userWhoCompletedSetup */
-        $userWhoCompletedSetup = $this->usersTable->loadInto(
+        $userWhoCompletedSetup = $UsersTable->loadInto(
         // Load additional associations needed for the email
             $userWhoCompletedSetup,
             [
@@ -118,7 +121,11 @@ class AdminUserSetupCompleteEmailRedactor implements SubscribedEmailRedactorInte
         }
 
         /** @var \App\Model\Entity\User[] $admins */
-        $admins = $this->usersTable->findAdmins()->find('locale');
+        $admins = $UsersTable->findAdmins()
+            ->find('locale')
+            ->find('notDisabled')
+            ->where(['Users.id !=' => $userWhoCompletedSetup->id]);
+
         // Create an email for every admin
         foreach ($admins as $admin) {
             $emailCollection->addEmail(
@@ -136,7 +143,7 @@ class AdminUserSetupCompleteEmailRedactor implements SubscribedEmailRedactorInte
      * @param \Cake\I18n\FrozenTime $invitedWhen When user was invited
      * @return \App\Notification\Email\Email
      */
-    private function createEmail(User $admin, User $userCompletedSetup, User $invitedBy, FrozenTime $invitedWhen)
+    private function createEmail(User $admin, User $userCompletedSetup, User $invitedBy, FrozenTime $invitedWhen): Email
     {
         /** @var \App\Model\Entity\Profile $profile */
         $profile = $userCompletedSetup->profile;
@@ -147,20 +154,30 @@ class AdminUserSetupCompleteEmailRedactor implements SubscribedEmailRedactorInte
                 return __('{0} just activated their account on passbolt', $profile->first_name);
             }
         );
+        $invitedWhen = (new LocaleService())->translateString(
+            $admin->locale,
+            function () use ($invitedWhen) {
+                return $invitedWhen->timeAgoInWords(['accuracy' => 'day']);
+            }
+        );
+
+        $body = [
+            'user' => $userCompletedSetup,
+            'admin' => $admin,
+            'invitedBy' => $invitedBy,
+            'invitedWhen' => $invitedWhen,
+            'invitedByYou' => $invitedBy->id === $admin->id,
+        ];
+        if (Configure::read('passbolt.v5.enabled')) {
+            // Notify administrator that this newly joined user can't share. This is applicable only when zero knowledge key share is enabled.
+            $settings = MetadataKeysSettingsGetService::getSettings();
+            $body['missingMetadataKey'] = $settings->isKeyShareZeroKnowledge();
+        }
 
         return new Email(
-            $admin->username,
+            $admin,
             $subject,
-            [
-                'title' => $subject,
-                'body' => [
-                    'user' => $userCompletedSetup,
-                    'admin' => $admin,
-                    'invitedBy' => $invitedBy,
-                    'invitedWhen' => $invitedWhen->timeAgoInWords(['accuracy' => 'day']),
-                    'invitedByYou' => $invitedBy->id === $admin->id,
-                ],
-            ],
+            ['title' => $subject, 'body' => $body],
             self::TEMPLATE
         );
     }

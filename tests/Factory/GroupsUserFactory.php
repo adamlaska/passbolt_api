@@ -22,6 +22,8 @@ use Faker\Generator;
 
 /**
  * GroupsUserFactory
+ *
+ * @method static \App\Model\Entity\GroupsUser firstOrFail($conditions = null)
  */
 class GroupsUserFactory extends CakephpBaseFactory
 {
@@ -48,7 +50,7 @@ class GroupsUserFactory extends CakephpBaseFactory
                 'group_id' => $faker->uuid(),
                 'user_id' => $faker->uuid(),
                 'is_admin' => false,
-                'created' => Chronos::now()->subDay($faker->randomNumber(4)),
+                'created' => Chronos::now()->subDays($faker->randomNumber(4)),
             ];
         });
     }

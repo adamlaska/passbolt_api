@@ -28,37 +28,56 @@ use Cake\Utility\Hash;
 use Cake\Validation\Validation;
 
 /**
- * @property \App\Model\Table\GroupsTable $Groups
- * @property \App\Model\Table\GroupsUsersTable $GroupsUsers
- * @property \App\Model\Table\ResourcesTable $Resources
- * @property \App\Model\Table\SecretsTable $Secrets
+ * GroupsUpdateController Class
  */
 class GroupsUpdateController extends AppController
 {
     /**
+     * @var \App\Model\Table\GroupsTable
+     */
+    protected $Groups;
+
+    /**
+     * @var \App\Model\Table\GroupsUsersTable
+     */
+    protected $GroupsUsers;
+
+    /**
+     * @var \App\Model\Table\ResourcesTable
+     */
+    protected $Resources;
+
+    /**
+     * @var \App\Model\Table\SecretsTable
+     */
+    protected $Secrets;
+
+    /**
      * @inheritDoc
      */
-    public function beforeFilter(\Cake\Event\EventInterface $event)
+    public function initialize(): void
     {
-        $this->loadModel('Groups');
-        $this->loadModel('GroupsUsers');
-        $this->loadModel('Resources');
-        $this->loadModel('Secrets');
-
-        return parent::beforeFilter($event);
+        parent::initialize();
+        $this->Groups = $this->fetchTable('Groups');
+        $this->GroupsUsers = $this->fetchTable('GroupsUsers');
+        $this->Resources = $this->fetchTable('Resources');
+        $this->Secrets = $this->fetchTable('Secrets');
     }
 
     /**
      * Group Update action.
      *
      * @param string $id The group identifier.
+     * @param \App\Service\Groups\GroupsUpdateService $groupsUpdateService Service to update the group associations.
      * @return void
      * @throws \Cake\Http\Exception\ForbiddenException If the user is not an admin
      * @throws \App\Error\Exception\ValidationException If an error occurred when patching or saving the group
      * @throws \Exception If an unexpected error occurred
      */
-    public function update(string $id)
+    public function update(string $id, GroupsUpdateService $groupsUpdateService)
     {
+        $this->assertJson();
+
         $uac = $this->User->getAccessControl();
         $this->assertRequestParameter($uac, $id);
 
@@ -71,7 +90,6 @@ class GroupsUpdateController extends AppController
         $changes = Hash::get($data, 'groups_users', []);
         $secrets = Hash::get($data, 'secrets', []);
 
-        $groupsUpdateService = new GroupsUpdateService();
         $groupsUpdateService->update($uac, $id, $metaData, $changes, $secrets);
 
         // The v1 expect the updated group to be returned.
@@ -149,6 +167,8 @@ class GroupsUpdateController extends AppController
      */
     public function dryRun(string $id)
     {
+        $this->assertJson();
+
         $uac = $this->User->getAccessControl();
         $this->assertRequestParameter($uac, $id);
 

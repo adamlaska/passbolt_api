@@ -17,16 +17,22 @@ declare(strict_types=1);
 namespace App\Controller\Users;
 
 use App\Controller\AppController;
+use App\Model\Event\TableFindIndexBefore;
+use App\Model\Table\Dto\FindIndexOptions;
+use App\Utility\Application\FeaturePluginAwareTrait;
 use Cake\Http\Exception\BadRequestException;
 use Cake\Http\Exception\NotFoundException;
 use Cake\Validation\Validation;
 use Exception;
+use Passbolt\MultiFactorAuthentication\Service\Query\IsMfaEnabledQueryService;
 
 /**
- * @property \App\Model\Table\UsersTable $Users
+ * UsersViewController Class
  */
 class UsersViewController extends AppController
 {
+    use FeaturePluginAwareTrait;
+
     /**
      * User View action
      *
@@ -37,6 +43,8 @@ class UsersViewController extends AppController
      */
     public function view($id)
     {
+        $this->assertJson();
+
         // Check request sanity
         if (!Validation::uuid($id)) {
             if ($id === 'me') {
@@ -47,15 +55,33 @@ class UsersViewController extends AppController
         }
 
         // Retrieve the user
-        $this->loadModel('Users');
+        /** @var \App\Model\Table\UsersTable $usersTable */
+        $usersTable = $this->fetchTable('Users');
+        $query = $usersTable->findView($id, $this->User->role());
+
+        // Trigger an event to filter data, decorate results, add contain, etc.
+        $event = TableFindIndexBefore::create(
+            $query,
+            FindIndexOptions::createFromArray(['query' => $query]),
+            $usersTable
+        );
+        /** @var \App\Model\Event\TableFindIndexBefore $event */
+        $this->getEventManager()->dispatch($event);
+        $query = $event->getQuery();
+
+        if ($this->isFeaturePluginEnabled('MultiFactorAuthentication')) {
+            (new IsMfaEnabledQueryService())->decorateForView($query, $this->User->getAccessControl(), $id);
+        }
+
         try {
-            $user = $this->Users->findView($id, $this->User->role())->first();
+            $user = $query->first();
         } catch (Exception $exception) {
             throw new NotFoundException(__('The user does not exist.'));
         }
         if (empty($user)) {
             throw new NotFoundException(__('The user does not exist.'));
         }
+
         $this->success(__('The operation was successful.'), $user);
     }
 }

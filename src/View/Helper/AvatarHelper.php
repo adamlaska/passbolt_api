@@ -42,13 +42,16 @@ class AvatarHelper extends Helper
      */
     public static function getAvatarFallBackUrl(?string $format = AvatarsConfigurationService::FORMAT_SMALL): string
     {
-        return Router::url(Configure::readOrFail('FileStorage.imageDefaults.Avatar.' . $format), true);
+        return Router::url(
+            '/' . Configure::readOrFail('FileStorage.imageDefaults.Avatar.' . $format),
+            true
+        );
     }
 
     /**
      * Checks if the format provided is medium or small
      *
-     * @param bool $withExtension Append the image file extension.
+     * @param bool|null $withExtension Append the image file extension.
      * @psalm-suppress InvalidReturnType false positive
      * @return array
      * @throws \RuntimeException if the avatar config is not set in config/file_storage.php

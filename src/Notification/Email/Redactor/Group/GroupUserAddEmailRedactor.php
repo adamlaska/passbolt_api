@@ -18,6 +18,7 @@ declare(strict_types=1);
 namespace App\Notification\Email\Redactor\Group;
 
 use App\Model\Entity\Group;
+use App\Model\Entity\GroupsUser;
 use App\Model\Entity\User;
 use App\Model\Table\GroupsTable;
 use App\Model\Table\UsersTable;
@@ -48,7 +49,6 @@ class GroupUserAddEmailRedactor implements SubscribedEmailRedactorInterface
      */
     public function __construct(?UsersTable $usersTable = null)
     {
-        /** @phpstan-ignore-next-line */
         $this->usersTable = $usersTable ?? TableRegistry::getTableLocator()->get('Users');
     }
 
@@ -66,6 +66,14 @@ class GroupUserAddEmailRedactor implements SubscribedEmailRedactorInterface
     }
 
     /**
+     * @inheritDoc
+     */
+    public function getNotificationSettingPath(): ?string
+    {
+        return 'send.group.user.add';
+    }
+
+    /**
      * @param \Cake\Event\Event $event User delete event
      * @return \App\Notification\Email\EmailCollection
      */
@@ -77,7 +85,9 @@ class GroupUserAddEmailRedactor implements SubscribedEmailRedactorInterface
             case GroupsUpdateService::UPDATE_SUCCESS_EVENT_NAME:
                 /** @var \App\Model\Entity\Group $group */
                 $group = $event->getData('group');
-                $addedGroupsUsers = $event->getData('addedGroupsUsers'); // the list of added groups users
+                /** @var \App\Model\Dto\EntitiesChangesDto $entitiesChanges */
+                $entitiesChanges = $event->getData('entitiesChanges');
+                $addedGroupsUsers = $entitiesChanges->getAddedEntities(GroupsUser::class);
                 $modifiedBy = $this->usersTable->findFirstForEmail($event->getData('userId'));
                 $emails = $this->createGroupUserAddedUpdateEmails($group, $addedGroupsUsers, $modifiedBy);
                 break;
@@ -103,7 +113,9 @@ class GroupUserAddEmailRedactor implements SubscribedEmailRedactorInterface
      */
     private function getRecipients(array $userIds): Query
     {
-        return $this->usersTable->find('locale')->where(['Users.id IN' => $userIds]);
+        return $this->usersTable->find('locale')
+            ->find('notDisabled')
+            ->where(['Users.id IN' => $userIds]);
     }
 
     /**
@@ -113,12 +125,14 @@ class GroupUserAddEmailRedactor implements SubscribedEmailRedactorInterface
     private function createGroupCreatedEmail(Group $group)
     {
         $emails = [];
+
         $admin = $this->usersTable->findFirstForEmail($group->created_by);
         $userIds = Hash::extract($group->groups_users, '{n}.user_id');
+
         // Don't send notification if the user added themselves
-        $recipients = $this->getRecipients($userIds)->where([
-            'Users.id !=' => $group->created_by,
-        ])->all();
+        $recipients = $this->getRecipients($userIds)
+            ->where(['Users.id !=' => $group->created_by])
+            ->all();
 
         foreach ($group->groups_users as $group_user) {
             if ($group_user->user_id === $group->created_by) {
@@ -126,7 +140,11 @@ class GroupUserAddEmailRedactor implements SubscribedEmailRedactorInterface
             }
 
             $recipient = $recipients->firstMatch(['id' => $group_user->user_id]);
-            $emails[] = $this->createGroupUserAddEmail($recipient, $admin, $group, $group_user->is_admin);
+
+            // skip disabled group members
+            if (isset($recipient)) {
+                $emails[] = $this->createGroupUserAddEmail($recipient, $admin, $group, $group_user->is_admin);
+            }
         }
 
         return $emails;
@@ -178,6 +196,6 @@ class GroupUserAddEmailRedactor implements SubscribedEmailRedactorInterface
         );
         $data = ['body' => ['isAdmin' => $isAdmin, 'admin' => $admin, 'group' => $group], 'title' => $subject];
 
-        return new Email($recipient->username, $subject, $data, self::TEMPLATE);
+        return new Email($recipient, $subject, $data, self::TEMPLATE);
     }
 }

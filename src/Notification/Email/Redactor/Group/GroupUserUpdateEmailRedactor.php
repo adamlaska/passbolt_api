@@ -18,6 +18,7 @@ declare(strict_types=1);
 namespace App\Notification\Email\Redactor\Group;
 
 use App\Model\Entity\Group;
+use App\Model\Entity\GroupsUser;
 use App\Model\Entity\User;
 use App\Model\Table\UsersTable;
 use App\Notification\Email\Email;
@@ -42,11 +43,10 @@ class GroupUserUpdateEmailRedactor implements SubscribedEmailRedactorInterface
     private $usersTable;
 
     /**
-     * @param \App\Model\Table\UsersTable $usersTable Users Table
+     * @param \App\Model\Table\UsersTable|null $usersTable Users Table
      */
     public function __construct(?UsersTable $usersTable = null)
     {
-        /** @phpstan-ignore-next-line */
         $this->usersTable = $usersTable ?? TableRegistry::getTableLocator()->get('Users');
     }
 
@@ -63,6 +63,14 @@ class GroupUserUpdateEmailRedactor implements SubscribedEmailRedactorInterface
     }
 
     /**
+     * @inheritDoc
+     */
+    public function getNotificationSettingPath(): ?string
+    {
+        return 'send.group.user.update';
+    }
+
+    /**
      * @param \Cake\Event\Event $event User delete event
      * @return \App\Notification\Email\EmailCollection
      */
@@ -71,7 +79,9 @@ class GroupUserUpdateEmailRedactor implements SubscribedEmailRedactorInterface
         $emailCollection = new EmailCollection();
 
         $group = $event->getData('group');
-        $updatedGroupsUsers = $event->getData('updatedGroupsUsers');
+        /** @var \App\Model\Dto\EntitiesChangesDto $entitiesChanges */
+        $entitiesChanges = $event->getData('entitiesChanges');
+        $updatedGroupsUsers = $entitiesChanges->getUpdatedEntities(GroupsUser::class);
         $modifiedById = $event->getData('userId');
         $modifiedBy = $this->usersTable->findFirstForEmail($modifiedById);
 
@@ -98,10 +108,17 @@ class GroupUserUpdateEmailRedactor implements SubscribedEmailRedactorInterface
     {
         // Retrieve the users to send an email to.
         $usersIds = Hash::extract($updatedGroupsUsers, '{n}.user_id');
-        $users = $this->usersTable->find('locale')->where(['Users.id IN' => $usersIds]);
-        $whoIsAdmin = Hash::combine($updatedGroupsUsers, '{n}.user_id', '{n}.is_admin');
+        $users = $this->usersTable->find('locale')
+            ->find('notDisabled')
+            ->where(['Users.id IN' => $usersIds]);
 
         $emails = [];
+        if (empty($users)) {
+            return $emails;
+        }
+
+        $whoIsAdmin = Hash::combine($updatedGroupsUsers, '{n}.user_id', '{n}.is_admin');
+
         foreach ($users as $user) {
             $isAdmin = isset($whoIsAdmin[$user->id]) && $whoIsAdmin[$user->id];
             $emails[] = $this->createUpdateMembershipGroupUpdateEmail($user, $isAdmin, $modifiedBy, $group);
@@ -137,6 +154,6 @@ class GroupUserUpdateEmailRedactor implements SubscribedEmailRedactorInterface
         );
         $data = ['body' => ['admin' => $modifiedBy, 'group' => $group, 'isAdmin' => $isAdmin], 'title' => $subject];
 
-        return new Email($recipient->username, $subject, $data, self::TEMPLATE);
+        return new Email($recipient, $subject, $data, self::TEMPLATE);
     }
 }

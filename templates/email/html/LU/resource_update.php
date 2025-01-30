@@ -15,11 +15,13 @@
 use App\Utility\Purifier;
 use App\View\Helper\AvatarHelper;
 use Cake\Routing\Router;
+
 if (PHP_SAPI === 'cli') {
     Router::fullBaseUrl($body['fullBaseUrl']);
 }
 $user = $body['user'];
 $resource = $body['resource'];
+$armoredSecret = $body['armoredSecret'];
 $showUsername = $body['showUsername'];
 $showUri = $body['showUri'];
 $showDescription = $body['showDescription'];
@@ -30,7 +32,7 @@ echo $this->element('Email/module/avatar',[
     'text' => $this->element('Email/module/avatar_text', [
         'user' => $user,
         'datetime' => $resource['modified'],
-        'text' => __('{0} updated the password {1}', Purifier::clean($user['profile']['first_name']), Purifier::clean($resource['name']))
+        'text' => $title,
     ])
 ]);
 
@@ -45,15 +47,14 @@ if ($showUri) {
 if ($showDescription && isset($resource['description'])) {
     $text .= __('Description: {0}', Purifier::clean($resource['description'])) . '<br/>';
 }
+
 echo $this->element('Email/module/text', [
     'text' => $text
 ]);
-if ($showSecret && isset($resource['secrets'][0]['data'])) {
-    echo $this->element('Email/module/code', [
-        'text' => $resource['secrets'][0]['data']
-    ]);
+if ($showSecret && $armoredSecret !== null) {
+    echo $this->element('Email/module/code', ['text' => Purifier::clean($armoredSecret)]);
 }
 echo $this->element('Email/module/button', [
     'url' => Router::url("/app/passwords/view/{$resource['id']}", true),
-    'text' => __('view it in passbolt')
+    'text' => __('View it in passbolt')
 ]);

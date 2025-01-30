@@ -16,6 +16,8 @@ declare(strict_types=1);
  */
 namespace App\Test\Factory;
 
+use App\Model\Entity\Resource;
+use App\Model\Entity\User;
 use Cake\Chronos\Chronos;
 use CakephpFixtureFactories\Factory\BaseFactory as CakephpBaseFactory;
 use Faker\Generator;
@@ -48,9 +50,21 @@ class FavoriteFactory extends CakephpBaseFactory
                 'user_id' => $faker->uuid(),
                 'foreign_key' => $faker->uuid(),
                 'foreign_model' => $faker->uuid(),
-                'created' => Chronos::now()->subDay($faker->randomNumber(4)),
-                'modified' => Chronos::now()->subDay($faker->randomNumber(4)),
+                'created' => Chronos::now()->subDays($faker->randomNumber(4)),
+                'modified' => Chronos::now()->subDays($faker->randomNumber(4)),
             ];
         });
+    }
+
+    public function setUser(User $user): self
+    {
+        return $this->setField('user_id', $user->get('id'));
+    }
+
+    public function setResource(Resource $resource): self
+    {
+        return $this
+            ->setField('foreign_key', $resource->get('id'))
+            ->setField('foreign_model', 'Resource');
     }
 }

@@ -20,8 +20,13 @@ namespace App\Command;
 use Cake\Console\Arguments;
 use Cake\Console\ConsoleIo;
 use Cake\Console\ConsoleOptionParser;
+use Cake\Datasource\ConnectionManager;
+use Cake\Http\Exception\InternalErrorException;
 use Cake\ORM\TableRegistry;
 
+/**
+ * CleanupCommand class
+ */
 class CleanupCommand extends PassboltCommand
 {
     /**
@@ -33,6 +38,9 @@ class CleanupCommand extends PassboltCommand
      * @var array The list of default cleanup jobs to perform.
      */
     private static $defaultCleanups = [
+        'Groups' => [
+            'With No Members',
+        ],
         'GroupsUsers' => [
             'Soft Deleted Users',
             'Hard Deleted Users',
@@ -78,6 +86,36 @@ class CleanupCommand extends PassboltCommand
             'Hard Deleted Profiles',
         ],
     ];
+
+    /**
+     * @var \App\Model\Table\UsersTable
+     */
+    protected $Users;
+
+    /**
+     * @var \App\Model\Table\RolesTable
+     */
+    protected $Roles;
+
+    /**
+     * @var \App\Model\Table\ResourcesTable
+     */
+    protected $Resources;
+
+    /**
+     * @var \App\Model\Table\GroupsUsersTable
+     */
+    protected $GroupsUsers;
+
+    /**
+     * @var \App\Model\Table\PermissionsTable
+     */
+    protected $Permissions;
+
+    /**
+     * @var \App\Model\Table\AuthenticationTokensTable
+     */
+    protected $AuthenticationTokens;
 
     /**
      * Add cleanups jobs.
@@ -126,12 +164,12 @@ class CleanupCommand extends PassboltCommand
     public function initialize(): void
     {
         parent::initialize();
-        $this->loadModel('Users');
-        $this->loadModel('Roles');
-        $this->loadModel('Resources');
-        $this->loadModel('GroupsUsers');
-        $this->loadModel('Permissions');
-        $this->loadModel('AuthenticationTokens');
+        $this->Users = $this->fetchTable('Users');
+        $this->Roles = $this->fetchTable('Roles');
+        $this->Resources = $this->fetchTable('Resources');
+        $this->GroupsUsers = $this->fetchTable('GroupsUsers');
+        $this->Permissions = $this->fetchTable('Permissions');
+        $this->AuthenticationTokens = $this->fetchTable('AuthenticationTokens');
 
         if (!isset(self::$cleanups)) {
             self::resetCleanups();
@@ -141,14 +179,23 @@ class CleanupCommand extends PassboltCommand
     /**
      * @inheritDoc
      */
+    public static function getCommandDescription(): string
+    {
+        return __('Identify and fix database relational integrity issues.');
+    }
+
+    /**
+     * @inheritDoc
+     */
     public function buildOptionParser(ConsoleOptionParser $parser): ConsoleOptionParser
     {
-        $parser->setDescription(__('Cleanup and fix issues in database.'))
-            ->addOption('dry-run', [
-                'help' => 'Don\'t fix only display report',
-                'default' => 'true',
-                'boolean' => true,
-            ]);
+        $parser = parent::buildOptionParser($parser);
+
+        $parser->addOption('dry-run', [
+            'help' => 'Don\'t fix only display report',
+            'default' => 'true',
+            'boolean' => true,
+        ]);
 
         return $parser;
     }
@@ -170,11 +217,22 @@ class CleanupCommand extends PassboltCommand
         }
         $io->hr();
 
+        try {
+            $this->assertDatabaseState();
+        } catch (InternalErrorException $e) {
+            $io->warning($e->getMessage());
+
+            return $this->successCode();
+        }
+
         $totalErrorCount = 0;
         foreach (self::$cleanups as $tableName => $tableCleanup) {
             $table = TableRegistry::getTableLocator()->get($tableName);
             foreach ($tableCleanup as $i => $cleanupName) {
+                $timeStart = microtime(true);
                 $cleanupMethod = 'cleanup' . str_replace(' ', '', $cleanupName);
+
+                $io->verbose("Clean up start: $tableName:$cleanupMethod");
                 $recordCount = $table->{$cleanupMethod}($dryRun);
                 $totalErrorCount += $recordCount;
                 if ($recordCount) {
@@ -185,6 +243,10 @@ class CleanupCommand extends PassboltCommand
                         $io->out(__('{0} issues fixed in table {1} ({2})', $recordCount, $tableName, $cleanupName));
                     }
                 }
+
+                $timeEnd = microtime(true);
+                $timeExecuted = round($timeEnd - $timeStart, 2);
+                $io->verbose("Cleanup up end ({$timeExecuted}s): $tableName:$cleanupMethod");
             }
         }
 
@@ -200,5 +262,30 @@ class CleanupCommand extends PassboltCommand
         }
 
         return $this->successCode();
+    }
+
+    /**
+     * Runs series of checks to make sure database is in valid state to run the cleanup command.
+     *
+     * @return void
+     * @throws \Cake\Http\Exception\InternalErrorException If database is not in valid state.
+     */
+    private function assertDatabaseState()
+    {
+        // Check 1. Users table exist in db
+        $listTables = ConnectionManager::get('default')->getSchemaCollection()->listTables();
+        if (!in_array('users', $listTables)) {
+            throw new InternalErrorException(
+                __('Cleanup command cannot be executed on an instance having no users table.')
+            );
+        }
+
+        // Check 2. Atleast one active administrator is present
+        $admin = $this->Users->findFirstAdmin();
+        if (is_null($admin)) {
+            throw new InternalErrorException(
+                __('Cleanup command cannot be executed on an instance having no active administrator.')
+            );
+        }
     }
 }

@@ -34,7 +34,7 @@ trait ObjectTrait
             $objectProperties = $object->toArray();
             self::assertTrue(array_key_exists($attributeName, $objectProperties), 'Missing attribute ' . $attributeName);
         } else {
-            parent::assertObjectHasAttribute($attributeName, $object, $message);
+            parent::assertObjectHasProperty($attributeName, $object, $message);
         }
     }
 
@@ -54,7 +54,7 @@ trait ObjectTrait
             $objectProperties = $object->toArray();
             self::assertFalse(array_key_exists($attributeName, $objectProperties));
         } else {
-            parent::assertObjectNotHasAttribute($attributeName, $object, $message);
+            parent::assertObjectNotHasProperty($attributeName, $object, $message);
         }
     }
 
@@ -64,10 +64,24 @@ trait ObjectTrait
      * @param array $attributesNames
      * @param object $object
      */
-    public function assertObjectHasAttributes($attributesNames, $object)
+    public function assertObjectHasAttributes(array $attributesNames, object $object): void
     {
         foreach ($attributesNames as $attributeName) {
             $this->assertObjectHasAttribute($attributeName, $object);
+        }
+    }
+
+    /**
+     * Asserts that an object doesn't have a list of attributes.
+     *
+     * @param array $attributesNames The list of attributes the object should have.
+     * @param object $object The object to test
+     * @return void
+     */
+    public function assertObjectNotHasAttributes(array $attributesNames, object $object): void
+    {
+        foreach ($attributesNames as $attributeName) {
+            $this->assertObjectNotHasAttribute($attributeName, $object);
         }
     }
 }

@@ -32,12 +32,31 @@ use Cake\Http\Exception\NotFoundException;
 use Cake\Validation\Validation;
 
 /**
- * @property \App\Model\Table\ResourcesTable $Resources
- * @property \App\Model\Table\UsersTable $Users
+ * ResourcesDeleteController Class
  */
 class ResourcesDeleteController extends AppController
 {
     public const DELETE_SUCCESS_EVENT_NAME = 'ResourcesDeleteController.delete.success';
+
+    /**
+     * @var \App\Model\Table\ResourcesTable
+     */
+    protected $Resources;
+
+    /**
+     * @var \App\Model\Table\UsersTable
+     */
+    protected $Users;
+
+    /**
+     * @inheritDoc
+     */
+    public function initialize(): void
+    {
+        parent::initialize();
+        $this->Resources = $this->fetchTable('Resources');
+        $this->Users = $this->fetchTable('Users');
+    }
 
     /**
      * Resource Delete action
@@ -53,13 +72,12 @@ class ResourcesDeleteController extends AppController
      */
     public function delete(string $id): void
     {
+        $this->assertJson();
+
         // Check request sanity
         if (!Validation::uuid($id)) {
             throw new BadRequestException(__('The resource identifier should be a valid UUID.'));
         }
-
-        $this->loadModel('Resources');
-        $this->loadModel('Users');
 
         // Retrieve the resource to delete.
         try {
@@ -92,7 +110,7 @@ class ResourcesDeleteController extends AppController
     /**
      * Manage delete errors.
      *
-     * @param Resource $resource entity
+     * @param \App\Model\Entity\Resource $resource entity
      * @throws \Cake\Http\Exception\NotFoundException
      * @throws \App\Error\Exception\ValidationException
      * @return void
@@ -120,7 +138,7 @@ class ResourcesDeleteController extends AppController
     /**
      * Send email notification
      *
-     * @param Resource $resource Resource
+     * @param \App\Model\Entity\Resource $resource Resource
      * @param \Cake\Datasource\ResultSetInterface $users Users who had access to the resource, deleter excluded
      * @return void
      */

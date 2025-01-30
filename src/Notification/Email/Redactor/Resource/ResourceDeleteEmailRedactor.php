@@ -25,6 +25,7 @@ use App\Notification\Email\Email;
 use App\Notification\Email\EmailCollection;
 use App\Notification\Email\SubscribedEmailRedactorInterface;
 use App\Notification\Email\SubscribedEmailRedactorTrait;
+use App\Utility\Purifier;
 use Cake\Event\Event;
 use Cake\ORM\TableRegistry;
 use Passbolt\Locale\Service\LocaleService;
@@ -47,8 +48,15 @@ class ResourceDeleteEmailRedactor implements SubscribedEmailRedactorInterface
     public function __construct(?array $config = [], ?UsersTable $usersTable = null)
     {
         $this->setConfig($config);
-        /** @phpstan-ignore-next-line */
         $this->usersTable = $usersTable ?? TableRegistry::getTableLocator()->get('Users');
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function getNotificationSettingPath(): ?string
+    {
+        return 'send.password.delete';
     }
 
     /**
@@ -71,7 +79,7 @@ class ResourceDeleteEmailRedactor implements SubscribedEmailRedactorInterface
     {
         $emailCollection = new EmailCollection();
 
-        /** @var Resource $resource */
+        /** @var \App\Model\Entity\Resource $resource */
         $resource = $event->getData('resource');
         /** @var string $deletedBy */
         $deletedBy = $event->getData('deletedBy');
@@ -86,6 +94,9 @@ class ResourceDeleteEmailRedactor implements SubscribedEmailRedactorInterface
         $owner = $this->usersTable->findFirstForEmail($deletedBy);
 
         foreach ($users as $user) {
+            if ($user->isDisabled()) {
+                continue;
+            }
             $emailCollection->addEmail($this->createDeleteEmail($user, $owner, $resource));
         }
 
@@ -95,7 +106,7 @@ class ResourceDeleteEmailRedactor implements SubscribedEmailRedactorInterface
     /**
      * @param \App\Model\Entity\User $recipient Email of the recipient user
      * @param \App\Model\Entity\User $owner User who executed the action
-     * @param Resource $resource Resource
+     * @param \App\Model\Entity\Resource $resource Resource
      * @return \App\Notification\Email\Email
      */
     private function createDeleteEmail(User $recipient, User $owner, Resource $resource): Email
@@ -103,12 +114,17 @@ class ResourceDeleteEmailRedactor implements SubscribedEmailRedactorInterface
         $subject = (new LocaleService())->translateString(
             $recipient->locale,
             function () use ($owner, $resource) {
-                return __('{0} deleted the password {1}', $owner->profile->first_name, $resource->name);
+                return __(
+                    '{0} deleted the password {1}',
+                    Purifier::clean($owner->profile->first_name),
+                    Purifier::clean($resource->name)
+                );
             }
         );
         $data = [
             'body' => [
                 'user' => $owner,
+                'subject' => $subject,
                 'resource' => $resource,
                 'showUsername' => $this->getConfig('show.username'),
                 'showUri' => $this->getConfig('show.uri'),
@@ -117,6 +133,6 @@ class ResourceDeleteEmailRedactor implements SubscribedEmailRedactorInterface
             'title' => $subject,
         ];
 
-        return new Email($recipient->username, $subject, $data, self::TEMPLATE);
+        return new Email($recipient, $subject, $data, self::TEMPLATE);
     }
 }

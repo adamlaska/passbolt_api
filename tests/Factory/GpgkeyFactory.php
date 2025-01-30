@@ -55,7 +55,7 @@ class GpgkeyFactory extends CakephpBaseFactory
             return [
                 'armored_key' => $faker->text(),
                 'uid' => $faker->text(128),
-                'key_id' => $faker->text(16),
+                'key_id' => $faker->shuffle('0123456789ABCDEF'),
                 'fingerprint' => $faker->shuffle('ABCDE12345ABCDE12345ABCDE12345ABCDE12345'), // 40 character random upper case
             ];
         });
@@ -85,15 +85,71 @@ class GpgkeyFactory extends CakephpBaseFactory
     }
 
     /**
-     * Set the armored key and fingerprint to Sofia's one
+     * Set the deleted field
+     *
+     * @return $this
+     */
+    public function deleted()
+    {
+        return $this->setField('deleted', true);
+    }
+
+    /**
+     * Set the expires field to the past
+     *
+     * @return $this
+     */
+    public function modifiedYesterday()
+    {
+        return $this->setField('modified', FrozenTime::yesterday());
+    }
+
+    /**
+     * Set the armored key and fingerprint to ada's one
      *
      * @return $this
      */
     public function withValidOpenPGPKey()
     {
+        return $this->withAdaKey();
+    }
+
+    /**
+     * Set the armored key and fingerprint to ada's one
+     *
+     * @return $this
+     */
+    public function withAdaKey()
+    {
         return $this->patchData([
             'armored_key' => file_get_contents(FIXTURES . DS . 'Gpgkeys' . DS . 'ada_public.key'),
             'fingerprint' => '03F60E958F4CB29723ACDF761353B5B15D9B054F',
+        ]);
+    }
+
+    /**
+     * Set the armored key and fingerprint to betty's one
+     *
+     * @return $this
+     */
+    public function withBettyKey()
+    {
+        return $this->patchData([
+            'armored_key' => file_get_contents(FIXTURES . DS . 'Gpgkeys' . DS . 'betty_public.key'),
+            'fingerprint' => 'A754860C3ADE5AB04599025ED3F1FE4BE61D7009',
+        ]);
+    }
+
+    /**
+     * Set the armored key and fingerprint to the given key
+     *
+     * @return $this
+     */
+    public function withKeyInfo(array $keyInfo)
+    {
+        return $this->patchData([
+            'armored_key' => $keyInfo['armored_key'],
+            'fingerprint' => $keyInfo['fingerprint'],
         ]);
     }
 }

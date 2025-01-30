@@ -18,15 +18,24 @@ declare(strict_types=1);
 namespace App\Controller\Resources;
 
 use App\Controller\AppController;
+use App\Database\Type\ISOFormatDateTimeType;
+use Cake\Collection\CollectionInterface;
 use Cake\Core\Configure;
 use Cake\Http\Exception\InternalErrorException;
+use Cake\Utility\Hash;
+use Passbolt\Folders\Model\Behavior\FolderizableBehavior;
+use Passbolt\Metadata\Service\MetadataResourcesRenderService;
 
 /**
- * @property \App\Model\Table\ResourcesTable $Resources
  * @property \BryanCrowe\ApiPagination\Controller\Component\ApiPaginationComponent $ApiPagination
  */
 class ResourcesIndexController extends AppController
 {
+    /**
+     * @var \App\Model\Table\ResourcesTable
+     */
+    protected $Resources;
+
     /**
      * @inheritDoc
      */
@@ -36,6 +45,7 @@ class ResourcesIndexController extends AppController
         $this->loadComponent('ApiPagination', [
             'model' => 'Resources',
         ]);
+        $this->Resources = $this->fetchTable('Resources');
     }
 
     public $paginate = [
@@ -57,7 +67,7 @@ class ResourcesIndexController extends AppController
      */
     public function index()
     {
-        $this->loadModel('Resources');
+        $this->assertJson();
 
         // Retrieve and sanity the query options.
         $whitelist = [
@@ -65,44 +75,66 @@ class ResourcesIndexController extends AppController
                 'creator', 'favorite', 'modifier', 'secret', 'resource-type',
                 'permission', 'permissions', 'permissions.user.profile', 'permissions.group',
             ],
-            'filter' => ['is-favorite', 'is-shared-with-group', 'is-owned-by-me', 'is-shared-with-me', 'has-id'],
+            'filter' => [
+                'is-favorite', 'is-shared-with-group', 'is-owned-by-me',
+                'is-shared-with-me', 'has-id', 'metadata_key_type',
+            ],
         ];
 
         if (Configure::read('passbolt.plugins.tags')) {
             $whitelist['contain'][] = 'tag'; // @deprecate should be tags
             $whitelist['filter'][] = 'has-tag';
         }
+        if (Configure::read('passbolt.plugins.folders')) {
+            $whitelist['filter'][] = 'has-parent';
+        }
         $options = $this->QueryString->get($whitelist);
 
-        // Retrieve the resources.
-        $resources = $this->Resources->findIndex($this->User->id(), $options);
-        $this->_logSecretAccesses($resources->all()->toArray());
+        // Performance improvement: map query result datetime properties to string.
+        ISOFormatDateTimeType::mapDatetimeTypesToMe();
+        $resources = $this->Resources->findIndex($this->User->id(), $options)->disableHydration();
         $this->paginate($resources);
+        $resources = $resources->all();
+        $resources = FolderizableBehavior::unsetPersonalPropertyIfNullOnResultSet($resources);
+        ISOFormatDateTimeType::remapDatetimeTypesToDefault();
+        $this->_logSecretAccesses($resources, $options);
+        $resources = (new MetadataResourcesRenderService())->renderResources($resources->toArray());
         $this->success(__('The operation was successful.'), $resources);
     }
 
     /**
      * Log secrets accesses in secretAccesses table.
      *
-     * @param array $resources resources
+     * @param \Cake\Collection\CollectionInterface $resources resources
+     * @param array $queryOptions The query options
      * @return void
      */
-    protected function _logSecretAccesses(array $resources)
+    protected function _logSecretAccesses(CollectionInterface $resources, array $queryOptions)
     {
+        $containSecret = (bool)Hash::get($queryOptions, 'contain.secret');
+        if (!$containSecret) {
+            return;
+        }
+
         if (!$this->Resources->getAssociation('Secrets')->hasAssociation('SecretAccesses')) {
             return;
         }
 
         foreach ($resources as $resource) {
-            if (!isset($resource->secrets)) {
+            $secrets = Hash::get($resource, 'secrets');
+            if (!isset($secrets)) {
                 continue;
             }
 
-            foreach ($resource->secrets as $secret) {
+            foreach ($secrets as $secret) {
                 try {
-                    $this->Resources->Secrets->SecretAccesses->create($secret, $this->User->getAccessControl());
+                    $this->Resources->Secrets->SecretAccesses->createFromSecretDetails(
+                        $this->User->getAccessControl(),
+                        Hash::get($secret, 'resource_id'),
+                        Hash::get($secret, 'id'),
+                    );
                 } catch (\Exception $e) {
-                    throw new InternalErrorException('Could not log secret access entry.');
+                    throw new InternalErrorException('Could not log secret access entry.', 500, $e);
                 }
             }
         }

@@ -22,13 +22,15 @@ if (PHP_SAPI === 'cli') {
 }
 $admin = $body['admin'];
 $user = $body['user'];
+$clientIp = $body['clientIp'];
+$userAgent = $body['userAgent'];
 $username = Purifier::clean($user['username']);
 $userFirstName = Purifier::clean($user['profile']['first_name']);
 
 echo $this->element('Email/module/avatar',[
-    'url' => AvatarHelper::getAvatarUrl($admin['profile']['avatar']),
+    'url' => AvatarHelper::getAvatarUrl($user['profile']['avatar']),
     'text' => $this->element('Email/module/avatar_text', [
-        'user' => $admin,
+        'user' => $user,
         'datetime' => FrozenTime::now(),
         'text' => $title,
     ])
@@ -38,7 +40,7 @@ $text = ' ' . __('{0} ({1}) just completed an account recovery. Feel free to get
 echo $this->element('Email/module/text', [
     'text' => $text
 ]);
-echo $this->element('Email/module/user_info');
+echo $this->element('Email/module/user_info', compact('userAgent', 'clientIp'));
 
 echo $this->element('Email/module/button', [
     'url' => Router::url('/app/users/view/' . $user['id'] , true),

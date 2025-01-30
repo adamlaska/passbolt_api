@@ -39,6 +39,7 @@ class SubscribedEmailRedactorTraitTest extends TestCase
 
     public function setUp(): void
     {
+        parent::setUp();
         $this->subscriptionManagerMock = $this->createMock(EmailSubscriptionManager::class);
 
         $this->sut = new class implements SubscribedEmailRedactorInterface {
@@ -51,12 +52,19 @@ class SubscribedEmailRedactorTraitTest extends TestCase
                 ];
             }
 
+            /**
+             * @inheritDoc
+             */
+            public function getNotificationSettingPath(): ?string
+            {
+                return null;
+            }
+
             public function onSubscribedEvent(Event $event): EmailCollection
             {
                 return new EmailCollection();
             }
         };
-        parent::setUp();
     }
 
     public function testThatIsInvokableAndCallSubscribe()

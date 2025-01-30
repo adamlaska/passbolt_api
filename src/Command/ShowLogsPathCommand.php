@@ -18,18 +18,15 @@ namespace App\Command;
 
 use Cake\Console\Arguments;
 use Cake\Console\ConsoleIo;
-use Cake\Console\ConsoleOptionParser;
 
 class ShowLogsPathCommand extends PassboltCommand
 {
     /**
      * @inheritDoc
      */
-    public function buildOptionParser(ConsoleOptionParser $parser): ConsoleOptionParser
+    public static function getCommandDescription(): string
     {
-        $parser->setDescription(__('Shows error logs path for the current environment.'));
-
-        return $parser;
+        return __('Shows error logs path for the current environment.');
     }
 
     /**

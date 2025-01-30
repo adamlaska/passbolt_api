@@ -30,6 +30,8 @@ use Cake\ORM\Entity;
  *
  * @property \App\Model\Entity\User $user
  * @property \App\Model\Entity\Avatar|null $avatar
+ *
+ * @property string $full_name Accessor / virtual property (see: `_getFullName()`).
  */
 class Profile extends Entity
 {
@@ -40,7 +42,7 @@ class Profile extends Entity
      * be mass assigned. For security purposes, it is advised to set '*' to false
      * (or remove it), and explicitly make individual fields accessible as needed.
      *
-     * @var array
+     * @var array<string, bool>
      */
     protected $_accessible = [
         'id' => false,
@@ -48,4 +50,14 @@ class Profile extends Entity
         'first_name' => false,
         'last_name' => false,
     ];
+
+    /**
+     * Returns full name.
+     *
+     * @return string
+     */
+    protected function _getFullName(): string
+    {
+        return $this->first_name . ' ' . $this->last_name;
+    }
 }

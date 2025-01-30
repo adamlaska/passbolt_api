@@ -27,22 +27,25 @@ use App\Test\Lib\Model\SecretsModelTrait;
 use App\Test\Lib\Model\UsersModelTrait;
 use App\Test\Lib\Utility\ArrayTrait;
 use App\Test\Lib\Utility\EntityTrait;
-use App\Test\Lib\Utility\ErrorTrait;
+use App\Test\Lib\Utility\ErrorTestTrait;
 use App\Test\Lib\Utility\ObjectTrait;
 use App\Test\Lib\Utility\UserAccessControlTrait;
 use App\Utility\Application\FeaturePluginAwareTrait;
+use App\Utility\UserAction;
 use Cake\Core\Configure;
 use Cake\TestSuite\TestCase;
+use CakephpFixtureFactories\ORM\FactoryTableRegistry;
 use CakephpTestSuiteLight\Fixture\TruncateDirtyTables;
-use Passbolt\EmailDigest\Utility\Digest\DigestsPool;
+use Passbolt\EmailDigest\Utility\Digest\DigestTemplateRegistry;
 use Passbolt\EmailNotificationSettings\Utility\EmailNotificationSettings;
+use Passbolt\MultiFactorAuthentication\MultiFactorAuthenticationPlugin;
 
 abstract class AppTestCase extends TestCase
 {
     use ArrayTrait;
     use CommentsModelTrait;
     use EntityTrait;
-    use ErrorTrait;
+    use ErrorTestTrait;
     use FavoritesModelTrait;
     use FeaturePluginAwareTrait;
     use GroupsModelTrait;
@@ -64,18 +67,28 @@ abstract class AppTestCase extends TestCase
     public function setUp(): void
     {
         parent::setUp();
-        Configure::write('passbolt.plugins.log.enabled', false);
+        // Disable feature plugins listed in default.php
+        $plugins = array_keys(Configure::read('passbolt.plugins'));
+        foreach ($plugins as $plugin) {
+            $this->disableFeaturePlugin(ucfirst($plugin));
+        }
+        $this->disableFeaturePlugin('Log');
+        $this->disableFeaturePlugin('Folders');
+        $this->disableFeaturePlugin(MultiFactorAuthenticationPlugin::class);
         $this->loadRoutes();
-        DigestsPool::clearInstance();
-        EmailNotificationSettings::flushCache();
     }
 
     /**
-     * Tear dow
+     * Tear down
      */
     public function tearDown(): void
     {
+        DigestTemplateRegistry::clearInstance();
+        EmailNotificationSettings::flushCache();
         $this->clearPlugins();
+        FactoryTableRegistry::getTableLocator()->clear();
+        UserAction::destroy();
+
         parent::tearDown();
     }
 

@@ -6,7 +6,7 @@ namespace App\Mailer\Transport;
 /**
  * Smtp Transport class based on the CakePHP one, with tracing capabilities to help with debugging.
  */
-class DebugSmtpTransport extends \Cake\Mailer\Transport\SmtpTransport
+class DebugSmtpTransport extends SmtpTransport
 {
     /**
      * Client / server communication trace.
@@ -33,11 +33,11 @@ class DebugSmtpTransport extends \Cake\Mailer\Transport\SmtpTransport
     /**
      * Add trace in buffer.
      *
-     * @param string $data data sent
+     * @param string|null $data data sent
      * @param array $response response received
      * @return array
      */
-    protected function _bufferTrace($data, $response)
+    protected function _bufferTrace(?string $data, array $response): array
     {
         $entry = [
             'cmd' => $data,
@@ -53,7 +53,7 @@ class DebugSmtpTransport extends \Cake\Mailer\Transport\SmtpTransport
      *
      * @return array
      */
-    public function getTrace()
+    public function getTrace(): array
     {
         return $this->trace;
     }

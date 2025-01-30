@@ -11,6 +11,9 @@
  * @license       https://opensource.org/licenses/AGPL-3.0 AGPL License
  * @link          https://www.passbolt.com Passbolt(tm)
  * @since         3.6.0
+ *
+ * @var string $userAgent
+ * @var string $clientIp
  */
 
 use App\Utility\Purifier;
@@ -18,23 +21,21 @@ use Cake\Core\Configure;
 
 $canSeeUserIp = Configure::read('passbolt.security.userIp');
 $canSeeUserAgent = Configure::read('passbolt.security.userAgent');
-/** @var \Cake\Http\ServerRequest $request */
-$request = $this->getRequest();
 
 $text = '';
 
 if ($canSeeUserAgent) {
-    $text .= "User Agent: <i>" . Purifier::clean($request->getEnv('HTTP_USER_AGENT')) . "</i>";
+    $text .= __('User Agent: ');
+    $text .= "<i>" . Purifier::clean($userAgent) . "</i>";
 }
 if ($canSeeUserIp && $canSeeUserAgent) {
     $text .= "<br/>";
 }
 if ($canSeeUserIp) {
-    $text .= "User IP: <i>" . Purifier::clean($request->clientIp()) . "</i>";
+    $text .= __('User IP: ');
+    $text .= "<i>" . Purifier::clean($clientIp) . "</i>";
 }
 
 echo $this->element('Email/module/text', [
     'text' => $text
 ]);
-
-?>

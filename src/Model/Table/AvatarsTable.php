@@ -24,14 +24,13 @@ use App\Utility\AvatarProcessing;
 use App\View\Helper\AvatarHelper;
 use Cake\Collection\CollectionInterface;
 use Cake\Core\Configure;
-use Cake\Database\Expression\IdentifierExpression;
 use Cake\Event\Event;
+use Cake\Http\Exception\InternalErrorException;
 use Cake\Log\Log;
 use Cake\ORM\Query;
 use Cake\ORM\RulesChecker;
 use Cake\ORM\Table;
 use Cake\Validation\Validator;
-use League\Flysystem\Filesystem;
 use League\Flysystem\FilesystemAdapter;
 use League\Flysystem\Local\LocalFilesystemAdapter;
 use Psr\Http\Message\UploadedFileInterface;
@@ -47,10 +46,10 @@ use Psr\Http\Message\UploadedFileInterface;
  * @method \App\Model\Entity\Avatar[] patchEntities(iterable $entities, array $data, array $options = [])
  * @method \App\Model\Entity\Avatar|false save(\Cake\Datasource\EntityInterface $entity, $options = [])
  * @method \App\Model\Entity\Avatar saveOrFail(\Cake\Datasource\EntityInterface $entity, $options = [])
- * @method \App\Model\Entity\Avatar[]|\Cake\Datasource\ResultSetInterface|false saveMany(iterable $entities, $options = [])
- * @method \App\Model\Entity\Avatar[]|\Cake\Datasource\ResultSetInterface saveManyOrFail(iterable $entities, $options = [])
- * @method \App\Model\Entity\Avatar[]|\Cake\Datasource\ResultSetInterface|false deleteMany(iterable $entities, $options = [])
- * @method \App\Model\Entity\Avatar[]|\Cake\Datasource\ResultSetInterface deleteManyOrFail(iterable $entities, $options = [])
+ * @method iterable<\App\Model\Entity\Avatar>|iterable<\Cake\Datasource\EntityInterface>|false saveMany(iterable $entities, $options = [])
+ * @method iterable<\App\Model\Entity\Avatar>|iterable<\Cake\Datasource\EntityInterface> saveManyOrFail(iterable $entities, $options = [])
+ * @method iterable<\App\Model\Entity\Avatar>|iterable<\Cake\Datasource\EntityInterface>|false deleteMany(iterable $entities, $options = [])
+ * @method iterable<\App\Model\Entity\Avatar>|iterable<\Cake\Datasource\EntityInterface> deleteManyOrFail(iterable $entities, $options = [])
  * @method \Cake\ORM\Query findById(string $id)
  * @mixin \Cake\ORM\Behavior\TimestampBehavior
  */
@@ -61,6 +60,7 @@ class AvatarsTable extends Table
     public const MAX_SIZE = '5MB';
     public const ALLOWED_MIME_TYPES = ['image/jpg', 'image/jpeg', 'image/png', 'image/gif'];
     public const ALLOWED_EXTENSIONS = ['png', 'jpg', 'jpeg', 'gif'];
+    public const FILESYSTEM_ADAPTER_OPTION = 'filesystemAdapter';
 
     /**
      * Initialize method
@@ -161,14 +161,18 @@ class AvatarsTable extends Table
      */
     public function afterSave(Event $event, Avatar $avatar, \ArrayObject $options)
     {
-        (new AvatarsCacheService($this))->storeInCache($avatar);
+        $filesystemAdapter = $this->getFilesystemFromOptions($options);
+        (new AvatarsCacheService($filesystemAdapter))->storeInCache($avatar);
 
         $this->deleteMany($this->find()->where([
-            (new IdentifierExpression('profile_id'))->getIdentifier() => $avatar->get('profile_id'),
-            (new IdentifierExpression('id'))->getIdentifier() . ' <>' => $avatar->get('id'),
-        ]));
-
-        $this->deleteMany($this->find()->where((new IdentifierExpression('data'))->getIdentifier() . ' IS NULL'));
+             'OR' => [
+                 [
+                     'profile_id' => $avatar->get('profile_id'),
+                     'id !=' => $avatar->get('id'),
+                 ],
+                 ['data IS NULL'],
+             ],
+        ]), [self::FILESYSTEM_ADAPTER_OPTION => $filesystemAdapter]);
     }
 
     /**
@@ -181,11 +185,27 @@ class AvatarsTable extends Table
      */
     public function afterDelete(Event $event, Avatar $avatar, \ArrayObject $options)
     {
+        $filesystemAdapter = $this->getFilesystemFromOptions($options);
         try {
-            $this->getFilesystem()->deleteDirectory($avatar->get('id'));
+            $filesystemAdapter->deleteDirectory($avatar->get('id'));
         } catch (\Throwable $exception) {
             Log::warning($exception->getMessage());
         }
+    }
+
+    /**
+     * @param \ArrayObject $options options passed to the after save and after delete events
+     * @return \League\Flysystem\FilesystemAdapter
+     * @throws \Cake\Http\Exception\InternalErrorException if the developer did not pass the adapter in the saving options
+     */
+    public function getFilesystemFromOptions(\ArrayObject $options): FilesystemAdapter
+    {
+        $adapter = $options[self::FILESYSTEM_ADAPTER_OPTION];
+        if (!($adapter instanceof FilesystemAdapter)) {
+            throw new InternalErrorException('The file system adapter was not passed in the event.');
+        }
+
+        return $options[self::FILESYSTEM_ADAPTER_OPTION];
     }
 
     /**
@@ -193,16 +213,32 @@ class AvatarsTable extends Table
      * Used mainly to populate an avatar when no there is no result with the default avatar url.
      *
      * @param \Cake\Collection\CollectionInterface $avatars list of avatars (\App\Model\Entity\Avatar)
+     * @param bool $isHydrationEnabled if hydration is enabled, return an Avatar object, otherwise an array
      * @return mixed
-     * @deprecated the fallback avatar url is handled by the AvatarHelper.
      */
-    public static function formatResults(CollectionInterface $avatars)
+    private static function formatResults(CollectionInterface $avatars, bool $isHydrationEnabled)
     {
-        return $avatars->map(function ($avatar) {
+        return $avatars->map(function ($avatar) use ($isHydrationEnabled) {
+            $sizes = Configure::read('FileStorage.imageSizes.Avatar');
+            $url = [];
+            // Add path for each available size.
+            foreach ($sizes as $size => $filters) {
+                $url[$size] = AvatarHelper::getAvatarUrl([
+                    'id' => $avatar['id'] ?? null,
+                ], $size);
+            }
+
             if (empty($avatar)) {
                 // If avatar is empty, we instantiate one.
                 // The virtual field will take care of retrieving the default avatar.
-                $avatar = new Avatar();
+                $avatar = $isHydrationEnabled ? new Avatar() : [];
+            }
+
+            if ($avatar instanceof Avatar) {
+                $avatar->setVirtual(['url'], true);
+                $avatar->set('url', (object)$url);
+            } else {
+                $avatar['url'] = $url;
             }
 
             return $avatar;
@@ -222,8 +258,8 @@ class AvatarsTable extends Table
                 // Formatter for empty avatars.
                 return $q
                     ->select(['Avatars.id', 'Avatars.profile_id', 'Avatars.created', 'Avatars.modified'])
-                    ->formatResults(function (CollectionInterface $avatars) {
-                        return AvatarsTable::formatResults($avatars);
+                    ->formatResults(function (CollectionInterface $avatars, Query $mainQuery) {
+                        return AvatarsTable::formatResults($avatars, $mainQuery->isHydrationEnabled());
                     });
             },
         ];
@@ -275,22 +311,12 @@ class AvatarsTable extends Table
     }
 
     /**
-     * @return \League\Flysystem\Filesystem
-     * @throws \RuntimeException if the filesystem was not set.
+     * @return \League\Flysystem\FilesystemAdapter
+     * @deprecated used for transferring avatars from the file_storage to the avatars table
      */
-    public function getFilesystem(): Filesystem
+    public function getFilesystem(): FilesystemAdapter
     {
-        return Configure::readOrFail('AvatarFilesystem');
-    }
-
-    /**
-     * @param \League\Flysystem\FilesystemAdapter $adapter Filesystem adapter
-     * @return void
-     * @throws \RuntimeException Will throw an exception if the image storage adapter is not configured.
-     */
-    public function setFilesystem(FilesystemAdapter $adapter): void
-    {
-        Configure::write('AvatarFilesystem', new Filesystem($adapter));
+        return new LocalFilesystemAdapter(TMP . 'avatars');
     }
 
     /**
@@ -300,10 +326,6 @@ class AvatarsTable extends Table
      */
     protected function initializeConfiguration(): void
     {
-        // Per default, use the local file system adapter. This may be overwritten on the fly if needed
-        // e.g. if storing the avatar on a cloud bucket.
-        $this->setFilesystem(new LocalFilesystemAdapter(TMP . 'avatars'));
-
         //  These configurations should be set in the Application::bootstrap() method.
         // However, has a backup, we ensure that on AvatarTable's initialization these
         // configurations are well set.

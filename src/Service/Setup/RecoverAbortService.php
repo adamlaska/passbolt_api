@@ -21,21 +21,22 @@ use App\Model\Entity\AuthenticationToken;
 use App\Model\Entity\User;
 use App\Service\AuthenticationTokens\AuthenticationTokenGetService;
 use App\Service\Users\UserGetService;
-use Cake\Datasource\ModelAwareTrait;
+use Cake\Core\Configure;
 use Cake\Event\EventDispatcherTrait;
 use Cake\Http\Exception\BadRequestException;
 use Cake\Http\Exception\InternalErrorException;
 use Cake\Http\Exception\NotFoundException;
+use Cake\Log\Log;
+use Cake\ORM\Locator\LocatorAwareTrait;
 
 /**
  * Class RecoverAbortService
  *
  * @package App\Service\Setup
- * @property \App\Model\Table\AuthenticationTokensTable $AuthenticationTokens
  */
 class RecoverAbortService
 {
-    use ModelAwareTrait;
+    use LocatorAwareTrait;
     use EventDispatcherTrait;
 
     public const RECOVER_ABORT_EVENT_NAME = 'RecoverAbortService.abort';
@@ -64,7 +65,7 @@ class RecoverAbortService
     }
 
     /**
-     * Return the token or failÎ
+     * Return the token or fail
      *
      * @param string $token token.token
      * @param string $userId User ID
@@ -76,12 +77,16 @@ class RecoverAbortService
             $tokenEntity = (new AuthenticationTokenGetService())
                 ->getActiveNotExpiredOrFail($token, $userId, AuthenticationToken::TYPE_RECOVER);
         } catch (NotFoundException $exception) {
+            if (Configure::read('debug')) {
+                Log::error('getActiveNotExpiredOrFail() failed: ' . $exception->getMessage());
+            }
             throw new BadRequestException(__('The authentication token is not valid.'));
         }
 
-        $this->loadModel('AuthenticationTokens');
+        /** @var \App\Model\Table\AuthenticationTokensTable $authenticationTokensTable */
+        $authenticationTokensTable = $this->fetchTable('AuthenticationTokens');
         $tokenEntity->active = false;
-        if (!$this->AuthenticationTokens->save($tokenEntity)) {
+        if (!$authenticationTokensTable->save($tokenEntity)) {
             throw new InternalErrorException(__('The authentication token could not be saved.'));
         }
     }
@@ -97,7 +102,7 @@ class RecoverAbortService
     protected function getAndAssertUser(string $userId): User
     {
         try {
-            return (new UserGetService())->getActiveNotDeletedOrFail($userId);
+            return (new UserGetService())->getActiveNotDeletedNotDisabledOrFail($userId);
         } catch (NotFoundException $exception) {
             $msg = __('The user does not exist, has not completed the setup or was deleted.');
             throw new BadRequestException($msg);

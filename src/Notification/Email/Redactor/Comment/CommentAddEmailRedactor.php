@@ -17,7 +17,6 @@ declare(strict_types=1);
 
 namespace App\Notification\Email\Redactor\Comment;
 
-use App\Controller\Comments\CommentsAddController;
 use App\Model\Entity\Comment;
 use App\Model\Entity\Resource;
 use App\Model\Entity\Role;
@@ -28,6 +27,7 @@ use App\Notification\Email\Email;
 use App\Notification\Email\EmailCollection;
 use App\Notification\Email\SubscribedEmailRedactorInterface;
 use App\Notification\Email\SubscribedEmailRedactorTrait;
+use App\Service\Comments\CommentsAddService;
 use Cake\Event\Event;
 use Cake\ORM\TableRegistry;
 use Passbolt\Locale\Service\LocaleService;
@@ -58,9 +58,7 @@ class CommentAddEmailRedactor implements SubscribedEmailRedactorInterface
         ?UsersTable $usersTable = null,
         ?ResourcesTable $resourcesTable = null
     ) {
-        /** @phpstan-ignore-next-line  */
         $this->usersTable = $usersTable ?? TableRegistry::getTableLocator()->get('Users');
-        /** @phpstan-ignore-next-line  */
         $this->resourcesTable = $resourcesTable ?? TableRegistry::getTableLocator()->get('Resources');
         $this->setConfig($config);
     }
@@ -73,7 +71,7 @@ class CommentAddEmailRedactor implements SubscribedEmailRedactorInterface
     public function getSubscribedEvents(): array
     {
         return [
-            CommentsAddController::ADD_SUCCESS_EVENT_NAME,
+            CommentsAddService::ADD_SUCCESS_EVENT_NAME,
         ];
     }
 
@@ -90,11 +88,11 @@ class CommentAddEmailRedactor implements SubscribedEmailRedactorInterface
 
         // Find the users that have access to the resource (including via their groups)
         $options = ['contain' => ['role'], 'filter' => ['has-access' => [$comment->foreign_key]]];
-        $users = $this->usersTable->findIndex(Role::USER, $options)->find('locale');
-        if ($users->count() < 2) {
-            // if there is nobody or just one user, give it up
-            return $emailCollection;
-        }
+        $users = $this->usersTable
+            ->findIndex(Role::USER, $options)
+            ->find('locale')
+            ->find('notDisabled')
+            ->all();
 
         $creator = $this->usersTable->findFirstForEmail($comment->created_by);
         $resource = $this->resourcesTable->get($comment->foreign_key);
@@ -114,7 +112,7 @@ class CommentAddEmailRedactor implements SubscribedEmailRedactorInterface
     /**
      * @param \App\Model\Entity\User $recipient User to notify
      * @param \App\Model\Entity\User $creator Creator of the comment
-     * @param Resource $resource Resource on which a comment was added
+     * @param \App\Model\Entity\Resource $resource Resource on which a comment was added
      * @param \App\Model\Entity\Comment $comment Comment added
      * @return \App\Notification\Email\Email
      */
@@ -137,6 +135,14 @@ class CommentAddEmailRedactor implements SubscribedEmailRedactorInterface
             'title' => $subject,
         ];
 
-        return new Email($recipient->username, $subject, $data, self::TEMPLATE);
+        return new Email($recipient, $subject, $data, self::TEMPLATE);
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function getNotificationSettingPath(): ?string
+    {
+        return 'send.comment.add';
     }
 }

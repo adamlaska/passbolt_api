@@ -17,6 +17,9 @@ declare(strict_types=1);
 
 namespace App\Test\TestCase\Controller\Comments;
 
+use App\Test\Factory\CommentFactory;
+use App\Test\Factory\ResourceFactory;
+use App\Test\Factory\UserFactory;
 use App\Test\Lib\AppIntegrationTestCase;
 use App\Test\Lib\Model\CommentsModelTrait;
 use App\Utility\UuidFactory;
@@ -25,16 +28,16 @@ class CommentsViewControllerTest extends AppIntegrationTestCase
 {
     use CommentsModelTrait;
 
-    public $fixtures = [
-        'app.Base/Users', 'app.Base/Profiles', 'app.Base/Roles', 'app.Base/Groups', 'app.Base/GroupsUsers',
-        'app.Base/Permissions', 'app.Base/Resources', 'app.Base/Comments',
-    ];
-
-    public function testCommentsViewSuccess()
+    public function testCommentsViewController_Success(): void
     {
-        $resourceId = UuidFactory::uuid('resource.id.apache');
-        $this->authenticateAs('ada');
-        $this->getJson("/comments/resource/$resourceId.json?api-version=2");
+        $user = UserFactory::make()->user()->persist();
+        $resource = ResourceFactory::make()->withCreatorAndPermission($user)->persist();
+        $comment = CommentFactory::make()->withUser($user)->withResource($resource)->persist();
+        CommentFactory::make()->withUser($user)->withResource($resource)->withParent($comment)->persist();
+        $resourceId = $resource->get('id');
+        $this->logInAs($user);
+
+        $this->getJson("/comments/resource/$resourceId.json");
         $this->assertSuccess();
         $this->assertGreaterThan(0, count($this->_responseJsonBody));
 
@@ -49,10 +52,14 @@ class CommentsViewControllerTest extends AppIntegrationTestCase
         $this->assertObjectNotHasAttribute('creator', $this->_responseJsonBody[0]);
     }
 
-    public function testCommentsViewContainSuccess()
+    public function testCommentsViewController_ContainSuccess(): void
     {
-        $resourceId = UuidFactory::uuid('resource.id.apache');
-        $this->authenticateAs('ada');
+        $user = UserFactory::make()->user()->persist();
+        $resource = ResourceFactory::make()->withCreatorAndPermission($user)->persist();
+        CommentFactory::make()->withUser($user)->withResource($resource)->withCreatorAndModifier($user)->persist();
+        $resourceId = $resource->get('id');
+        $this->logInAs($user);
+
         $urlParameter = 'contain[modifier]=1&contain[creator]=1';
         $this->getJson("/comments/resource/$resourceId.json?$urlParameter&api-version=2");
         $this->assertSuccess();
@@ -66,34 +73,59 @@ class CommentsViewControllerTest extends AppIntegrationTestCase
         $this->assertUserAttributes($this->_responseJsonBody[0]->creator);
     }
 
-    public function testCommentsViewErrorNotFound()
+    public function testCommentsViewController_Error_NotFound(): void
     {
-        $this->authenticateAs('ada');
-        // jquery is soft deleted. Hence, not reachable.
-        $resourceId = UuidFactory::uuid('Resource.id.jquery');
-        $this->getJson("/comments/resource/$resourceId.json?api-version=v2");
+        $user = UserFactory::make()->user()->persist();
+        // Resource is soft-deleted. Hence, not reachable.
+        $resourceId = ResourceFactory::make()
+            ->withCreatorAndPermission($user)
+            ->setDeleted()
+            ->persist()
+            ->get('id');
+        $this->logInAs($user);
+
+        $this->getJson("/comments/resource/$resourceId.json");
+
         $this->assertError(404, 'Could not find comments for the requested model');
     }
 
-    public function testCommentsViewErrorWrongModelNameParameter()
+    public function testCommentsViewController_Error_WrongModelNameParameter(): void
     {
-        $resourceId = UuidFactory::uuid('resource.id.apache');
-        $this->authenticateAs('ada');
-        $this->getJson("/comments/WrongModelName/$resourceId.json?api-version=v2");
+        $user = UserFactory::make()->user()->persist();
+        $resourceId = ResourceFactory::make()->withCreatorAndPermission($user)->persist()->get('id');
+        $this->logInAs($user);
+
+        $this->getJson("/comments/WrongModelName/$resourceId.json");
+
         $this->assertBadRequestError('Invalid model name');
     }
 
-    public function testCommentsViewErrorWrongUuidParameter()
+    public function testCommentsViewController_Error_WrongUuidParameter(): void
     {
-        $this->authenticateAs('ada');
-        $this->getJson('/comments/resource/wrong-uuid.json?api-version=v2');
+        $this->logInAsUser();
+        $this->getJson('/comments/resource/wrong-uuid.json');
         $this->assertBadRequestError('Invalid id');
     }
 
-    public function testCommentsViewErrorNotAuthenticated()
+    public function testCommentsViewController_Erro_NotAuthenticated(): void
     {
-        $resourceId = UuidFactory::uuid('resource.id.apache');
-        $this->getJson("/comments/resource/$resourceId.json?api-version=v2");
+        $resourceId = UuidFactory::uuid();
+        $this->getJson("/comments/resource/$resourceId.json");
         $this->assertAuthenticationError();
+    }
+
+    /**
+     * Check that calling url without JSON extension throws a 404
+     */
+    public function testCommentsViewController_Error_NotJson(): void
+    {
+        $user = UserFactory::make()->user()->persist();
+        $resource = ResourceFactory::make()->withCreatorAndPermission($user)->persist();
+        $comment = CommentFactory::make()->withUser($user)->withResource($resource)->persist();
+        CommentFactory::make()->withUser($user)->withResource($resource)->withParent($comment)->persist();
+        $resourceId = $resource->get('id');
+        $this->logInAs($user);
+        $this->get("/comments/resource/$resourceId");
+        $this->assertResponseCode(404);
     }
 }

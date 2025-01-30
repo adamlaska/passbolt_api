@@ -17,45 +17,72 @@ declare(strict_types=1);
 
 namespace App\Test\TestCase\Controller\Secrets;
 
+use App\Model\Entity\Permission;
+use App\Test\Factory\ResourceFactory;
+use App\Test\Factory\UserFactory;
 use App\Test\Lib\AppIntegrationTestCase;
-use App\Utility\UuidFactory;
 
 class SecretsViewControllerTest extends AppIntegrationTestCase
 {
-    public $fixtures = [
-        'app.Base/Users', 'app.Base/Profiles', 'app.Base/Roles', 'app.Base/Secrets',
-    ];
-
-    public function testSecretsViewControllerSuccess()
+    public function testSecretsViewController_Success(): void
     {
-        $this->authenticateAs('dame');
-        $resourceId = UuidFactory::uuid('resource.id.apache');
-        $this->getJson("/secrets/resource/$resourceId.json?api-version=2");
+        $user = UserFactory::make()->user()->persist();
+        $owner = UserFactory::make()->admin()->persist();
+
+        $this->loginAs($user);
+
+        $resourceId = ResourceFactory::make()->withPermissionsFor([$owner], Permission::OWNER)->withSecretsFor([$user])->withPermissionsFor([$user], Permission::READ)->persist()->get('id');
+
+        $this->getJson("/secrets/resource/$resourceId.json");
         $this->assertSuccess();
         $this->assertNotNull($this->_responseJsonBody);
         $this->assertSecretAttributes($this->_responseJsonBody);
     }
 
-    public function testSecretsViewControllerErrorNotAuthenticated()
+    public function testSecretsViewController_Error_NotAuthenticated(): void
     {
-        $resourceId = UuidFactory::uuid('resource.id.apache');
-        $this->getJson("/secrets/resource/$resourceId.json?api-version=2");
+        $admin = UserFactory::make()->admin()->persist();
+
+        $resourceId = ResourceFactory::make()->withCreatorAndPermission($admin)->persist()->get('id');
+
+        $this->getJson("/secrets/resource/$resourceId.json");
         $this->assertAuthenticationError();
     }
 
-    public function testSecretsViewControllerErrorNotValidId()
+    public function testSecretsViewController_Error_NotValidId(): void
     {
-        $this->authenticateAs('dame');
+        $user = UserFactory::make()->user()->persist();
+        $this->loginAs($user);
+
         $resourceId = 'invalid-id';
-        $this->getJson("/secrets/resource/$resourceId.json?api-version=2");
+
+        $this->getJson("/secrets/resource/$resourceId.json");
         $this->assertError(400, 'The resource identifier should be a valid UUID.');
     }
 
-    public function testSecretsViewControllerErrorNotFound()
+    public function testSecretsViewController_Error_NotFound(): void
     {
-        $this->authenticateAs('ada');
-        $resourceId = UuidFactory::uuid('resource.id.april');
-        $this->getJson("/secrets/resource/$resourceId.json?api-version=2");
+        $user = UserFactory::make()->user()->persist();
+        $this->loginAs($user);
+
+        $resourceOwner = UserFactory::make()->user()->persist();
+        $resourceId = ResourceFactory::make()->withCreatorAndPermission($resourceOwner)->withPermissionsFor([$user], Permission::READ)->persist()->get('id');
+
+        $this->getJson("/secrets/resource/$resourceId.json");
         $this->assertError(404, 'The secret does not exist.');
+    }
+
+    /**
+     * Check that calling url without JSON extension throws a 404
+     */
+    public function testSecretsViewController_Error_NotJson(): void
+    {
+        $user = UserFactory::make()->persist();
+        $resourceId = ResourceFactory::make()->withCreatorAndPermission($user)->persist()->get('id');
+        $this->logInAs($user);
+
+        $this->get("/secrets/resource/{$resourceId}");
+
+        $this->assertResponseCode(404);
     }
 }

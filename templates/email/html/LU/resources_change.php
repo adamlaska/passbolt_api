@@ -12,7 +12,6 @@
  * @link          https://www.passbolt.com Passbolt(tm)
  * @since         2.0.0
  */
-use App\Utility\Purifier;
 use App\View\Helper\AvatarHelper;
 use Cake\Routing\Router;
 use Cake\I18n\FrozenTime;
@@ -22,13 +21,14 @@ if (PHP_SAPI === 'cli') {
 }
 $user = $body['user'];
 $count = $body['count'];
+$subject = $body['subject'];
 
 echo $this->element('Email/module/avatar',[
     'url' => AvatarHelper::getAvatarUrl($user['profile']['avatar']),
     'text' => $this->element('Email/module/avatar_text', [
         'user' => $user,
         'datetime' => new FrozenTime(),
-        'text' => __('Edited multiple resources')
+        'text' => $subject,
     ])
 ]);
 
@@ -40,6 +40,6 @@ echo $this->element('Email/module/text', [
 ]);
 
 echo $this->element('Email/module/button', [
-    'url' => Router::url("/app/passwords/view", true),
-    'text' => __('view them in passbolt')
+    'url' => Router::url('/', true),
+    'text' => __('View them in passbolt')
 ]);

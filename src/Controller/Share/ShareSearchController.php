@@ -24,11 +24,25 @@ use Cake\Collection\CollectionInterface;
 use Cake\ORM\Query;
 
 /**
- * @property \App\Model\Table\UsersTable $Users
- * @property \App\Model\Table\GroupsTable $Groups
+ * ShareSearchController Class
  */
 class ShareSearchController extends AppController
 {
+    /**
+     * @var \App\Model\Table\UsersTable
+     */
+    protected $Users;
+
+    /**
+     * @var \App\Model\Table\GroupsTable
+     */
+    protected $Groups;
+
+    /**
+     * Limits the query results to this number.
+     */
+    private const LIMIT = 25;
+
     /**
      * Share search potential user or group to share with
      *
@@ -36,17 +50,29 @@ class ShareSearchController extends AppController
      */
     public function searchArosToShareWith()
     {
-        $this->loadModel('Users');
-        $this->loadModel('Groups');
+        $this->assertJson();
+
+        $this->Users = $this->fetchTable('Users');
+        $this->Groups = $this->fetchTable('Groups');
 
         // Build the find options.
         $whitelist = [
             'filter' => ['search'],
+            'contain' => ['groups_users', 'gpgkey', 'role'],
         ];
         $options = $this->QueryString->get($whitelist);
 
-        $groups = $this->_searchGroups($options);
-        $users = $this->_searchUsers($options);
+        if (!empty($options['contain'])) {
+            // By default, disable all the contains and only set what is requested.
+            $containDefault = ['groups_users' => false, 'gpgkey' => false, 'role' => false];
+
+            $options['contain'] = array_merge($containDefault, $options['contain']);
+        }
+
+        // Paginating two different models is non-convention, we set a limit here to improve performance.
+        // This is a quick win but in future will be refactored properly to implement pagination of some sort.
+        $groups = $this->_searchGroups($options)->limit(self::LIMIT);
+        $users = $this->_searchUsers($options)->limit(self::LIMIT);
 
         $aros = $users->all()->append($groups);
         $output = $this->_formatResult($aros);

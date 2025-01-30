@@ -20,6 +20,8 @@ namespace App\Notification\Email;
 use App\Utility\Purifier;
 use Cake\Core\Configure;
 use Cake\ORM\TableRegistry;
+use Cake\Routing\Router;
+use Cake\Utility\Text;
 use EmailQueue\Model\Table\EmailQueueTable;
 
 /**
@@ -28,7 +30,7 @@ use EmailQueue\Model\Table\EmailQueueTable;
  * @package App\Notification\Email
  *
  * Its sole purpose is to send emails. It encapsulates the logic on how the email is sent.
- * In practices it uses the EmailQueue plugin enqueue. Ultimate send responsibility is deferred to a
+ * In practice, it uses the EmailQueue plugin enqueue. Ultimate send responsibility is deferred to a
  * separated command line task (triggered manually or via cron job).
  */
 class EmailSender
@@ -58,7 +60,6 @@ class EmailSender
         ?string $appFullBaseUrl = null,
         ?bool $purifySubject = false
     ) {
-        /** @phpstan-ignore-next-line */
         $this->emailQueue = $emailQueue ?? TableRegistry::getTableLocator()->get('EmailQueue.EmailQueue');
         $this->appFullBaseUrl = $appFullBaseUrl ?? Configure::read('App.fullBaseUrl');
         $this->purifySubject = $purifySubject ?? Configure::read('passbolt.email.purify.subject');
@@ -92,7 +93,11 @@ class EmailSender
             'subject' => $this->purifySubject($email->getSubject()),
             'format' => 'html',
             'config' => 'default',
-            'headers' => ['Auto-Submitted' => 'auto-generated'],
+            'headers' => [
+                'Auto-Submitted' => 'auto-generated',
+                // Set message-id header which is by default disabled in the lorenzo/cakephp-email-queue plugin.
+                'Message-ID' => self::getMessageId(),
+            ],
         ];
     }
 
@@ -100,7 +105,7 @@ class EmailSender
      * @param string $subject Subject to purify
      * @return string
      */
-    private function purifySubject(string $subject): string
+    public function purifySubject(string $subject): string
     {
         if ($this->purifySubject) {
             $subject = Purifier::clean($subject);
@@ -112,15 +117,51 @@ class EmailSender
     }
 
     /**
+     * Set the full base URL at the body level for the email content
+     * and at the higher level for the layout
+     *
      * @param \App\Notification\Email\Email $email Email to send
      * @return \App\Notification\Email\Email
      */
     private function addFullBaseUrlToEmail(Email $email): Email
     {
         return $email->withData(array_merge_recursive($email->getData(), [
+            'fullBaseUrl' => $this->appFullBaseUrl,
             'body' => [
                 'fullBaseUrl' => $this->appFullBaseUrl,
             ],
         ]));
+    }
+
+    /**
+     * Returns a string that can be used directly in Message-ID header.
+     *
+     * @return string
+     *
+     * Original implementation:
+     * @see https://github.com/cakephp/cakephp/blob/4.x/src/Mailer/Message.php#L924
+     */
+    public static function getMessageId(): string
+    {
+        $domain = self::getDomainFromFullBaseUrl();
+
+        // example: <e8c3db0628f41ea86a03dc53d16d11a@domain.com>
+        return '<' . str_replace('-', '', Text::uuid()) . '@' . $domain . '>';
+    }
+
+    /**
+     * Returns domain part from `Router::url()`.
+     *
+     * @return string The domain value or empty string if unable to parse host.
+     */
+    private static function getDomainFromFullBaseUrl(): string
+    {
+        $parts = parse_url(Router::url('/', true));
+
+        if (!isset($parts['host'])) {
+            return '';
+        }
+
+        return $parts['host'];
     }
 }

@@ -19,48 +19,35 @@ namespace App\Test\TestCase\Service\Avatars;
 
 use App\Model\Entity\Avatar;
 use App\Service\Avatars\AvatarsCacheService;
+use App\Test\Lib\Model\AvatarsIntegrationTestTrait;
 use App\Utility\UuidFactory;
+use Cake\ORM\Table;
 use Cake\ORM\TableRegistry;
 use Cake\TestSuite\TestCase;
-use CakephpTestSuiteLight\Fixture\TruncateDirtyTables;
 use Laminas\Diactoros\Stream;
-use League\Flysystem\Local\LocalFilesystemAdapter;
 
 /**
  * @covers \App\Service\Avatars\AvatarsCacheService
  */
 class AvatarsCacheServiceTest extends TestCase
 {
-    use TruncateDirtyTables;
+    use AvatarsIntegrationTestTrait;
 
-    /**
-     * @var \App\Model\Table\AvatarsTable
-     */
-    public $Avatars;
+    public AvatarsCacheService $avatarsCacheService;
 
-    /**
-     * @var AvatarsCacheService
-     */
-    public $avatarsCacheService;
-
-    /**
-     * @var string
-     */
-    public $cachedFileLocation = TMP . 'tests' . DS . 'avatars' . DS;
+    public ?Table $Avatars = null;
 
     public function setUp(): void
     {
         parent::setUp();
+
         $this->Avatars = TableRegistry::getTableLocator()->get('Avatars');
-        $this->Avatars->setFilesystem(new LocalFilesystemAdapter($this->cachedFileLocation));
-        $this->avatarsCacheService = new AvatarsCacheService($this->Avatars);
+        $this->avatarsCacheService = new AvatarsCacheService($this->filesystemAdapter);
     }
 
     public function tearDown(): void
     {
-        $this->Avatars->getFilesystem()->deleteDirectory('.');
         unset($this->Avatars);
-        unset($this->avatarsCacheService);
         parent::tearDown();
     }
 

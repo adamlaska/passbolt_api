@@ -19,45 +19,40 @@ namespace App\Controller\Resources;
 
 use App\Controller\AppController;
 use App\Service\Resources\ResourcesAddService;
-use Cake\Event\EventInterface;
+use Passbolt\Folders\Model\Behavior\FolderizableBehavior;
+use Passbolt\Metadata\Model\Dto\MetadataResourceDto;
+use Passbolt\Metadata\Service\MetadataResourcesRenderService;
+use Passbolt\Metadata\Utility\MetadataPopulateUserKeyIdTrait;
 
 /**
- * @property \App\Model\Table\ResourcesTable $Resources
  * @property \App\Model\Table\UsersTable $Users
  */
 class ResourcesAddController extends AppController
 {
-    /**
-     * @var \App\Service\Resources\ResourcesAddService
-     */
-    protected $resourcesAddService;
-
-    /**
-     * @inheritDoc
-     */
-    public function initialize(): void
-    {
-        parent::initialize();
-        $this->loadModel('Resources');
-
-        $this->resourcesAddService = new ResourcesAddService();
-
-        $this->createAfterSaveEvent();
-    }
+    use MetadataPopulateUserKeyIdTrait;
 
     /**
      * Resource Add action
      *
+     * @param \App\Service\Resources\ResourcesAddService $resourcesAddService Service adding the resource
      * @return void
      * @throws \Exception
      * @throws \App\Error\Exception\ValidationException if the resource is not valid.
      * @throws \Cake\Http\Exception\ServiceUnavailableException if parallel requests lead to a table lock albeit multiple attempts.
      */
-    public function add()
+    public function add(ResourcesAddService $resourcesAddService)
     {
-        $resource = $this->resourcesAddService->add(
-            $this->User->id(),
-            $this->getRequest()->getData()
+        $this->assertJson();
+
+        // Massage the user provided data
+        $data = $this->getRequest()->getData();
+        $data = $this->populatedMetadataUserKeyId($this->User->id(), $data);
+        $resourceDto = new MetadataResourceDto($data);
+
+        // Add the new resource
+        $resource = $resourcesAddService->add(
+            $this->User->getAccessControl(),
+            $resourceDto
         );
 
         // Retrieve the saved resource.
@@ -67,28 +62,12 @@ class ResourcesAddController extends AppController
                 'secret' => true, 'permission' => true,
             ],
         ];
-        $resource = $this->Resources->findView($this->User->id(), $resource->id, $options)->first();
+        /** @var \App\Model\Table\ResourcesTable $Resources */
+        $Resources = $this->fetchTable('Resources');
+        $resource = $Resources->findView($this->User->id(), $resource->id, $options)->first();
+        $resource = FolderizableBehavior::unsetPersonalPropertyIfNull($resource->toArray());
+        $resource = (new MetadataResourcesRenderService())->renderResource($resource, $resourceDto->isV5());
 
         $this->success(__('The resource has been added successfully.'), $resource);
-    }
-
-    /**
-     * Create the after save events on the Resources table.
-     *
-     * @return void
-     */
-    protected function createAfterSaveEvent(): void
-    {
-        $this->Resources->getEventManager()->on(
-            'Model.afterSave',
-            ['priority' => 1],
-            function (EventInterface $event, $resource) {
-                $this->resourcesAddService->afterSave(
-                    $resource,
-                    $this->User->getAccessControl(),
-                    $this->getRequest()->getData()
-                );
-            }
-        );
     }
 }

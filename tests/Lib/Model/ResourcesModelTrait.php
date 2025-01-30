@@ -18,9 +18,11 @@ namespace App\Test\Lib\Model;
 
 use App\Model\Entity\Resource;
 use App\Model\Table\PermissionsTable;
+use App\Test\Factory\ResourceFactory;
 use App\Utility\UuidFactory;
 use Cake\Core\Configure;
 use Cake\ORM\TableRegistry;
+use Passbolt\Metadata\Model\Dto\MetadataResourceDto;
 
 trait ResourcesModelTrait
 {
@@ -85,7 +87,7 @@ trait ResourcesModelTrait
      * - Secrets.
      * - Folders if folders enabled.
      *
-     * @param Resource $resource
+     * @param \App\Model\Entity\Resource $resource Resource entity.
      * @param string $userId
      * @param array $data
      */
@@ -166,6 +168,15 @@ trait ResourcesModelTrait
         $this->assertObjectHasAttributes($attributes, $resource);
     }
 
+    protected function assertResourceV5Attributes($resource)
+    {
+        $attributes = array_merge(
+            ['id', 'deleted', 'created', 'modified', 'created_by', 'modified_by'],
+            MetadataResourceDto::V5_META_PROPS
+        );
+        $this->assertObjectHasAttributes($attributes, $resource);
+    }
+
     /**
      * Assert that a user has not access to a or multiple resources
      *
@@ -215,7 +226,7 @@ trait ResourcesModelTrait
      */
     protected function assertResourceIsSoftDeleted($id)
     {
-        $resource = $this->Resources->get($id);
+        $resource = ResourceFactory::get($id);
         $this->assertTrue($resource->deleted);
     }
 
@@ -226,7 +237,7 @@ trait ResourcesModelTrait
      */
     protected function assertResourceIsNotSoftDeleted($id)
     {
-        $resource = $this->Resources->get($id);
+        $resource = ResourceFactory::get($id);
         $this->assertFalse($resource->deleted);
     }
 

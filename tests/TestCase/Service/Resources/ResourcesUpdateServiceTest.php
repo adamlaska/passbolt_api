@@ -37,6 +37,7 @@ use Cake\Http\Exception\ForbiddenException;
 use Cake\Http\Exception\NotFoundException;
 use Cake\ORM\TableRegistry;
 use Cake\Utility\Hash;
+use Passbolt\Metadata\Model\Dto\MetadataResourceDto;
 
 /**
  * \App\Service\Resources\ResourcesUpdateService Test Case
@@ -81,6 +82,14 @@ class ResourcesUpdateServiceTest extends AppTestCase
         $this->service = new ResourcesUpdateService();
     }
 
+    public function tearDown(): void
+    {
+        parent::tearDown();
+        unset($this->resourcesTable);
+        unset($this->secretsTable);
+        unset($this->service);
+    }
+
     public function testUpdateResourcesSuccess_UpdateResourceMeta()
     {
         [$r1, $r2, $userAId] = $this->insertFixture_UpdateResourceMeta();
@@ -94,7 +103,7 @@ class ResourcesUpdateServiceTest extends AppTestCase
             'uri' => 'https://r1-updated.com',
             'description' => 'R1 description updated',
         ];
-        $this->service->update($uac, $r1->id, $data);
+        $this->service->update($uac, $r1->id, new MetadataResourceDto($data));
 
         // Assert R1 meta have been updated
         $r1Updated = $this->resourcesTable->findById($r1->id)->first();
@@ -142,7 +151,8 @@ class ResourcesUpdateServiceTest extends AppTestCase
                 ['user_id' => $userCId, 'data' => $r1EncryptedSecretC],
             ],
         ];
-        $this->service->update($uac, $r1->id, $data);
+
+        $this->service->update($uac, $r1->id, new MetadataResourceDto($data));
 
         // Assert R1 secrets have been updated
         $r1SecretA = $this->secretsTable->findByResourceIdAndUserId($r1->id, $userAId)->first();
@@ -151,7 +161,6 @@ class ResourcesUpdateServiceTest extends AppTestCase
         $this->assertEquals($r1EncryptedSecretB, $r1SecretB->data);
         $r1SecretC = $this->secretsTable->findByResourceIdAndUserId($r1->id, $userCId)->first();
         $this->assertEquals($r1EncryptedSecretC, $r1SecretC->data);
-
         // Assert R1 meta has not been updated except for the modified field.
         $r1Updated = $this->resourcesTable->findById($r1->id)->first();
         $this->assertEquals('R1', $r1Updated->name);
@@ -160,7 +169,6 @@ class ResourcesUpdateServiceTest extends AppTestCase
         $this->assertEquals('R1 description', $r1Updated->description);
         $this->assertEquals('R1', $r1Updated->name);
         $this->assertGreaterThan($r1->modified, $r1Updated->modified);
-
         // Assert R2 secrets have not been updated
         $r2AfterUpdateSecretA = $this->secretsTable->findByResourceIdAndUserId($r2->id, $userAId)->first();
         $this->assertEquals($r2SecretA->data, $r2AfterUpdateSecretA->data);
@@ -198,7 +206,7 @@ class ResourcesUpdateServiceTest extends AppTestCase
         ];
 
         try {
-            $this->service->update($uac, $r1->id, $data);
+            $this->service->update($uac, $r1->id, new MetadataResourceDto($data));
             $this->assertFalse(true, 'The test should catch an exception');
         } catch (ValidationException $e) {
             $this->assertEquals('Could not validate resource data.', $e->getMessage());
@@ -230,7 +238,7 @@ class ResourcesUpdateServiceTest extends AppTestCase
         ];
 
         try {
-            $this->service->update($uac, $r1->id, $data);
+            $this->service->update($uac, $r1->id, new MetadataResourceDto($data));
             $this->assertFalse(true, 'The test should catch an exception');
         } catch (ValidationException $e) {
             $this->assertEquals('Could not validate resource data.', $e->getMessage());
@@ -266,7 +274,7 @@ class ResourcesUpdateServiceTest extends AppTestCase
         ];
 
         try {
-            $this->service->update($uac, $r1->id, $data);
+            $this->service->update($uac, $r1->id, new MetadataResourceDto($data));
             $this->assertFalse(true, 'The test should catch an exception');
         } catch (ForbiddenException $e) {
             $this->assertEquals('You are not allowed to update this resource.', $e->getMessage());
@@ -293,24 +301,7 @@ class ResourcesUpdateServiceTest extends AppTestCase
         $notFoundId = UuidFactory::uuid();
 
         try {
-            $this->service->update($uac, $notFoundId);
-            $this->assertFalse(true, 'The test should catch an exception');
-        } catch (NotFoundException $e) {
-            $this->assertEquals('The resource does not exist.', $e->getMessage());
-        }
-    }
-
-    public function testUpdateResourcesError_NoAccessToResource()
-    {
-        [$r1, $userAId, $userBId] = $this->insertFixture_UpdateResourcesError_InsufficientPermission();
-        $userCId = UuidFactory::uuid('user.id.carol');
-        $uac = new UserAccessControl(Role::USER, $userCId);
-        $data = [
-            'name' => 'R1 updated',
-        ];
-
-        try {
-            $this->service->update($uac, $r1->id, $data);
+            $this->service->update($uac, $notFoundId, new MetadataResourceDto());
             $this->assertFalse(true, 'The test should catch an exception');
         } catch (NotFoundException $e) {
             $this->assertEquals('The resource does not exist.', $e->getMessage());

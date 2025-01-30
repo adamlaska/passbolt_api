@@ -20,40 +20,66 @@ use App\Controller\AppController;
 use App\Error\Exception\CustomValidationException;
 use App\Model\Entity\Permission;
 use App\Model\Entity\Role;
+use App\Model\Entity\Secret;
 use App\Model\Entity\User;
 use App\Model\Table\PermissionsTable;
+use App\Service\Resources\ResourcesExpireResourcesServiceInterface;
+use Cake\Core\Configure;
 use Cake\Event\Event;
 use Cake\Http\Exception\BadRequestException;
 use Cake\Http\Exception\ForbiddenException;
 use Cake\Http\Exception\InternalErrorException;
 use Cake\Http\Exception\NotFoundException;
 use Cake\ORM\RulesChecker;
+use Cake\ORM\TableRegistry;
 use Cake\Utility\Hash;
 use Cake\Validation\Validation;
+use Passbolt\Metadata\Model\Dto\MetadataResourceDto;
+use Passbolt\Metadata\Service\MetadataResourcesRenderService;
 
 /**
- * @property \App\Model\Table\UsersTable $Users
- * @property \App\Model\Table\GroupsTable $Groups
- * @property \App\Model\Table\GroupsUsersTable $GroupsUsers
- * @property \App\Model\Table\PermissionsTable $Permissions
- * @property \App\Model\Table\ResourcesTable $Resources
+ * UsersDeleteController Class
  */
 class UsersDeleteController extends AppController
 {
     public const DELETE_SUCCESS_EVENT_NAME = 'UsersDeleteController.delete.success';
 
     /**
+     * @var \App\Model\Table\UsersTable
+     */
+    protected $Users;
+
+    /**
+     * @var \App\Model\Table\GroupsTable
+     */
+    protected $Groups;
+
+    /**
+     * @var \App\Model\Table\GroupsUsersTable
+     */
+    protected $GroupsUsers;
+
+    /**
+     * @var \App\Model\Table\PermissionsTable
+     */
+    protected $Permissions;
+
+    /**
+     * @var \App\Model\Table\ResourcesTable
+     */
+    protected $Resources;
+
+    /**
      * @inheritDoc
      */
-    public function beforeFilter(\Cake\Event\EventInterface $event)
+    public function initialize(): void
     {
-        $this->loadModel('Users');
-        $this->loadModel('Groups');
-        $this->loadModel('GroupsUsers');
-        $this->loadModel('Permissions');
-        $this->loadModel('Resources');
-
-        return parent::beforeFilter($event);
+        parent::initialize();
+        $this->Users = $this->fetchTable('Users');
+        $this->Groups = $this->fetchTable('Groups');
+        $this->GroupsUsers = $this->fetchTable('GroupsUsers');
+        $this->Permissions = $this->fetchTable('Permissions');
+        $this->Resources = $this->fetchTable('Resources');
     }
 
     /**
@@ -64,6 +90,8 @@ class UsersDeleteController extends AppController
      */
     public function dryrun(string $id)
     {
+        $this->assertJson();
+
         $user = $this->_validateRequestData($id);
         $this->_validateDelete($user);
         $this->success(__('The user can be deleted.'));
@@ -73,11 +101,16 @@ class UsersDeleteController extends AppController
      * User delete action
      *
      * @param string $id user uuid
-     * @throws \Exception if user cannot be deleted
+     * @param \App\Service\Resources\ResourcesExpireResourcesServiceInterface $resourcesExpireResourcesService Service to expire resources that were consumed by users who lost access to them.
      * @return void
+     * @throws \Exception if user cannot be deleted
      */
-    public function delete(string $id)
-    {
+    public function delete(
+        string $id,
+        ResourcesExpireResourcesServiceInterface $resourcesExpireResourcesService
+    ) {
+        $this->assertJson();
+
         $user = $this->_validateRequestData($id);
         // keep a list of group the user was a member of. Useful to notify the group managers after the delete
         $groupIdsNotOnlyMember = $this->GroupsUsers
@@ -86,16 +119,20 @@ class UsersDeleteController extends AppController
             ->extract('group_id')
             ->toArray();
 
-        $this->GroupsUsers->getConnection()->transactional(function () use ($user) {
+        $this->GroupsUsers->getConnection()->transactional(function () use ($user, $resourcesExpireResourcesService) {
             $this->_transferGroupsManagers($user);
             $this->_transferContentOwners($user);
             $this->_validateDelete($user);
-            if (!$this->Users->softDelete($user, ['checkRules' => false])) {
+            $entitiesChanges = $this->Users->softDelete($user, ['checkRules' => false]);
+            if (!$entitiesChanges) {
                 throw new InternalErrorException('Could not delete the user, please try again later.');
             }
+            $deletedSecrets = $entitiesChanges->getDeletedEntities(Secret::class);
+            $resourcesExpireResourcesService->expireResourcesForSecrets($deletedSecrets);
         });
 
         $this->_notifyUsers($user, $groupIdsNotOnlyMember);
+
         $this->success(__('The user has been deleted successfully.'));
     }
 
@@ -118,7 +155,7 @@ class UsersDeleteController extends AppController
         if (!Validation::uuid($id)) {
             throw new BadRequestException(__('The user identifier should be a valid UUID.'));
         }
-        // An admin cannot delete themeselves
+        // An admin cannot delete themselves
         if ($id === $this->User->id()) {
             throw new BadRequestException(__('You are not allowed to delete yourself.'));
         }
@@ -176,8 +213,30 @@ class UsersDeleteController extends AppController
                     $findResourcesOptions['contain']['permissions.user.profile'] = true;
                     $findResourcesOptions['contain']['permissions.group'] = true;
                     $resources = $this->Resources->findAllByIds($user->id, $resourcesIds, $findResourcesOptions);
+                    $resources = $this->formatResources($resources->toArray());
                     $body['errors']['resources']['sole_owner'] = $resources;
                     $msg .= ' ' . $errors['id']['soleOwnerOfSharedContent'];
+                }
+
+                if (Configure::read('passbolt.plugins.folders.enabled')) {
+                    $foldersIds = $this->Permissions
+                        ->findSharedAcosByAroIsSoleOwner(PermissionsTable::FOLDER_ACO, $user->id, [
+                            'checkGroupsUsers' => true,
+                        ])
+                        ->all()
+                        ->extract('aco_foreign_key')
+                        ->toArray();
+                    if ($foldersIds) {
+                        $findFoldersOptions = [];
+                        $findFoldersOptions['contain']['permissions.user.profile'] = true;
+                        $findFoldersOptions['contain']['permissions.group'] = true;
+                        $findFoldersOptions['filter']['has-id'] = $foldersIds;
+                        /** @var \Passbolt\Folders\Model\Table\FoldersTable $foldersTable */
+                        $foldersTable = TableRegistry::getTableLocator()->get('Passbolt/Folders.Folders');
+                        $folders = $foldersTable->findIndex($user->id, $findFoldersOptions);
+                        $body['errors']['folders']['sole_owner'] = $folders;
+                        $msg .= ' ' . $errors['id']['soleOwnerOfSharedContent'];
+                    }
                 }
             }
 
@@ -270,6 +329,15 @@ class UsersDeleteController extends AppController
             ->all()
             ->extract('aco_foreign_key')
             ->toArray();
+
+        if (Configure::read('passbolt.plugins.folders.enabled')) {
+            $foldersIdsBlockingDelete = $this->Permissions
+                ->findSharedAcosByAroIsSoleOwner(PermissionsTable::FOLDER_ACO, $user->id, ['checkGroupsUsers' => true])
+                ->all()
+                ->extract('aco_foreign_key')
+                ->toArray();
+            $contentIdBlockingDelete = array_merge($contentIdBlockingDelete, $foldersIdsBlockingDelete);
+        }
         sort($contentIdBlockingDelete);
 
         // If all the resources that are requiring a change are not satisfied, throw an exception.
@@ -302,5 +370,25 @@ class UsersDeleteController extends AppController
             'deletedBy' => $this->User->id(),
         ]);
         $this->getEventManager()->dispatch($event);
+    }
+
+    /**
+     * Formats resource array fields according to V4/V5.
+     *
+     * @param \App\Model\Entity\Resource[] $resources Resources array to format.
+     * @return array
+     */
+    private function formatResources(array $resources): array
+    {
+        $metadataResourcesRenderService = new MetadataResourcesRenderService();
+        $result = [];
+
+        foreach ($resources as $resource) {
+            $resource = $resource->toArray();
+            $dto = MetadataResourceDto::fromArray($resource);
+            $result[] = $metadataResourcesRenderService->renderResource($resource, $dto->isV5());
+        }
+
+        return $result;
     }
 }

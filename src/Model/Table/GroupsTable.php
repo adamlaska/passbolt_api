@@ -17,11 +17,15 @@ declare(strict_types=1);
 namespace App\Model\Table;
 
 use App\Error\Exception\ValidationException;
+use App\Model\Dto\EntitiesChangesDto;
 use App\Model\Entity\Group;
 use App\Model\Rule\IsNotSoftDeletedRule;
 use App\Model\Rule\IsNotSoleOwnerOfSharedResourcesRule;
+use App\Model\Traits\Cleanup\TableCleanupTrait;
 use App\Model\Traits\Groups\GroupsFindersTrait;
+use App\Service\Secrets\SecretsFindSecretsAccessibleViaGroupOnlyService;
 use App\Utility\UserAccessControl;
+use Cake\Core\Configure;
 use Cake\Event\Event;
 use Cake\Http\Exception\InternalErrorException;
 use Cake\ORM\RulesChecker;
@@ -48,16 +52,17 @@ use Cake\Validation\Validator;
  * @property \App\Model\Table\PermissionsTable&\Cake\ORM\Association\HasMany $Permissions
  * @method \App\Model\Entity\Group newEmptyEntity()
  * @method \App\Model\Entity\Group saveOrFail(\Cake\Datasource\EntityInterface $entity, $options = [])
- * @method \App\Model\Entity\Group[]|\Cake\Datasource\ResultSetInterface|false saveMany(iterable $entities, $options = [])
- * @method \App\Model\Entity\Group[]|\Cake\Datasource\ResultSetInterface saveManyOrFail(iterable $entities, $options = [])
- * @method \App\Model\Entity\Group[]|\Cake\Datasource\ResultSetInterface|false deleteMany(iterable $entities, $options = [])
- * @method \App\Model\Entity\Group[]|\Cake\Datasource\ResultSetInterface deleteManyOrFail(iterable $entities, $options = [])
+ * @method iterable<\App\Model\Entity\Group>|iterable<\Cake\Datasource\EntityInterface>|false saveMany(iterable $entities, $options = [])
+ * @method iterable<\App\Model\Entity\Group>|iterable<\Cake\Datasource\EntityInterface> saveManyOrFail(iterable $entities, $options = [])
+ * @method iterable<\App\Model\Entity\Group>|iterable<\Cake\Datasource\EntityInterface>|false deleteMany(iterable $entities, $options = [])
+ * @method iterable<\App\Model\Entity\Group>|iterable<\Cake\Datasource\EntityInterface> deleteManyOrFail(iterable $entities, $options = [])
  * @method \Cake\ORM\Query findById(string $id)
  * @method \Cake\ORM\Query findByIdAndGroupId(string $id, string $groupId)
  */
 class GroupsTable extends Table
 {
     use GroupsFindersTrait;
+    use TableCleanupTrait;
 
     public const GROUP_CREATE_SUCCESS_EVENT_NAME = 'Model.Groups.create.success';
 
@@ -242,14 +247,14 @@ class GroupsTable extends Table
 
         // Check validation rules.
         $group = $this->buildEntity($data);
-        if (!empty($group->getErrors())) {
+        if ($group->getErrors()) {
             throw new ValidationException(__('Could not validate group data.'), $group, $this);
         }
 
         $groupSaved = $this->save($group);
 
         // Check for validation errors. (associated models too).
-        if (!empty($group->getErrors())) {
+        if ($group->getErrors()) {
             throw new ValidationException(__('Could not validate group data.'), $group, $this);
         }
 
@@ -290,12 +295,16 @@ class GroupsTable extends Table
      * Delete all UserGroups association entries
      * Delete all Permissions associated with this group
      *
+     * Using a service here would require vast refactoring in Active Directory.
+     * It is however recommended refactoring this method within a service.
+     *
      * @throws \InvalidArgumentException if $group is not a valid group entity
      * @param \App\Model\Entity\Group $group entity
      * @param array|null $options additional delete options such as ['checkRules' => true]
-     * @return bool status
+     * @return \App\Model\Dto\EntitiesChangesDto|bool The list of entities changes, false if a validation error occurred.
+     * @see PasswordExpiryOnDeleteGroupEventListener::expireResourcesOnDeletedGroup
      */
-    public function softDelete(Group $group, ?array $options = null): bool
+    public function softDelete(Group $group, ?array $options = null)
     {
         // Check the delete rules like a normal operation
         if (!isset($options['checkRules'])) {
@@ -306,6 +315,21 @@ class GroupsTable extends Table
                 return false;
             }
         }
+
+        $entitiesChanges = new EntitiesChangesDto();
+
+        // Delete the secrets group users will lose the access to.
+        $groupUsersIds = $this->GroupsUsers->findByGroupId($group->id)
+            ->select('user_id')->all()->extract('user_id')->toArray();
+        $secretsFindSecretsAccessibleViaGroupOnlyService = new SecretsFindSecretsAccessibleViaGroupOnlyService();
+        $secretsToDelete = $secretsFindSecretsAccessibleViaGroupOnlyService->find(
+            $group->id,
+            $groupUsersIds,
+            PermissionsTable::RESOURCE_ACO
+        )->select(['id', 'resource_id', 'user_id'])->all()->toArray();
+
+        $this->Permissions->Resources->Secrets->deleteMany($secretsToDelete);
+        $entitiesChanges->pushDeletedEntities($secretsToDelete);
 
         // find all the resources that only belongs to the group and mark them as deleted
         // Note: all resources that cannot be deleted should have been
@@ -320,16 +344,29 @@ class GroupsTable extends Table
             $Resources->softDeleteAll($resourceIds);
         }
 
+        if (Configure::read('passbolt.plugins.folders.enabled')) {
+            // Find all the folders that only belongs to the deleted group and delete them.
+            // Note: all folders that cannot be deleted should have been transferred to other people already.
+            $foldersIds = $this->Permissions->findAcosOnlyAroCanAccess(PermissionsTable::FOLDER_ACO, $group->id)
+                ->all()
+                ->extract('aco_foreign_key')->toArray();
+            if (!empty($foldersIds)) {
+                $foldersTable = TableRegistry::getTableLocator()->get('Passbolt/Folders.Folders');
+                $foldersRelationsTable = TableRegistry::getTableLocator()->get('Passbolt/Folders.FoldersRelations');
+                $foldersTable->deleteAll(['id IN' => $foldersIds]);
+                $foldersRelationsTable
+                    ->deleteAll(['foreign_id IN' => $foldersIds]);
+                $foldersRelationsTable
+                    ->updateAll(['folder_parent_id' => null], ['folder_parent_id IN ' => $foldersIds]);
+            }
+        }
+
         // Delete all group memberships
         $this->GroupsUsers->deleteAll(['group_id' => $group->id]);
 
         // Delete all permissions
         // Delete all the secrets that lost permissions in the process
         $this->Permissions->deleteAll(['aro_foreign_key' => $group->id]);
-
-        /** @var \App\Model\Table\SecretsTable $Secrets */
-        $Secrets = TableRegistry::getTableLocator()->get('Secrets');
-        $Secrets->cleanupHardDeletedPermissions();
 
         // Mark group as deleted
         $group->deleted = true;
@@ -338,6 +375,23 @@ class GroupsTable extends Table
             throw new InternalErrorException($msg);
         }
 
-        return true;
+        return $entitiesChanges;
+    }
+
+    /**
+     * Delete all groups records with no members(groups_users).
+     *
+     * @param bool $dryRun false
+     * @return int Number of affected records
+     */
+    public function cleanupWithNoMembers(bool $dryRun = false): int
+    {
+        $query = $this->selectQuery()
+            ->select(['id'])
+            ->leftJoinWith('GroupsUsers')
+            ->whereNull('GroupsUsers.id')
+            ->where([$this->aliasField('deleted') => 0]);
+
+        return $this->cleanupHardDeleted('GroupsUsers', $dryRun, $query);
     }
 }

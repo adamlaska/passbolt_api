@@ -18,18 +18,34 @@ declare(strict_types=1);
 namespace App\Controller\Resources;
 
 use App\Controller\AppController;
-use App\Model\Entity\Resource;
 use Cake\Http\Exception\BadRequestException;
 use Cake\Http\Exception\InternalErrorException;
 use Cake\Http\Exception\NotFoundException;
 use Cake\Validation\Validation;
 use Exception;
+use Passbolt\Folders\Model\Behavior\FolderizableBehavior;
+use Passbolt\Metadata\Model\Dto\MetadataResourceDto;
+use Passbolt\Metadata\Service\MetadataResourcesRenderService;
 
 /**
- * @property \App\Model\Table\ResourcesTable $Resources
+ * ResourcesViewController Class
  */
 class ResourcesViewController extends AppController
 {
+    /**
+     * @var \App\Model\Table\ResourcesTable
+     */
+    protected $Resources;
+
+    /**
+     * @inheritDoc
+     */
+    public function initialize(): void
+    {
+        parent::initialize();
+        $this->Resources = $this->fetchTable('Resources');
+    }
+
     /**
      * Resource View action
      *
@@ -40,11 +56,12 @@ class ResourcesViewController extends AppController
      */
     public function view(string $id): void
     {
+        $this->assertJson();
+
         // Check request sanity
         if (!Validation::uuid($id)) {
             throw new BadRequestException(__('The resource identifier should be a valid UUID.'));
         }
-        $this->loadModel('Resources');
 
         // Retrieve and sanity the query options.
         $whitelist = ['contain' => [
@@ -59,6 +76,9 @@ class ResourcesViewController extends AppController
         if (empty($resource)) {
             throw new NotFoundException(__('The resource does not exist.'));
         }
+        $resource = FolderizableBehavior::unsetPersonalPropertyIfNull($resource->toArray());
+        $resourceDto = MetadataResourceDto::fromArray($resource);
+        $resource = (new MetadataResourcesRenderService())->renderResource($resource, $resourceDto->isV5());
 
         // Log secret access.
         $this->_logSecretAccesses($resource);
@@ -69,23 +89,23 @@ class ResourcesViewController extends AppController
     /**
      * Log secrets accesses in secretAccesses table.
      *
-     * @param Resource $resource resource
+     * @param array $resource resource
      * @return void
      */
-    protected function _logSecretAccesses(Resource $resource): void
+    protected function _logSecretAccesses(array $resource): void
     {
         $Secrets = $this->Resources->getAssociation('Secrets');
-        if (!isset($resource->secrets) || !$Secrets->hasAssociation('SecretAccesses')) {
+        if (!isset($resource['secrets']) || !$Secrets->hasAssociation('SecretAccesses')) {
             return;
         }
 
-        foreach ($resource->secrets as $secret) {
+        foreach ($resource['secrets'] as $secret) {
             try {
                 /** @var \Passbolt\Log\Model\Table\SecretAccessesTable $SecretAccesses */
                 $SecretAccesses = $Secrets->getAssociation('SecretAccesses');
-                $SecretAccesses->create($secret, $this->User->getAccessControl());
+                $SecretAccesses->createFromSecretEntity($this->User->getAccessControl(), $secret);
             } catch (Exception $e) {
-                throw new InternalErrorException('Could not log secret access entry.');
+                throw new InternalErrorException('Could not log secret access entry.', 500, $e);
             }
         }
     }

@@ -16,7 +16,6 @@ declare(strict_types=1);
  */
 namespace App\Model\Table;
 
-use App\Utility\PassboltText;
 use Cake\ORM\RulesChecker;
 use Cake\ORM\Table;
 use Cake\Validation\Validator;
@@ -36,10 +35,10 @@ use Cake\Validation\Validator;
  * @property \App\Model\Table\AvatarsTable&\Cake\ORM\Association\HasOne $Avatars
  * @method \App\Model\Entity\Profile newEmptyEntity()
  * @method \App\Model\Entity\Profile saveOrFail(\Cake\Datasource\EntityInterface $entity, $options = [])
- * @method \App\Model\Entity\Profile[]|\Cake\Datasource\ResultSetInterface|false saveMany(iterable $entities, $options = [])
- * @method \App\Model\Entity\Profile[]|\Cake\Datasource\ResultSetInterface saveManyOrFail(iterable $entities, $options = [])
- * @method \App\Model\Entity\Profile[]|\Cake\Datasource\ResultSetInterface|false deleteMany(iterable $entities, $options = [])
- * @method \App\Model\Entity\Profile[]|\Cake\Datasource\ResultSetInterface deleteManyOrFail(iterable $entities, $options = [])
+ * @method iterable<\App\Model\Entity\Profile>|iterable<\Cake\Datasource\EntityInterface>|false saveMany(iterable $entities, $options = [])
+ * @method iterable<\App\Model\Entity\Profile>|iterable<\Cake\Datasource\EntityInterface> saveManyOrFail(iterable $entities, $options = [])
+ * @method iterable<\App\Model\Entity\Profile>|iterable<\Cake\Datasource\EntityInterface>|false deleteMany(iterable $entities, $options = [])
+ * @method iterable<\App\Model\Entity\Profile>|iterable<\Cake\Datasource\EntityInterface> deleteManyOrFail(iterable $entities, $options = [])
  */
 class ProfilesTable extends Table
 {
@@ -127,24 +126,5 @@ class ProfilesTable extends Table
         $rules->add($rules->existsIn(['user_id'], 'Users'));
 
         return $rules;
-    }
-
-    /**
-     * Event fired before request data is converted into entities
-     * Ucfirst firstname and lastname
-     *
-     * @param \Cake\Event\Event $event event
-     * @param \ArrayObject $data data
-     * @param \ArrayObject $options options
-     * @return void
-     */
-    public function beforeMarshal(\Cake\Event\Event $event, \ArrayObject $data, \ArrayObject $options)
-    {
-        if (isset($data['first_name'])) {
-            $data['first_name'] = PassboltText::ucfirst($data['first_name']);
-        }
-        if (isset($data['last_name'])) {
-            $data['last_name'] = PassboltText::ucfirst($data['last_name']);
-        }
     }
 }

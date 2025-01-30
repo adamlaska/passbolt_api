@@ -16,6 +16,7 @@ declare(strict_types=1);
  */
 namespace App\Command;
 
+use App\Service\Command\ProcessUserService;
 use Cake\Console\Arguments;
 use Cake\Console\ConsoleIo;
 use Cake\Console\ConsoleOptionParser;
@@ -34,11 +35,34 @@ class MigratePostgresCommand extends PassboltCommand
     ];
 
     /**
+     * @var \App\Service\Command\ProcessUserService
+     */
+    protected ProcessUserService $processUserService;
+
+    /**
+     * @param \App\Service\Command\ProcessUserService $processUserService Process user service.
+     */
+    public function __construct(ProcessUserService $processUserService)
+    {
+        parent::__construct();
+
+        $this->processUserService = $processUserService;
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public static function getCommandDescription(): string
+    {
+        return __('Re-runs the migrations required by Postgres.');
+    }
+
+    /**
      * @inheritDoc
      */
     public function buildOptionParser(ConsoleOptionParser $parser): ConsoleOptionParser
     {
-        $parser->setDescription(__('Re-runs the migrations required by Postgres.'));
+        $parser = parent::buildOptionParser($parser);
 
         $this->addDatasourceOption($parser);
 
@@ -54,9 +78,7 @@ class MigratePostgresCommand extends PassboltCommand
 
         // Root user is not allowed to execute this command.
         // This command needs to be executed with the same user as the webserver.
-        if (!$this->assertNotRoot($io)) {
-            return $this->errorCode();
-        }
+        $this->assertCurrentProcessUser($io, $this->processUserService);
 
         /** @var \Cake\Database\Connection $connection */
         $connection = ConnectionManager::get($args->getOption('datasource'));
@@ -82,8 +104,7 @@ class MigratePostgresCommand extends PassboltCommand
      */
     public function deletePostgresRelevantMigrations(Connection $connection): void
     {
-        $connection->newQuery()
-            ->delete('phinxlog')
+        $connection->deleteQuery('phinxlog')
             ->where(['phinxlog.migration_name IN' => self::POSTGRES_RELEVANT_MIGRATIONS,])
             ->execute();
     }

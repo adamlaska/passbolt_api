@@ -28,9 +28,18 @@ class DropTablesCommand extends PassboltCommand
     /**
      * @inheritDoc
      */
+    public static function getCommandDescription(): string
+    {
+        return __('Drop all the tables. Dangerous but useful for a full reinstall.');
+    }
+
+    /**
+     * @inheritDoc
+     */
     public function buildOptionParser(ConsoleOptionParser $parser): ConsoleOptionParser
     {
-        $parser->setDescription(__('Drop all the tables. Dangerous but useful for a full reinstall.'));
+        $parser = parent::buildOptionParser($parser);
+
         $this->addDatasourceOption($parser, false);
 
         return $parser;
@@ -45,11 +54,11 @@ class DropTablesCommand extends PassboltCommand
 
         $datasource = $args->getOption('datasource');
         $connection = ConnectionManager::get($datasource);
-        $tables = ConnectionManager::get('default')->getSchemaCollection()->listTables();
+        $tables = ConnectionManager::get($datasource)->getSchemaCollection()->listTables();
         foreach ($tables as $table) {
             $io->out(__('Dropping table ' . $table));
             $quotedTableName = $connection->getDriver()->quoteIdentifier($table);
-            $connection->query("drop table {$quotedTableName};");
+            $connection->execute("drop table {$quotedTableName};");
         }
         $this->success(__('{0} tables dropped', count($tables)), $io);
 

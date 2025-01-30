@@ -16,10 +16,11 @@ declare(strict_types=1);
  */
 namespace App\Test\TestCase\Controller\Notifications;
 
-use App\Model\Entity\Role;
+use App\Test\Factory\AuthenticationTokenFactory;
+use App\Test\Factory\RoleFactory;
+use App\Test\Factory\UserFactory;
 use App\Test\Lib\AppIntegrationTestCase;
 use App\Test\Lib\Model\EmailQueueTrait;
-use Cake\ORM\TableRegistry;
 use Passbolt\EmailNotificationSettings\Test\Lib\EmailNotificationSettingsTestTrait;
 
 class UsersAddNotificationTest extends AppIntegrationTestCase
@@ -27,41 +28,18 @@ class UsersAddNotificationTest extends AppIntegrationTestCase
     use EmailNotificationSettingsTestTrait;
     use EmailQueueTrait;
 
-    public $fixtures = [
-        'app.Base/Users', 'app.Base/Gpgkeys', 'app.Base/GroupsUsers', 'app.Base/Roles',
-        'app.Base/Profiles',
-    ];
-
-    public function testUserAddNotificationDisabled()
+    public function testUserAddNotification_NotificationDisabled(): void
     {
         $this->setEmailNotificationSetting('send.user.create', false);
-        $username = 'new@passbolt.com';
 
-        $this->authenticateAs('admin');
-        $roles = TableRegistry::getTableLocator()->get('Roles');
-        $this->postJson('/users.json', [
-                'username' => $username,
-                'role_id' => $roles->getIdByName(Role::ADMIN),
-                'profile' => [
-                    'first_name' => 'new',
-                    'last_name' => 'user',
-                ],
-            ]);
-        $this->assertResponseSuccess();
+        RoleFactory::make()->guest()->persist();
+        $role = RoleFactory::make()->user()->persist();
+        $admin = UserFactory::make()->admin()->active()->persist();
 
-        // check email notification
-        $this->assertEmailWithRecipientIsInNotQueue($username);
-    }
-
-    public function testUserAddNotificationSuccess()
-    {
-        $this->setEmailNotificationSetting('send.user.create', true);
-
-        $this->authenticateAs('admin');
-        $roles = TableRegistry::getTableLocator()->get('Roles');
+        $this->logInAs($admin);
         $this->postJson('/users.json', [
             'username' => 'new.user@passbolt.com',
-            'role_id' => $roles->getIdByName(Role::ADMIN),
+            'role_id' => $role->id,
             'profile' => [
                 'first_name' => 'new',
                 'last_name' => 'user',
@@ -70,6 +48,48 @@ class UsersAddNotificationTest extends AppIntegrationTestCase
         $this->assertResponseSuccess();
 
         // check email notification
-        $this->assertEmailInBatchContains('just created an account for you', 'new.user@passbolt.com');
+        $this->assertEmailQueueIsEmpty();
+    }
+
+    public function testUserAddNotification_NotificationEnabled(): void
+    {
+        $this->setEmailNotificationSetting('send.user.create', true);
+
+        RoleFactory::make()->guest()->persist();
+        $role = RoleFactory::make()->user()->persist();
+        $admin = UserFactory::make()
+            ->admin()
+            ->active()
+            ->with('Profiles', [
+                'first_name' => '<Steve>',
+                'last_name' => 'Doe',
+            ])
+            ->persist();
+
+        $firstName = 'John\'s';
+        $lastName = 'O\'Connor';
+        $username = 'new@passbolt.com';
+        $this->logInAs($admin);
+        $this->postJson('/users.json', [
+            'username' => $username,
+            'role_id' => $role->id,
+            'profile' => [
+                'first_name' => $firstName,
+                'last_name' => $lastName,
+            ],
+        ]);
+        $this->assertResponseSuccess();
+        $userId = $this->_responseJsonBody->id;
+
+        // check email notification
+        $this->assertEmailInBatchContains(
+            [
+                $admin->profile->first_name . ' just created an account for you',
+                $admin->profile->first_name . ' just invited you to join passbolt',
+                'Welcome ' . $firstName,
+                '/setup/start/' . $userId . '/' . AuthenticationTokenFactory::firstOrFail()->token,
+            ],
+            $username
+        );
     }
 }

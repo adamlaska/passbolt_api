@@ -23,20 +23,32 @@ use App\Notification\Email\Email;
 use App\Notification\Email\EmailCollection;
 use App\Notification\Email\SubscribedEmailRedactorInterface;
 use App\Notification\Email\SubscribedEmailRedactorTrait;
-use Cake\Datasource\ModelAwareTrait;
+use App\Utility\Purifier;
 use Cake\Event\Event;
+use Cake\ORM\Locator\LocatorAwareTrait;
 use Cake\ORM\Query;
 use Passbolt\Locale\Service\LocaleService;
 
 /**
  * Class UserDeleteEmailRedactor
- *
- * @property \App\Model\Table\UsersTable $Users
  */
 class UserDeleteEmailRedactor implements SubscribedEmailRedactorInterface
 {
-    use ModelAwareTrait;
+    use LocatorAwareTrait;
     use SubscribedEmailRedactorTrait;
+
+    /**
+     * @var \App\Model\Table\UsersTable
+     */
+    protected $Users;
+
+    /**
+     * @inheritDoc
+     */
+    public function getNotificationSettingPath(): ?string
+    {
+        return 'send.group.user.delete';
+    }
 
     /**
      * @param \Cake\Event\Event $event User delete event
@@ -44,7 +56,9 @@ class UserDeleteEmailRedactor implements SubscribedEmailRedactorInterface
      */
     public function onSubscribedEvent(Event $event): EmailCollection
     {
-        $this->loadModel('Users');
+        /** @var \App\Model\Table\UsersTable $usersTable */
+        $usersTable = $this->fetchTable('Users');
+        $this->Users = $usersTable;
         $emailCollection = new EmailCollection();
 
         $user = $event->getData('user');
@@ -85,6 +99,7 @@ class UserDeleteEmailRedactor implements SubscribedEmailRedactorInterface
 
         // This is ugly CakePHP https://github.com/cakephp/cakephp/issues/15689
         return $this->Users->find('locale')
+            ->find('notDisabled')
             ->group($this->Users->aliasField('id'))
             ->select($this->Users)
             ->contain('GroupsUsers.Groups', function (Query $q) use ($filter) {
@@ -107,12 +122,16 @@ class UserDeleteEmailRedactor implements SubscribedEmailRedactorInterface
         $subject = (new LocaleService())->translateString(
             $recipient->locale,
             function () use ($deletedBy, $user) {
-                return __('{0} deleted user {1}', $deletedBy->profile->first_name, $user->profile->first_name);
+                return __(
+                    '{0} deleted user {1}',
+                    Purifier::clean($deletedBy->profile->first_name),
+                    Purifier::clean($user->profile->first_name)
+                );
             }
         );
 
         return new Email(
-            $recipient->username,
+            $recipient,
             $subject,
             ['body' => ['user' => $user, 'groups' => $groups, 'admin' => $deletedBy], 'title' => $subject],
             'GM/user_delete'

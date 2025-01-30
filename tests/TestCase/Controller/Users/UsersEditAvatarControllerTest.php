@@ -20,38 +20,23 @@ use App\Test\Factory\AvatarFactory;
 use App\Test\Factory\RoleFactory;
 use App\Test\Factory\UserFactory;
 use App\Test\Lib\AppIntegrationTestCase;
-use App\Test\Lib\Model\AvatarsModelTrait;
+use App\Test\Lib\Model\AvatarsIntegrationTestTrait;
 use App\Utility\UuidFactory;
-use Cake\ORM\TableRegistry;
 
 class UsersEditAvatarControllerTest extends AppIntegrationTestCase
 {
-    use AvatarsModelTrait;
-
-    public $localFileStorageListener = null;
-    public $imageProcessingListener = null;
-
-    /**
-     * @var \App\Model\Table\AvatarsTable $Avatars
-     */
-    public $Avatars;
+    use AvatarsIntegrationTestTrait;
 
     public function setUp(): void
     {
         parent::setUp();
-        $this->Avatars = TableRegistry::getTableLocator()->get('Avatars');
-        $this->setTestLocalFilesystemAdapter();
         RoleFactory::make()->guest()->persist();
+        // Mock user agent and IP
+        $this->mockUserAgent('PHPUnit');
+        $this->mockUserIp();
     }
 
-    public function tearDown(): void
-    {
-        $this->Avatars->getFilesystem()->deleteDirectory('.');
-        unset($this->Avatars);
-        parent::tearDown();
-    }
-
-    public function testUsersEditAvatarSuccess()
+    public function testUsersEditAvatarController_Success(): void
     {
         $user = UserFactory::make()->user()->persist();
         $this->logInAs($user);
@@ -69,8 +54,7 @@ class UsersEditAvatarControllerTest extends AppIntegrationTestCase
         $this->assertSuccess();
 
         /** @var \App\Model\Entity\Avatar $avatar */
-        $avatar = $this->Avatars
-            ->find()
+        $avatar = AvatarFactory::find()
             ->contain('Profiles.Users')
             ->where(['Users.id' => $user->id])
             ->firstOrFail();
@@ -78,17 +62,17 @@ class UsersEditAvatarControllerTest extends AppIntegrationTestCase
         $this->assertAvatarCachedFilesExist($avatar);
     }
 
-    public function testUsersEditAvatarMissingCsrfTokenError()
+    public function testUsersEditAvatarController_Error_MissingCsrfToken(): void
     {
         $user = UserFactory::make()->user()->persist();
         $this->logInAs($user);
         $this->disableCsrfToken();
         $userId = $user->id;
-        $this->post("/users/$userId.json?api-version=v2");
+        $this->post("/users/$userId.json");
         $this->assertResponseCode(403);
     }
 
-    public function testUsersEditAvatarWrongFileFormat()
+    public function testUsersEditAvatarController_Error_WrongFileFormat(): void
     {
         $filesDirectory = TESTS . 'Fixtures' . DS . 'Avatar';
         $pdfFile = $filesDirectory . DS . 'minimal.pdf';
@@ -107,16 +91,16 @@ class UsersEditAvatarControllerTest extends AppIntegrationTestCase
                 ],
             ],
         ];
-        $this->postJson('/users/' . $user->id . '.json?api-version=v2', $data);
+        $this->postJson('/users/' . $user->id . '.json', $data);
         $this->assertError(400, 'Could not validate user data.');
         $this->assertNotEmpty($this->_responseJsonBody->profile->avatar->file->validExtension);
         $this->assertNotEmpty($this->_responseJsonBody->profile->avatar->file->validMimeType);
         $this->assertNotEmpty($this->_responseJsonBody->profile->avatar->file->validUploadedFile);
 
-        $this->assertEquals(0, $this->Avatars->find()->count(), 'The number of avatars in db should be same before and after the test');
+        $this->assertEquals(0, AvatarFactory::count(), 'The number of avatars in db should be same before and after the test');
     }
 
-    public function testUsersEditAvatarNoDataProvided()
+    public function testUsersEditAvatarController_Error_NoDataProvided(): void
     {
         $user = UserFactory::make()->user()->persist();
         $this->logInAs($user);
@@ -131,7 +115,7 @@ class UsersEditAvatarControllerTest extends AppIntegrationTestCase
         $this->assertNotEmpty($this->_responseJsonBody->profile->avatar->file->_required);
     }
 
-    public function testUsersEditAvatarCantOverrideData()
+    public function testUsersEditAvatarController_Success_CantOverrideData(): void
     {
         $irene = UserFactory::make()->user()->persist();
 
@@ -176,5 +160,6 @@ class UsersEditAvatarControllerTest extends AppIntegrationTestCase
         $this->assertNotEquals($data['path'], $ireneAvatar->path);
         $this->assertNotEquals($data['adapter'], $ireneAvatar->adapter);
         $this->assertSame(1, AvatarFactory::count());
+        $this->assertAvatarCachedFilesExist($ireneAvatar);
     }
 }

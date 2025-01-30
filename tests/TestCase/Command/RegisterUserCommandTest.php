@@ -16,16 +16,15 @@ declare(strict_types=1);
  */
 namespace App\Test\TestCase\Command;
 
-use App\Command\RegisterUserCommand;
 use App\Model\Entity\Role;
 use App\Test\Factory\RoleFactory;
 use App\Test\Factory\UserFactory;
 use App\Test\Lib\AppTestCase;
 use App\Test\Lib\Model\EmailQueueTrait;
 use App\Test\Lib\Utility\PassboltCommandTestTrait;
+use Cake\Console\TestSuite\ConsoleIntegrationTestTrait;
 use Cake\ORM\TableRegistry;
 use Cake\Routing\Router;
-use Cake\TestSuite\ConsoleIntegrationTestTrait;
 use Faker\Factory;
 use Passbolt\EmailNotificationSettings\Test\Lib\EmailNotificationSettingsTestTrait;
 
@@ -45,8 +44,8 @@ class RegisterUserCommandTest extends AppTestCase
     {
         parent::setUp();
         $this->useCommandRunner();
-        RegisterUserCommand::$isUserRoot = false;
         $this->loadNotificationSettings();
+        $this->mockProcessUserService('www-data');
     }
 
     /**
@@ -67,7 +66,7 @@ class RegisterUserCommandTest extends AppTestCase
      */
     public function testRegisterUserCommandAsRoot()
     {
-        $this->assertCommandCannotBeRunAsRootUser(RegisterUserCommand::class);
+        $this->assertCommandCannotBeRunAsRootUser('register_user');
     }
 
     public function withAdmin(): array
@@ -125,7 +124,7 @@ class RegisterUserCommandTest extends AppTestCase
         // Assert that the correct link is provided in the console
         $user = UserFactory::find()->firstOrFail();
         $token = TableRegistry::getTableLocator()->get('AuthenticationTokens')->getByUserId($user->id);
-        $setupLink = Router::url('/setup/install/' . $user->id . '/' . $token->token, true);
+        $setupLink = Router::url('/setup/start/' . $user->id . '/' . $token->token, true);
         $this->assertOutputContains($setupLink);
 //         TODO: fix this line in the CI
 //        $this->assertEmailQueueCount(1);

@@ -19,31 +19,35 @@ namespace App\Service\Resources;
 
 use App\Error\Exception\CustomValidationException;
 use App\Error\Exception\ValidationException;
+use App\Model\Dto\EntitiesChangesDto;
 use App\Model\Entity\Permission;
 use App\Model\Entity\Resource;
+use App\Model\Entity\Secret;
 use App\Model\Table\PermissionsTable;
 use App\Service\Permissions\PermissionsGetUsersIdsHavingAccessToService;
 use App\Service\Permissions\PermissionsUpdatePermissionsService;
 use App\Service\Permissions\UserHasPermissionService;
 use App\Service\Secrets\SecretsUpdateSecretsService;
 use App\Utility\UserAccessControl;
-use Cake\Datasource\ModelAwareTrait;
 use Cake\Event\Event;
+use Cake\Event\EventDispatcherTrait;
 use Cake\Http\Exception\NotFoundException;
+use Cake\ORM\Locator\LocatorAwareTrait;
 
 class ResourcesShareService
 {
-    use ModelAwareTrait;
+    use EventDispatcherTrait;
+    use LocatorAwareTrait;
+
+    public const SHARE_SUCCESS_EVENT_NAME = 'ResourcesShareService.share.success';
+    public const AFTER_ACCESS_REVOKED_EVENT_NAME = 'ResourcesShareService.afterAccessRevoked';
 
     /**
      * @var \App\Model\Table\GroupsUsersTable
      */
     private $GroupsUsers;
 
-    /**
-     * @var \App\Service\Permissions\PermissionsGetUsersIdsHavingAccessToService
-     */
-    private $permissionsGetUsersIdsHavingAccessToService;
+    protected PermissionsGetUsersIdsHavingAccessToService $permissionsGetUsersIdsHavingAccessToService;
 
     /**
      * @var \App\Service\Permissions\PermissionsUpdatePermissionsService
@@ -66,16 +70,27 @@ class ResourcesShareService
     private $userHasPermissionService;
 
     /**
-     * Instantiate the service.
+     * @var \App\Service\Resources\ResourcesExpireResourcesServiceInterface
      */
-    public function __construct()
-    {
-        $this->loadModel('GroupsUsers');
-        $this->loadModel('Resources');
+    private ResourcesExpireResourcesServiceInterface $resourcesExpireResourcesService;
+
+    /**
+     * Instantiate the service.
+     *
+     * @param \App\Service\Resources\ResourcesExpireResourcesServiceInterface $resourcesExpireResourcesService Service to expire resources that were consumed by users who lost access to them.
+     */
+    public function __construct(
+        ResourcesExpireResourcesServiceInterface $resourcesExpireResourcesService
+    ) {
+        /** @phpstan-ignore-next-line */
+        $this->GroupsUsers = $this->fetchTable('GroupsUsers');
+        /** @phpstan-ignore-next-line */
+        $this->Resources = $this->fetchTable('Resources');
         $this->permissionsGetUsersIdsHavingAccessToService = new PermissionsGetUsersIdsHavingAccessToService();
         $this->permissionsUpdatePermissionsService = new PermissionsUpdatePermissionsService();
         $this->secretsUpdateSecretsService = new SecretsUpdateSecretsService();
         $this->userHasPermissionService = new UserHasPermissionService();
+        $this->resourcesExpireResourcesService = $resourcesExpireResourcesService;
     }
 
     /**
@@ -88,16 +103,32 @@ class ResourcesShareService
      * @return Resource
      * @throws \Exception
      */
-    public function share(UserAccessControl $uac, string $resourceId, array $changes = [], array $secrets = [])
-    {
+    public function share(
+        UserAccessControl $uac,
+        string $resourceId,
+        array $changes = [],
+        array $secrets = []
+    ): Resource {
         $resource = $this->getResource($resourceId);
 
-        $this->Resources->getConnection()->transactional(function () use ($uac, $resource, $changes, $secrets) {
-            $updatePermissionsResult = $this->updatePermissions($uac, $resource, $changes);
-            $this->updateSecrets($uac, $resource, $secrets);
-            $this->postAccessesGranted($uac, $updatePermissionsResult['added']);
-            $this->postAccessesRevoked($uac, $resource, $updatePermissionsResult['removed']);
-        });
+        $this->Resources->getConnection()->transactional(
+            function () use ($uac, $resource, $changes, $secrets) {
+                $entitiesChanges = $this->updatePermissions($uac, $resource, $changes);
+                $entitiesChanges->merge($this->updateSecrets($uac, $resource, $secrets));
+                $this->postAccessesGranted($uac, $entitiesChanges->getAddedEntities(Permission::class));
+                $this->postAccessesRevoked($uac, $resource, $entitiesChanges->getDeletedEntities(Permission::class));
+                $this->resourcesExpireResourcesService->expireResourcesForSecrets(
+                    $entitiesChanges->getDeletedEntities(Secret::class)
+                );
+            }
+        );
+
+        $event = new Event(self::SHARE_SUCCESS_EVENT_NAME, $this, [
+            'resource' => $resource,
+            'secrets' => $secrets,
+            'ownerId' => $uac->getId(),
+        ]);
+        $this->getEventManager()->dispatch($event);
 
         return $resource;
     }
@@ -124,19 +155,15 @@ class ResourcesShareService
      * Update the permissions of a resource.
      *
      * @param \App\Utility\UserAccessControl $uac The current user
-     * @param Resource $resource The target resource
+     * @param \App\Model\Entity\Resource $resource The target resource
      * @param array $changes The list of permissions changes to apply
-     * @return array
-     * [
-     *   added => <array> List of added permissions
-     *   deleted => <array> List of deleted permissions
-     *   updated => <array> List of updated permissions
-     * ]
+     * @return \App\Model\Dto\EntitiesChangesDto
      * @throws \Exception If something unexpected occurred
      */
-    private function updatePermissions(UserAccessControl $uac, Resource $resource, array $changes)
+    private function updatePermissions(UserAccessControl $uac, Resource $resource, array $changes): EntitiesChangesDto
     {
-        $result = [];
+        $result = new EntitiesChangesDto();
+
         try {
             $result = $this->permissionsUpdatePermissionsService
                 ->updatePermissions($uac, PermissionsTable::RESOURCE_ACO, $resource->id, $changes);
@@ -151,7 +178,7 @@ class ResourcesShareService
     /**
      * Handle resource validation errors.
      *
-     * @param Resource $resource The target resource
+     * @param \App\Model\Entity\Resource $resource The target resource
      * @return void
      * @throws \App\Error\Exception\ValidationException If the provided data does not validate.
      */
@@ -167,19 +194,23 @@ class ResourcesShareService
      * Update the secrets.
      *
      * @param \App\Utility\UserAccessControl $uac The operator
-     * @param Resource $resource The target resource
+     * @param \App\Model\Entity\Resource $resource The target resource
      * @param array $data The list of secrets to add
-     * @return void
+     * @return \App\Model\Dto\EntitiesChangesDto
      * @throws \Exception
      */
-    private function updateSecrets(UserAccessControl $uac, Resource $resource, array $data)
+    private function updateSecrets(UserAccessControl $uac, Resource $resource, array $data): EntitiesChangesDto
     {
+        $result = new EntitiesChangesDto();
+
         try {
-            $this->secretsUpdateSecretsService->updateSecrets($uac, $resource->id, $data);
+            $result = $this->secretsUpdateSecretsService->updateSecrets($uac, $resource->id, $data);
         } catch (CustomValidationException $e) {
             $resource->setError('secrets', $e->getErrors());
             $this->handleValidationErrors($resource);
         }
+
+        return $result;
     }
 
     /**
@@ -214,7 +245,7 @@ class ResourcesShareService
      * Post accesses revoked.
      *
      * @param \App\Utility\UserAccessControl $uac The operator
-     * @param Resource $resource The target permissions
+     * @param \App\Model\Entity\Resource $resource The target permissions
      * @param array $deletedPermissions The list of deleted permissions
      * @return void
      */
@@ -240,14 +271,14 @@ class ResourcesShareService
     private function notifyAccessRevoked(UserAccessControl $uac, Permission $permission)
     {
         $eventData = ['permission' => $permission, 'accessControl' => $uac];
-        $event = new Event('Service.ResourcesShare.afterAccessRevoked', $this, $eventData);
+        $event = new Event(self::AFTER_ACCESS_REVOKED_EVENT_NAME, $this, $eventData);
         $this->Resources->getEventManager()->dispatch($event);
     }
 
     /**
      * Post group access revoked treatment.
      *
-     * @param Resource $resource The target resource
+     * @param \App\Model\Entity\Resource $resource The target resource
      * @param string $groupId The target group
      * @return void
      * @throws \Exception
@@ -266,7 +297,7 @@ class ResourcesShareService
      * - Remove the user favorites for this resource.
      * - Trigger an event to notify other plugin about the revoked access.
      *
-     * @param Resource $resource The target resource
+     * @param \App\Model\Entity\Resource $resource The target resource
      * @param string $userId The target user
      * @return void
      */

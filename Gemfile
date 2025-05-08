@@ -1,6 +1,6 @@
 source 'https://rubygems.org' do
   gem 'test-kitchen'
-  gem 'chef'
+  gem 'chef', '>= 18.7.3'
   gem 'berkshelf'
   gem 'chef-cli'
   gem 'inspec'

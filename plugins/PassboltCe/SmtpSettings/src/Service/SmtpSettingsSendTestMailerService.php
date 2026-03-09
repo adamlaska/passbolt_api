@@ -19,6 +19,7 @@ namespace Passbolt\SmtpSettings\Service;
 use App\Mailer\Transport\DebugSmtpTransport;
 use App\Mailer\Transport\DebugTransport;
 use Cake\Mailer\Mailer;
+use Cake\Mailer\Transport\SmtpTransport as CakeSmtpTransport;
 use Cake\Mailer\TransportFactory;
 
 class SmtpSettingsSendTestMailerService
@@ -72,6 +73,16 @@ class SmtpSettingsSendTestMailerService
             'tls' => $smtpSettings['tls'],
             'client' => $smtpSettings['client'],
         ];
+
+        // Override credentials with OAuth2 token when configured
+        if (SmtpOauthExchangeOnlineService::isOauth2ClientCredentials($smtpSettings)) {
+            $smtpOauthService = new SmtpOauthExchangeOnlineService($smtpSettings);
+            $config = array_merge($config, [
+                'username' => $smtpOauthService->getUsername(),
+                'password' => $smtpOauthService->getAccessToken(),
+                'authType' => CakeSmtpTransport::AUTH_XOAUTH2,
+            ]);
+        }
 
         // Merge SSL Options if present in config
         $sslOptions = (new SmtpSettingsSslOptionsGetService())->get();

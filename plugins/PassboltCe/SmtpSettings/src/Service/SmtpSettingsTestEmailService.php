@@ -126,6 +126,17 @@ class SmtpSettingsTestEmailService
             $replaceWith[] = $replaceMask;
         }
 
+        if (!empty($this->smtpSettings['oauth2_username'])) {
+            $toReplace[] = $this->smtpSettings['oauth2_username'];
+            $replaceWith[] = $replaceMask;
+            $toReplace[] = base64_encode($this->smtpSettings['oauth2_username']);
+            $replaceWith[] = $replaceMask;
+        }
+        if (!empty($this->smtpSettings['client_secret'])) {
+            $toReplace[] = $this->smtpSettings['client_secret'];
+            $replaceWith[] = $replaceMask;
+        }
+
         return str_replace($toReplace, $replaceWith, $str);
     }
 

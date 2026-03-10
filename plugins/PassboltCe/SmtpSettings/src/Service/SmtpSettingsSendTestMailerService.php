@@ -40,6 +40,11 @@ class SmtpSettingsSendTestMailerService
     private array $smtpSettings = [];
 
     /**
+     * @var string|null
+     */
+    private ?string $oauthAccessToken = null;
+
+    /**
      * Sends an email.
      *
      * @param array $smtpSettings SMTP settings.
@@ -77,9 +82,10 @@ class SmtpSettingsSendTestMailerService
         // Override credentials with OAuth2 token when configured
         if (SmtpOauthExchangeOnlineService::isOauth2ClientCredentials($smtpSettings)) {
             $smtpOauthService = new SmtpOauthExchangeOnlineService($smtpSettings);
+            $this->oauthAccessToken = $smtpOauthService->getAccessToken();
             $config = array_merge($config, [
                 'username' => $smtpOauthService->getUsername(),
-                'password' => $smtpOauthService->getAccessToken(),
+                'password' => $this->oauthAccessToken,
                 'authType' => CakeSmtpTransport::AUTH_XOAUTH2,
             ]);
         }
@@ -114,6 +120,16 @@ class SmtpSettingsSendTestMailerService
         $transport = $this->email->getTransport();
 
         return $transport->getTrace();
+    }
+
+    /**
+     * Get the OAuth2 access token fetched at runtime, if any.
+     *
+     * @return string|null
+     */
+    public function getOauthAccessToken(): ?string
+    {
+        return $this->oauthAccessToken;
     }
 
     /**

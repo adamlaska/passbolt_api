@@ -18,6 +18,8 @@ namespace Passbolt\SmtpSettings\Service;
 
 use Cake\Http\Client;
 use Cake\Http\Exception\InternalErrorException;
+use Cake\Log\Log;
+use Cake\Validation\Validation;
 
 class SmtpOauthExchangeOnlineService
 {
@@ -70,11 +72,31 @@ class SmtpOauthExchangeOnlineService
      */
     public function __construct(array $config, ?Client $httpClient = null)
     {
+        $this->assertConfiguration($config);
+
         $this->tenantId = $config['tenant_id'];
         $this->clientId = $config['client_id'];
         $this->clientSecret = $config['client_secret'];
         $this->username = $config['oauth2_username'];
-        $this->httpClient = $httpClient ?? new Client();
+        // default timeout is 30 (same) but added here for more visibility
+        $this->httpClient = $httpClient ?? new Client(['timeout' => 30]);
+    }
+
+    /**
+     * Add basic data validation check to reduce SSRF risk.
+     * We are not using form class as it can create overhead in this scenario.
+     *
+     * @param array $config Configuration to check.
+     * @return void
+     */
+    private function assertConfiguration(array $config): void
+    {
+        if (!Validation::uuid($config['tenant_id'])) {
+            throw new InternalErrorException(__('Tenant ID should be a valid UUID.'));
+        }
+        if (!Validation::uuid($config['client_id'])) {
+            throw new InternalErrorException(__('Client ID should be a valid UUID.'));
+        }
     }
 
     /**
@@ -98,9 +120,8 @@ class SmtpOauthExchangeOnlineService
         if (!$response->isOk()) {
             $body = $response->getJson();
             $error = $body['error_description'] ?? $body['error'] ?? 'Unknown error';
-            throw new InternalErrorException(
-                __('Failed to obtain SMTP OAuth2 access token from Microsoft: {0}', $error)
-            );
+            Log::error(sprintf('SMTP OAuth2 token fetch failed: %s', $error));
+            throw new InternalErrorException(__('Failed to obtain SMTP OAuth2 access token.'));
         }
 
         $body = $response->getJson();

@@ -183,6 +183,7 @@ class SmtpSettingsTestEmailServiceTest extends TestCase
     public function testSmtpSettingsSendTestEmailService_GetTrace_MasksOauth2Username(): void
     {
         $oauth2Username = 'oauth-user@example.com';
+        $oauth2AccessToken = 'super-secure-access-token';
         $smtpSettings = [
             'sender_name' => 'Passbolt test',
             'sender_email' => 'test@passbolt.test',
@@ -199,10 +200,14 @@ class SmtpSettingsTestEmailServiceTest extends TestCase
         // mock mailer service
         $mailerService = $this->createMock(SmtpSettingsSendTestMailerService::class);
         $mailerService->expects($this->once())->method('sendEmail')->with($smtpSettings);
+        $mailerService
+            ->expects($this->exactly(2)) // first time for 'cmd' and second for 'response'
+            ->method('getOauthAccessToken')
+            ->willReturn($oauth2AccessToken);
+        $authString = base64_encode(sprintf("user=%s\1auth=Bearer %s\1\1", $oauth2Username, $oauth2AccessToken));
         $trace = [
-            ['cmd' => "AUTH XOAUTH2 user={$oauth2Username}"],
-            ['cmd' => 'Some base64: ' . base64_encode($oauth2Username)],
-            ['response' => [['code' => '235', 'message' => "Authenticated as {$oauth2Username}"]]],
+            ['cmd' => "AUTH XOAUTH2 {$authString}"],
+            ['response' => [['code' => '235', 'message' => '2.7.0 Authentication successful']]],
         ];
         $mailerService->expects($this->once())->method('getTrace')->willReturn($trace);
 
@@ -211,9 +216,10 @@ class SmtpSettingsTestEmailServiceTest extends TestCase
         $result = $sut->getTrace();
 
         $this->assertStringNotContainsString($oauth2Username, $result[0]['cmd']);
+        $this->assertStringNotContainsString($oauth2AccessToken, $result[0]['cmd']);
         $this->assertStringContainsString('*****', $result[0]['cmd']);
-        $this->assertStringNotContainsString(base64_encode($oauth2Username), $result[1]['cmd']);
-        $this->assertStringNotContainsString($oauth2Username, $result[2]['response'][0]['message']);
+        $this->assertStringNotContainsString($oauth2Username, $result[1]['response'][0]['message']);
+        $this->assertStringNotContainsString($oauth2AccessToken, $result[1]['response'][0]['message']);
     }
 
     public function testSmtpSettingsSendTestEmailService_GetTrace_MasksClientSecret(): void

@@ -101,7 +101,7 @@ class SmtpOauthExchangeOnlineServiceTest extends TestCase
         $service = new SmtpOauthExchangeOnlineService($config, $httpClient);
 
         $this->expectException(InternalErrorException::class);
-        $this->expectExceptionMessage('Failed to obtain SMTP OAuth2 access token from Microsoft');
+        $this->expectExceptionMessage('Failed to obtain SMTP OAuth2 access token');
         $service->getAccessToken();
     }
 

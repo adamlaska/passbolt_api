@@ -119,7 +119,7 @@ class SmtpSettingsGetControllerTest extends AppIntegrationTestCase
         $data['tenant_id'] = Text::uuid();
         $data['client_id'] = Text::uuid();
         $data['client_secret'] = 'my-secret';
-        $data['oauth2_username'] = 'user@example.com';
+        $data['oauth_username'] = 'user@example.com';
         $this->encryptAndPersistSmtpSettings($data);
 
         $this->getJson('/smtp/settings.json');
@@ -128,7 +128,7 @@ class SmtpSettingsGetControllerTest extends AppIntegrationTestCase
         $this->assertSame($data['tenant_id'], $response['tenant_id']);
         $this->assertSame($data['client_id'], $response['client_id']);
         $this->assertSame($data['client_secret'], $response['client_secret']);
-        $this->assertSame($data['oauth2_username'], $response['oauth2_username']);
+        $this->assertSame($data['oauth_username'], $response['oauth_username']);
     }
 
     public function testSmtpSettingsGetController_BackwardCompat_LegacySettingsNoOauth2(): void

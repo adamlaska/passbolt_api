@@ -64,7 +64,7 @@ trait SmtpSettingsTestTrait
             'tenant_id' => null,
             'client_id' => null,
             'client_secret' => null,
-            'oauth2_username' => null,
+            'oauth_username' => null,
         ];
 
         if (isset($field)) {

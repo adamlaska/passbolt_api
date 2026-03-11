@@ -126,7 +126,7 @@ class SendTestEmailCommandTest extends AppTestCase
             'tenant_id' => UuidFactory::uuid(),
             'client_id' => UuidFactory::uuid(),
             'client_secret' => 'secret',
-            'oauth2_username' => 'test@example.com',
+            'oauth_username' => 'test@example.com',
         ]);
         TransportFactory::drop('default');
         TransportFactory::setConfig('default', $config);

@@ -39,7 +39,7 @@ class SmtpOauthExchangeOnlineService
     /**
      * OAuth2 configuration fields expected in the config array.
      */
-    public const OAUTH2_FIELDS = ['tenant_id', 'client_id', 'client_secret', 'oauth2_username'];
+    public const OAUTH2_FIELDS = ['tenant_id', 'client_id', 'client_secret', 'oauth_username'];
 
     /**
      * @var \Cake\Http\Client
@@ -67,7 +67,7 @@ class SmtpOauthExchangeOnlineService
     private string $username;
 
     /**
-     * @param array $config OAuth2 configuration with keys: tenant_id, client_id, client_secret, oauth2_username.
+     * @param array $config OAuth2 configuration with keys: tenant_id, client_id, client_secret, oauth_username.
      * @param \Cake\Http\Client|null $httpClient Optional HTTP client (for testing/DI).
      */
     public function __construct(array $config, ?Client $httpClient = null)
@@ -77,7 +77,7 @@ class SmtpOauthExchangeOnlineService
         $this->tenantId = $config['tenant_id'];
         $this->clientId = $config['client_id'];
         $this->clientSecret = $config['client_secret'];
-        $this->username = $config['oauth2_username'];
+        $this->username = $config['oauth_username'];
         // default timeout is 30 (same) but added here for more visibility
         $this->httpClient = $httpClient ?? new Client(['timeout' => 30]);
     }

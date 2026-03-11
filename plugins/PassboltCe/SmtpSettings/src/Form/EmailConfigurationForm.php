@@ -54,7 +54,7 @@ class EmailConfigurationForm extends Form
             ->addField('tenant_id', ['type' => 'string'])
             ->addField('client_id', ['type' => 'string'])
             ->addField('client_secret', ['type' => 'string'])
-            ->addField('oauth2_username', ['type' => 'string']);
+            ->addField('oauth_username', ['type' => 'string']);
     }
 
     /**
@@ -129,11 +129,11 @@ class EmailConfigurationForm extends Form
             ->maxLength('client_secret', 256, __('The client secret should not exceed 256 characters.'));
 
         $validator
-            ->allowEmptyString('oauth2_username')
-            ->add('oauth2_username', 'email', new EmailValidationRule([
+            ->allowEmptyString('oauth_username')
+            ->add('oauth_username', 'email', new EmailValidationRule([
                 'message' => __('The OAuth2 username should be a valid email address.'),
             ]))
-            ->maxLength('oauth2_username', 256, __('The OAuth2 username should not exceed 256 characters.'));
+            ->maxLength('oauth_username', 256, __('The OAuth2 username should not exceed 256 characters.'));
 
         return $validator;
     }
@@ -292,7 +292,7 @@ class EmailConfigurationForm extends Form
             $data['tenant_id'] = null;
             $data['client_id'] = null;
             $data['client_secret'] = null;
-            $data['oauth2_username'] = null;
+            $data['oauth_username'] = null;
         }
 
         return $data;
@@ -322,8 +322,8 @@ class EmailConfigurationForm extends Form
             ->notEmptyString('client_secret', __('The client secret should not be empty.'));
 
         $validator
-            ->requirePresence('oauth2_username', true, __('The OAuth2 username is required.'))
-            ->notEmptyString('oauth2_username', __('The OAuth2 username should not be empty.'));
+            ->requirePresence('oauth_username', true, __('The OAuth2 username is required.'))
+            ->notEmptyString('oauth_username', __('The OAuth2 username should not be empty.'));
 
         return $validator;
     }

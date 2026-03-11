@@ -194,7 +194,7 @@ class SmtpSettingsTestEmailServiceTest extends TestCase
             'client' => null,
             'port' => 587,
             'email_test_to' => 'test@passbolt.test',
-            'oauth2_username' => $oauth2Username,
+            'oauth_username' => $oauth2Username,
             'client_secret' => 'my-secret',
         ];
         // mock mailer service

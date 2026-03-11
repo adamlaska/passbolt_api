@@ -321,7 +321,7 @@ class EmailConfigurationFormTest extends TestCase
         $data['tenant_id'] = Text::uuid();
         $data['client_id'] = Text::uuid();
         $data['client_secret'] = 'my-secret';
-        $data['oauth2_username'] = 'user@example.com';
+        $data['oauth_username'] = 'user@example.com';
 
         $result = $this->form->execute($data);
         $this->assertTrue($result);
@@ -335,7 +335,7 @@ class EmailConfigurationFormTest extends TestCase
                     'tenant_id' => '',
                     'client_id' => '',
                     'client_secret' => '',
-                    'oauth2_username' => '',
+                    'oauth_username' => '',
                 ],
             ],
             [
@@ -343,7 +343,7 @@ class EmailConfigurationFormTest extends TestCase
                     'tenant_id' => null,
                     'client_id' => null,
                     'client_secret' => null,
-                    'oauth2_username' => null,
+                    'oauth_username' => null,
                 ],
             ],
         ];
@@ -369,7 +369,7 @@ class EmailConfigurationFormTest extends TestCase
                     'tenant_id' => 'not-a-uuid',
                     'client_id' => 'not-a-uuid',
                     'client_secret' => 'super-secret',
-                    'oauth2_username' => 'user@example.com',
+                    'oauth_username' => 'user@example.com',
                 ],
                 ['tenant_id', 'client_id'],
             ],
@@ -378,7 +378,7 @@ class EmailConfigurationFormTest extends TestCase
                     'tenant_id' => Text::uuid(),
                     'client_id' => Text::uuid(),
                     'client_secret' => str_repeat('a', 257),
-                    'oauth2_username' => 'user@example.com',
+                    'oauth_username' => 'user@example.com',
                 ],
                 ['client_secret'],
             ],
@@ -387,18 +387,18 @@ class EmailConfigurationFormTest extends TestCase
                     'tenant_id' => Text::uuid(),
                     'client_id' => Text::uuid(),
                     'client_secret' => 'super-secret',
-                    'oauth2_username' => 'not-an-email',
+                    'oauth_username' => 'not-an-email',
                 ],
-                ['oauth2_username'],
+                ['oauth_username'],
             ],
             [
                 [
                     'tenant_id' => Text::uuid(),
                     'client_id' => Text::uuid(),
                     'client_secret' => 'super-secret',
-                    'oauth2_username' => str_repeat('a', 246) . '@example.com',
+                    'oauth_username' => str_repeat('a', 246) . '@example.com',
                 ],
-                ['oauth2_username'],
+                ['oauth_username'],
             ],
         ];
     }
@@ -432,7 +432,7 @@ class EmailConfigurationFormTest extends TestCase
         $this->assertArrayHasKey('tenant_id', $errors);
         $this->assertArrayHasKey('client_id', $errors);
         $this->assertArrayHasKey('client_secret', $errors);
-        $this->assertArrayHasKey('oauth2_username', $errors);
+        $this->assertArrayHasKey('oauth_username', $errors);
     }
 
     public static function dataForOauth2MissingRequiredField(): array
@@ -441,7 +441,7 @@ class EmailConfigurationFormTest extends TestCase
             ['tenant_id'],
             ['client_id'],
             ['client_secret'],
-            ['oauth2_username'],
+            ['oauth_username'],
         ];
     }
 
@@ -455,7 +455,7 @@ class EmailConfigurationFormTest extends TestCase
         $data['tenant_id'] = Text::uuid();
         $data['client_id'] = Text::uuid();
         $data['client_secret'] = 'my-secret';
-        $data['oauth2_username'] = 'user@example.com';
+        $data['oauth_username'] = 'user@example.com';
         unset($data[$missingField]);
 
         $result = $this->form->execute($data);
@@ -470,7 +470,7 @@ class EmailConfigurationFormTest extends TestCase
         $data['tenant_id'] = Text::uuid();
         $data['client_id'] = Text::uuid();
         $data['client_secret'] = 'my-secret';
-        $data['oauth2_username'] = 'user@example.com';
+        $data['oauth_username'] = 'user@example.com';
         $data['username'] = 'should-be-nullified';
         $data['password'] = 'should-be-nullified';
 
@@ -486,13 +486,13 @@ class EmailConfigurationFormTest extends TestCase
         $data['tenant_id'] = Text::uuid();
         $data['client_id'] = Text::uuid();
         $data['client_secret'] = 'my-secret';
-        $data['oauth2_username'] = 'user@example.com';
+        $data['oauth_username'] = 'user@example.com';
 
         $this->form->execute($data);
         $this->assertNull($this->form->getData('tenant_id'));
         $this->assertNull($this->form->getData('client_id'));
         $this->assertNull($this->form->getData('client_secret'));
-        $this->assertNull($this->form->getData('oauth2_username'));
+        $this->assertNull($this->form->getData('oauth_username'));
     }
 
     public function testEmailConfigurationForm_FilterOauth2Fields_NoAuthMethodLeavesAllUnchanged(): void

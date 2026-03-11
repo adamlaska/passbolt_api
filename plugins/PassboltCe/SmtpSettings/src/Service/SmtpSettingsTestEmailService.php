@@ -128,10 +128,10 @@ class SmtpSettingsTestEmailService
 
         // Mask the OAuth2 access token fetched at runtime (not part of smtpSettings)
         $oauthAccessToken = $this->mailerService->getOauthAccessToken();
-        if (!empty($this->smtpSettings['oauth2_username']) && !empty($oauthAccessToken)) {
+        if (!empty($this->smtpSettings['oauth_username']) && !empty($oauthAccessToken)) {
             $toReplace[] = base64_encode(sprintf(
                 "user=%s\1auth=Bearer %s\1\1",
-                $this->smtpSettings['oauth2_username'],
+                $this->smtpSettings['oauth_username'],
                 $oauthAccessToken,
             ));
             $replaceWith[] = $replaceMask;

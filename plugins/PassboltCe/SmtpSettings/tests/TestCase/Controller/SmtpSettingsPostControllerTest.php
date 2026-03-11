@@ -126,7 +126,7 @@ class SmtpSettingsPostControllerTest extends AppIntegrationTestCase
             'tenant_id' => Text::uuid(),
             'client_id' => Text::uuid(),
             'client_secret' => 'my-client-secret',
-            'oauth2_username' => 'user@example.com',
+            'oauth_username' => 'user@example.com',
             // other non-oauth2 specific fields set to null
             'username' => null,
             'password' => null,
@@ -142,7 +142,7 @@ class SmtpSettingsPostControllerTest extends AppIntegrationTestCase
         $this->assertSame($data['tenant_id'], $response['tenant_id']);
         $this->assertSame($data['client_id'], $response['client_id']);
         $this->assertSame($data['client_secret'], $response['client_secret']);
-        $this->assertSame($data['oauth2_username'], $response['oauth2_username']);
+        $this->assertSame($data['oauth_username'], $response['oauth_username']);
         // username and password should be null in OAuth2 mode
         $this->assertNull($response['username']);
         $this->assertNull($response['password']);
@@ -157,7 +157,7 @@ class SmtpSettingsPostControllerTest extends AppIntegrationTestCase
             // tenant_id is missing
             'client_id' => Text::uuid(),
             'client_secret' => 'my-client-secret',
-            'oauth2_username' => 'user@example.com',
+            'oauth_username' => 'user@example.com',
         ]);
 
         $this->logInAsAdmin();

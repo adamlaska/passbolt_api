@@ -124,7 +124,7 @@ class SmtpOauthExchangeOnlineServiceTest extends TestCase
     public function testSmtpOauthExchangeOnlineService_GetUsername_ReturnsConfiguredUsername(): void
     {
         $email = 'user@example.com';
-        $config = $this->getOauth2Config(['oauth2_username' => $email]);
+        $config = $this->getOauth2Config(['oauth_username' => $email]);
 
         $httpClient = $this->createMock(Client::class);
         $service = new SmtpOauthExchangeOnlineService($config, $httpClient);
@@ -172,7 +172,7 @@ class SmtpOauthExchangeOnlineServiceTest extends TestCase
             ['tenant_id'],
             ['client_id'],
             ['client_secret'],
-            ['oauth2_username'],
+            ['oauth_username'],
         ];
     }
 
@@ -192,7 +192,7 @@ class SmtpOauthExchangeOnlineServiceTest extends TestCase
             'tenant_id' => 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
             'client_id' => 'b2c3d4e5-f6a7-8901-bcde-f12345678901',
             'client_secret' => 'my-client-secret',
-            'oauth2_username' => 'user@example.com',
+            'oauth_username' => 'user@example.com',
         ], $overrides);
     }
 

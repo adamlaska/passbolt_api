@@ -130,7 +130,7 @@ class SmtpSettingsSetServiceTest extends TestCase
             'tenant_id' => Text::uuid(),
             'client_id' => Text::uuid(),
             'client_secret' => 'my-client-secret',
-            'oauth2_username' => 'user@example.com',
+            'oauth_username' => 'user@example.com',
             // non-oauth2 fields set to null
             'username' => null,
             'password' => null,
@@ -144,7 +144,7 @@ class SmtpSettingsSetServiceTest extends TestCase
         $this->assertSame($data['tenant_id'], $decryptedSettings['tenant_id']);
         $this->assertSame($data['client_id'], $decryptedSettings['client_id']);
         $this->assertSame($data['client_secret'], $decryptedSettings['client_secret']);
-        $this->assertSame($data['oauth2_username'], $decryptedSettings['oauth2_username']);
+        $this->assertSame($data['oauth_username'], $decryptedSettings['oauth_username']);
         // username and password should be null in OAuth2 mode
         $this->assertNull($decryptedSettings['username']);
         $this->assertNull($decryptedSettings['password']);

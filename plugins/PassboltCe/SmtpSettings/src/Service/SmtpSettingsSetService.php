@@ -41,7 +41,7 @@ class SmtpSettingsSetService
         'tenant_id',
         'client_id',
         'client_secret',
-        'oauth2_username',
+        'oauth_username',
     ];
 
     /**

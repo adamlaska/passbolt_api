@@ -155,7 +155,7 @@ class SendTestEmailCommand extends PassboltCommand
             $io->out(__('Tenant ID: {0}', $transportConfig['tenant_id']));
             $io->out(__('Client ID: {0}', $transportConfig['client_id']));
             $io->out(__('Client Secret: {0}', '*********'));
-            $io->out(__('Username: {0}', $transportConfig['oauth2_username']));
+            $io->out(__('Username: {0}', $transportConfig['oauth_username']));
         } else {
             $io->out(__('Username: {0}', $transportConfig['username'] ?? ''));
             $io->out(__('Password: {0}', '*********'));

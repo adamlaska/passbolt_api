@@ -147,7 +147,6 @@ class Application extends BaseApplication implements AuthenticationServiceProvid
                 ->setCrossDomainPolicy()
                 ->setReferrerPolicy()
                 ->setXFrameOptions('deny')
-                ->setXssProtection()
                 ->noOpen()
                 ->noSniff();
 

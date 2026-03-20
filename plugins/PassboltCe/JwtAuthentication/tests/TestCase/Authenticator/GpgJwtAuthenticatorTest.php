@@ -89,7 +89,7 @@ class GpgJwtAuthenticatorTest extends TestCase
     {
         $this->gpgSetup();
         $request = new ServerRequest();
-        $request = $request->withData('user_id', UserFactory::make()->persist()->get('id'));
+        $request = $request->withData('user_id', UserFactory::make()->withAdaKey()->persist()->get('id'));
         $result = $this->sut->authenticate($request);
         $this->assertEquals(Result::FAILURE_CREDENTIALS_INVALID, $result->getStatus());
     }
@@ -99,7 +99,7 @@ class GpgJwtAuthenticatorTest extends TestCase
         $this->gpgSetup();
         $request = new ServerRequest();
 
-        $request = $request->withData('user_id', UserFactory::make()->persist()->get('id'));
+        $request = $request->withData('user_id', UserFactory::make()->withAdaKey()->persist()->get('id'));
         $request = $request->withData('challenge', 'nope');
         $result = $this->sut->authenticate($request);
 
@@ -115,7 +115,7 @@ class GpgJwtAuthenticatorTest extends TestCase
         $this->gpg->setSignKeyFromFingerprint($this->adaKeyId, '');
         $msg = $this->gpg->encrypt('no sig');
 
-        $request = $request->withData('user_id', UserFactory::make()->persist()->get('id'));
+        $request = $request->withData('user_id', UserFactory::make()->withAdaKey()->persist()->get('id'));
         $request = $request->withData('challenge', $msg);
         $result = $this->sut->authenticate($request);
 
@@ -131,7 +131,7 @@ class GpgJwtAuthenticatorTest extends TestCase
         $this->gpg->setSignKeyFromFingerprint($this->adaKeyId, '');
         $msg = $this->gpg->encryptSign('wrong format');
 
-        $request = $request->withData('user_id', UserFactory::make()->persist()->get('id'));
+        $request = $request->withData('user_id', UserFactory::make()->withAdaKey()->persist()->get('id'));
         $request = $request->withData('challenge', $msg);
         $result = $this->sut->authenticate($request);
 
@@ -153,7 +153,7 @@ class GpgJwtAuthenticatorTest extends TestCase
         ];
         $msg = $this->gpg->encryptSign(json_encode($challenge));
 
-        $request = $request->withData('user_id', UserFactory::make()->persist()->get('id'));
+        $request = $request->withData('user_id', UserFactory::make()->withAdaKey()->persist()->get('id'));
         $request = $request->withData('challenge', $msg);
         $result = $this->sut->authenticate($request);
 
@@ -175,7 +175,7 @@ class GpgJwtAuthenticatorTest extends TestCase
         ];
         $msg = $this->gpg->encryptSign(json_encode($challenge));
 
-        $request = $request->withData('user_id', UserFactory::make()->persist()->get('id'));
+        $request = $request->withData('user_id', UserFactory::make()->withAdaKey()->persist()->get('id'));
         $request = $request->withData('challenge', $msg);
         $result = $this->sut->authenticate($request);
 
@@ -215,7 +215,7 @@ class GpgJwtAuthenticatorTest extends TestCase
         ];
         $msg = $this->gpg->encryptSign(json_encode($challenge));
 
-        $request = $request->withData('user_id', UserFactory::make()->persist()->get('id'));
+        $request = $request->withData('user_id', UserFactory::make()->withAdaKey()->persist()->get('id'));
         $request = $request->withData('challenge', $msg);
         $result = $this->sut->authenticate($request);
 
@@ -237,7 +237,7 @@ class GpgJwtAuthenticatorTest extends TestCase
         ];
         $msg = $this->gpg->encryptSign(json_encode($challenge));
 
-        $request = $request->withData('user_id', UserFactory::make()->persist()->get('id'));
+        $request = $request->withData('user_id', UserFactory::make()->withAdaKey()->persist()->get('id'));
         $request = $request->withData('challenge', $msg);
         $result = $this->sut->authenticate($request);
 
@@ -277,7 +277,7 @@ class GpgJwtAuthenticatorTest extends TestCase
         ];
         $msg = $this->gpg->encryptSign(json_encode($challenge));
 
-        $request = $request->withData('user_id', UserFactory::make()->persist()->get('id'));
+        $request = $request->withData('user_id', UserFactory::make()->withAdaKey()->persist()->get('id'));
         $request = $request->withData('challenge', $msg);
         $result = $this->sut->authenticate($request);
 

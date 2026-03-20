@@ -343,21 +343,152 @@ class FindIndexTest extends AppTestCase
         $this->assertCount(0, $groups);
     }
 
-    public function testFilterHasNotPermission()
+    /**
+     * Test that groups with a READ permission on a resource are excluded.
+     */
+    public function testFilterHasNotPermission_ExcludesGroupWithReadPermission()
     {
+        [$groupWithAccess, $groupWithout] = GroupFactory::make(2)->persist();
         $resource = ResourceFactory::make()->persist();
-        [$groupA, $groupB, $groupC] = GroupFactory::make(3)->persist();
-        PermissionFactory::make()
-            ->acoResource($resource)
-            ->aroGroup($groupA)
-            ->persist();
-        $expectedGroupsIds = [$groupB->id, $groupC->id];
-        // Find all the groups who have access to the resource.
+        PermissionFactory::make()->acoResource($resource)->aroGroup($groupWithAccess)->typeRead()->persist();
+
         $findIndexOptions['filter']['has-not-permission'] = [$resource->id];
         $groups = $this->Groups->findIndex($findIndexOptions)->all();
         $groupsIds = Hash::extract($groups->toArray(), '{n}.id');
-        $this->assertEmpty(array_diff($expectedGroupsIds, $groupsIds), 'The filter hasNotPermission does not return expected groups for the resource');
-        $this->assertEmpty(array_diff($groupsIds, $expectedGroupsIds), 'The filter hasNotPermission does not return expected groups for the resource');
+
+        $this->assertContains($groupWithout->id, $groupsIds);
+        $this->assertNotContains($groupWithAccess->id, $groupsIds);
+    }
+
+    /**
+     * Test that groups with an UPDATE permission on a resource are excluded.
+     */
+    public function testFilterHasNotPermission_ExcludesGroupWithUpdatePermission()
+    {
+        [$groupWithAccess, $groupWithout] = GroupFactory::make(2)->persist();
+        $resource = ResourceFactory::make()->persist();
+        PermissionFactory::make()->acoResource($resource)->aroGroup($groupWithAccess)->typeUpdate()->persist();
+
+        $findIndexOptions['filter']['has-not-permission'] = [$resource->id];
+        $groups = $this->Groups->findIndex($findIndexOptions)->all();
+        $groupsIds = Hash::extract($groups->toArray(), '{n}.id');
+
+        $this->assertContains($groupWithout->id, $groupsIds);
+        $this->assertNotContains($groupWithAccess->id, $groupsIds);
+    }
+
+    /**
+     * Test that groups with an OWNER permission on a resource are excluded.
+     */
+    public function testFilterHasNotPermission_ExcludesGroupWithOwnerPermission()
+    {
+        [$groupWithAccess, $groupWithout] = GroupFactory::make(2)->persist();
+        $resource = ResourceFactory::make()->persist();
+        PermissionFactory::make()->acoResource($resource)->aroGroup($groupWithAccess)->typeOwner()->persist();
+
+        $findIndexOptions['filter']['has-not-permission'] = [$resource->id];
+        $groups = $this->Groups->findIndex($findIndexOptions)->all();
+        $groupsIds = Hash::extract($groups->toArray(), '{n}.id');
+
+        $this->assertContains($groupWithout->id, $groupsIds);
+        $this->assertNotContains($groupWithAccess->id, $groupsIds);
+    }
+
+    /**
+     * Test that all permission types (READ, UPDATE, OWNER) are excluded and
+     * only the group with no permission is returned.
+     */
+    public function testFilterHasNotPermission_MixedPermissionTypes()
+    {
+        [$groupRead, $groupUpdate, $groupOwner, $groupNoPerm] = GroupFactory::make(4)->persist();
+        $resource = ResourceFactory::make()->persist();
+        PermissionFactory::make()->acoResource($resource)->aroGroup($groupRead)->typeRead()->persist();
+        PermissionFactory::make()->acoResource($resource)->aroGroup($groupUpdate)->typeUpdate()->persist();
+        PermissionFactory::make()->acoResource($resource)->aroGroup($groupOwner)->typeOwner()->persist();
+
+        $findIndexOptions['filter']['has-not-permission'] = [$resource->id];
+        $groups = $this->Groups->findIndex($findIndexOptions)->all();
+        $groupsIds = Hash::extract($groups->toArray(), '{n}.id');
+
+        $this->assertEqualsCanonicalizing([$groupNoPerm->id], $groupsIds);
+    }
+
+    /**
+     * Test that when a resource has no permissions at all, all groups are returned.
+     */
+    public function testFilterHasNotPermission_ResourceWithNoPermissions()
+    {
+        [$groupA, $groupB] = GroupFactory::make(2)->persist();
+        $resource = ResourceFactory::make()->persist();
+
+        $findIndexOptions['filter']['has-not-permission'] = [$resource->id];
+        $groups = $this->Groups->findIndex($findIndexOptions)->all();
+        $groupsIds = Hash::extract($groups->toArray(), '{n}.id');
+
+        $this->assertContains($groupA->id, $groupsIds);
+        $this->assertContains($groupB->id, $groupsIds);
+    }
+
+    /**
+     * Test that permissions on a different resource do not affect the filter result.
+     */
+    public function testFilterHasNotPermission_PermissionOnDifferentResource()
+    {
+        [$groupA, $groupB] = GroupFactory::make(2)->persist();
+        [$resourceA, $resourceB] = ResourceFactory::make(2)->persist();
+        // groupA has permission on resourceA only
+        PermissionFactory::make()->acoResource($resourceA)->aroGroup($groupA)->typeRead()->persist();
+
+        // Filter on resourceB — groupA has no permission on resourceB, so both groups should be returned.
+        $findIndexOptions['filter']['has-not-permission'] = [$resourceB->id];
+        $groups = $this->Groups->findIndex($findIndexOptions)->all();
+        $groupsIds = Hash::extract($groups->toArray(), '{n}.id');
+
+        $this->assertContains($groupA->id, $groupsIds);
+        $this->assertContains($groupB->id, $groupsIds);
+
+        // Filter on resourceA — only groupB should be returned.
+        $findIndexOptions['filter']['has-not-permission'] = [$resourceA->id];
+        $groups = $this->Groups->findIndex($findIndexOptions)->all();
+        $groupsIds = Hash::extract($groups->toArray(), '{n}.id');
+
+        $this->assertContains($groupB->id, $groupsIds);
+        $this->assertNotContains($groupA->id, $groupsIds);
+    }
+
+    /**
+     * Test that soft-deleted groups are excluded from has-not-permission results.
+     */
+    public function testFilterHasNotPermission_ExcludesSoftDeletedGroups()
+    {
+        $activeGroup = GroupFactory::make()->persist();
+        $deletedGroup = GroupFactory::make()->deleted()->persist();
+        $resource = ResourceFactory::make()->persist();
+
+        $findIndexOptions['filter']['has-not-permission'] = [$resource->id];
+        $groups = $this->Groups->findIndex($findIndexOptions)->all();
+        $groupsIds = Hash::extract($groups->toArray(), '{n}.id');
+
+        $this->assertContains($activeGroup->id, $groupsIds);
+        $this->assertNotContains($deletedGroup->id, $groupsIds);
+    }
+
+    /**
+     * Test that a soft-deleted group with a permission on the resource is excluded.
+     */
+    public function testFilterHasNotPermission_SoftDeletedGroupWithPermission()
+    {
+        $activeGroup = GroupFactory::make()->persist();
+        $deletedGroupWithPerm = GroupFactory::make()->deleted()->persist();
+        $resource = ResourceFactory::make()->persist();
+        PermissionFactory::make()->acoResource($resource)->aroGroup($deletedGroupWithPerm)->typeRead()->persist();
+
+        $findIndexOptions['filter']['has-not-permission'] = [$resource->id];
+        $groups = $this->Groups->findIndex($findIndexOptions)->all();
+        $groupsIds = Hash::extract($groups->toArray(), '{n}.id');
+
+        $this->assertContains($activeGroup->id, $groupsIds);
+        $this->assertNotContains($deletedGroupWithPerm->id, $groupsIds);
     }
 
     public function testFilterSearch()

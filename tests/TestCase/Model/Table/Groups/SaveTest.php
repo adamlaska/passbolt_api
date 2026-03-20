@@ -29,7 +29,7 @@ class SaveTest extends AppTestCase
 {
     use FormatValidationTrait;
 
-    public $Groups;
+    public GroupsTable $Groups;
 
     public function setUp(): void
     {

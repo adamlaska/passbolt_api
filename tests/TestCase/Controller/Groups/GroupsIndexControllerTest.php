@@ -96,7 +96,7 @@ class GroupsIndexControllerTest extends AppIntegrationTestCase
 
     public function testGroupsIndexFilterHasUsersSuccess(): void
     {
-        $this->loginAsUser();
+        $this->logInAsUser();
         $user = UserFactory::make()->persist();
         [$groupA, $groupB, $groupC] = GroupFactory::make(3)->withGroupsUsersFor([$user])->persist();
         $urlParameter = 'filter[has-users]=' . $user->id;
@@ -110,7 +110,7 @@ class GroupsIndexControllerTest extends AppIntegrationTestCase
 
     public function testGroupsIndexFilterHasUsers_UpperCase(): void
     {
-        $this->loginAsUser();
+        $this->logInAsUser();
         $user = UserFactory::make()->persist();
         GroupFactory::make(3)->withGroupsUsersFor([$user])->persist();
         $urlParameter = 'filter[has-users]=' . strtoupper($user->id);
@@ -121,7 +121,7 @@ class GroupsIndexControllerTest extends AppIntegrationTestCase
 
     public function testGroupsIndexFilterHasManagersSuccess(): void
     {
-        $this->loginAsUser();
+        $this->logInAsUser();
         $user = UserFactory::make()->persist();
         [$groupA, $groupB] = GroupFactory::make(2)->withGroupsManagersFor([$user])->persist();
         $urlParameter = 'filter[has-managers]=' . $user->id;

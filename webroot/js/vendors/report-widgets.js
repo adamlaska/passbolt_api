@@ -66,27 +66,27 @@ class ReportGaugeWidget{
   }
 
   render(elt) {
-    const chart = new ApexCharts(elt[0], this.getOptions());
+    const chart = new ApexCharts(elt, this.getOptions());
     chart.render();
   }
 }
 
 
-$(()=> {
-  $('.report-widget.gauge').each((i, e) => {
-    const $widgetEl = $(".widget-content", e);
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('.report-widget.gauge').forEach((e) => {
+    const widgetEl = e.querySelector('.widget-content');
     const cssColorsPath = '.report-widget .colors.';
-    const color = $widgetEl.data('color');
+    const color = widgetEl.dataset.color;
     const graphColor = ReportWidget.getStyleSheetPropertyValue(cssColorsPath + color, 'color');
 
     // Get data properties from element.
     const options = {
-      "value" : $widgetEl.data('value'),
-      "radd" : $widgetEl.data('textradd'),
+      "value" : widgetEl.dataset.value,
+      "radd" : widgetEl.dataset.textradd,
       "color" : graphColor
     };
 
     const gauge = new ReportGaugeWidget(options);
-    gauge.render($widgetEl);
+    gauge.render(widgetEl);
   });
 });

@@ -9,7 +9,6 @@ declare(strict_types=1);
 
 use Cake\Routing\Router;
 
-$this->Html->script('vendors/jquery.min.js', ['block' => 'scriptBottom']);
 $this->Html->script('web_installer/email', ['block' => 'scriptBottom']);
 ?>
 <?= $this->element('header', ['title' => __('Enter your SMTP server settings.')]) ?>

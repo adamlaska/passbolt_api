@@ -8,7 +8,6 @@
  */
 use Passbolt\Reports\Utility\AbstractSingleReport;
 
-$this->Html->script('vendors/jquery.min.js', ['block' => 'scriptBottom']);
 $this->Html->script('vendors/report-widgets.js', ['block' => 'scriptBottom']);
 $this->Html->script('vendors/apexcharts.min.js', ['block' => 'scriptBottom']);
 

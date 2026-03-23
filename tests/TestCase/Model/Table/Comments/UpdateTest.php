@@ -21,14 +21,12 @@ use App\Model\Table\CommentsTable;
 use App\Test\Factory\CommentFactory;
 use App\Test\Factory\UserFactory;
 use App\Test\Lib\AppTestCase;
-use App\Test\Lib\Model\CommentsModelTrait;
 use App\Test\Lib\Model\FormatValidationTrait;
 use App\Utility\UuidFactory;
 use Cake\ORM\TableRegistry;
 
 class UpdateTest extends AppTestCase
 {
-    use CommentsModelTrait;
     use FormatValidationTrait;
 
     public $Comments;
@@ -109,7 +107,7 @@ class UpdateTest extends AppTestCase
         $user = UserFactory::make()->persist();
         $commentId = CommentFactory::make()->withUser($user)->persist()->id;
         $comment = $this->Comments->get($commentId);
-        $comment = $this->Comments->patchEntity($comment, ['content' => 'test', 'modified_by' => UuidFactory::uuid('user.id.notexist')], self::getEntityDefaultOptions());
+        $comment = $this->Comments->patchEntity($comment, ['content' => 'test', 'modified_by' => UuidFactory::uuid()], self::getEntityDefaultOptions());
         $save = $this->Comments->save($comment, ['Comments.user_id' => $user->id]);
         $this->assertFalse($save);
         $errors = $comment->getErrors();
@@ -141,7 +139,7 @@ class UpdateTest extends AppTestCase
         $errors = $comment->getErrors();
         $this->assertEmpty($errors);
 
-        // Check the favorite exists in db.
+        // Check the comment exists in db.
         $updatedComment = $this->Comments->get($save->id);
         $this->assertEquals($user->id, $updatedComment->modified_by);
         $this->assertEquals('updated comment', $updatedComment->content);

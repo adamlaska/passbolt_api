@@ -67,19 +67,26 @@ class CreateTest extends AppTestCase
     /**
      * Build default comment using factories.
      */
-    private function generateDummyComment(array $data = []): array
+    private function generateDummyComment(array $data = [], bool $persist = true): array
     {
-        $user = UserFactory::make()->persist();
-        $resource = ResourceFactory::make()->withPermissionsFor([$user])->persist();
+        if ($persist) {
+            $user = UserFactory::make()->persist();
+            $resource = ResourceFactory::make()->withPermissionsFor([$user])->persist();
+            $userId = $user->id;
+            $resourceId = $resource->id;
+        } else {
+            $userId = UuidFactory::uuid();
+            $resourceId = UuidFactory::uuid();
+        }
 
         return array_merge([
-            'user_id' => $user->id,
-            'foreign_key' => $resource->id,
+            'user_id' => $userId,
+            'foreign_key' => $resourceId,
             'foreign_model' => 'Resource',
             'content' => 'this is a test comment',
             'parent_id' => null,
-            'created_by' => $user->id,
-            'modified_by' => $user->id,
+            'created_by' => $userId,
+            'modified_by' => $userId,
         ], $data);
     }
 
@@ -92,7 +99,7 @@ class CreateTest extends AppTestCase
             'notEmpty' => self::getNotEmptyTestCases(),
             'requirePresence' => self::getRequirePresenceTestCases(),
         ];
-        $this->assertFieldFormatValidation($this->Comments, 'user_id', $this->generateDummyComment(), self::getEntityDefaultOptions(), $testCases);
+        $this->assertFieldFormatValidation($this->Comments, 'user_id', $this->generateDummyComment(persist: false), self::getEntityDefaultOptions(), $testCases);
     }
 
     public function testValidationParentId()
@@ -101,7 +108,7 @@ class CreateTest extends AppTestCase
             'uuid' => self::getUuidTestCases(),
             'allowEmpty' => self::getAllowEmptyTestCases(),
         ];
-        $this->assertFieldFormatValidation($this->Comments, 'parent_id', $this->generateDummyComment(), self::getEntityDefaultOptions(), $testCases);
+        $this->assertFieldFormatValidation($this->Comments, 'parent_id', $this->generateDummyComment(persist: false), self::getEntityDefaultOptions(), $testCases);
     }
 
     public function testValidationForeignModel()
@@ -111,7 +118,7 @@ class CreateTest extends AppTestCase
             'notEmpty' => self::getNotEmptyTestCases(),
             'inList' => self::getInListTestCases(CommentsTable::ALLOWED_FOREIGN_MODELS),
         ];
-        $this->assertFieldFormatValidation($this->Comments, 'foreign_model', $this->generateDummyComment(), self::getEntityDefaultOptions(), $testCases);
+        $this->assertFieldFormatValidation($this->Comments, 'foreign_model', $this->generateDummyComment(persist: false), self::getEntityDefaultOptions(), $testCases);
     }
 
     public function testValidationForeignId()
@@ -121,7 +128,7 @@ class CreateTest extends AppTestCase
             'requirePresence' => self::getRequirePresenceTestCases(),
             'notEmpty' => self::getNotEmptyTestCases(),
         ];
-        $this->assertFieldFormatValidation($this->Comments, 'foreign_key', $this->generateDummyComment(), self::getEntityDefaultOptions(), $testCases);
+        $this->assertFieldFormatValidation($this->Comments, 'foreign_key', $this->generateDummyComment(persist: false), self::getEntityDefaultOptions(), $testCases);
     }
 
     public function testValidationContent()
@@ -132,7 +139,7 @@ class CreateTest extends AppTestCase
             'notEmpty' => self::getNotEmptyTestCases(),
             'lengthBetween' => self::getLengthBetweenTestCases(1, 255),
         ];
-        $this->assertFieldFormatValidation($this->Comments, 'content', $this->generateDummyComment(), self::getEntityDefaultOptions(), $testCases);
+        $this->assertFieldFormatValidation($this->Comments, 'content', $this->generateDummyComment(persist: false), self::getEntityDefaultOptions(), $testCases);
     }
 
     public function testValidationCreatedBy()
@@ -142,7 +149,7 @@ class CreateTest extends AppTestCase
             'notEmpty' => self::getNotEmptyTestCases(),
             'requirePresence' => self::getRequirePresenceTestCases(),
         ];
-        $this->assertFieldFormatValidation($this->Comments, 'created_by', $this->generateDummyComment(), self::getEntityDefaultOptions(), $testCases);
+        $this->assertFieldFormatValidation($this->Comments, 'created_by', $this->generateDummyComment(persist: false), self::getEntityDefaultOptions(), $testCases);
     }
 
     /* LOGIC VALIDATION TESTS */
@@ -195,7 +202,7 @@ class CreateTest extends AppTestCase
 
     public function testErrorParentIdDoesNotExist()
     {
-        $data = $this->generateDummyComment(['parent_id' => UuidFactory::uuid('comment.id.doesnotexist')]);
+        $data = $this->generateDummyComment(['parent_id' => UuidFactory::uuid()]);
         $comment = $this->Comments->newEntity($data, self::getEntityDefaultOptions());
         $save = $this->Comments->save($comment);
         $this->assertFalse($save);
@@ -249,7 +256,7 @@ class CreateTest extends AppTestCase
         $errors = $comment->getErrors();
         $this->assertEmpty($errors);
 
-        // Check the favorite exists in db.
+        // Check the comment exists in db.
         $addedComment = $this->Comments->get($save->id);
         $this->assertNotEmpty($addedComment);
         $this->assertEquals($data['user_id'], $addedComment->user_id);

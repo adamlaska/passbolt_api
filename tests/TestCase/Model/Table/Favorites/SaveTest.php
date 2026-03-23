@@ -61,14 +61,21 @@ class SaveTest extends AppTestCase
     /**
      * Build default favorite using factories.
      */
-    private function generateDummyFavorite(array $data = []): array
+    private function generateDummyFavorite(array $data = [], bool $persist = true): array
     {
-        $user = UserFactory::make()->persist();
-        $resource = ResourceFactory::make()->withPermissionsFor([$user])->persist();
+        if ($persist) {
+            $user = UserFactory::make()->persist();
+            $resource = ResourceFactory::make()->withPermissionsFor([$user])->persist();
+            $userId = $user->id;
+            $resourceId = $resource->id;
+        } else {
+            $userId = UuidFactory::uuid();
+            $resourceId = UuidFactory::uuid();
+        }
 
         return array_merge([
-            'user_id' => $user->id,
-            'foreign_key' => $resource->id,
+            'user_id' => $userId,
+            'foreign_key' => $resourceId,
             'foreign_model' => 'Resource',
         ], $data);
     }
@@ -82,7 +89,7 @@ class SaveTest extends AppTestCase
             'requirePresence' => self::getRequirePresenceTestCases(),
             'notEmpty' => self::getNotEmptyTestCases(),
         ];
-        $this->assertFieldFormatValidation($this->Favorites, 'user_id', $this->generateDummyFavorite(), self::getEntityDefaultOptions(), $testCases);
+        $this->assertFieldFormatValidation($this->Favorites, 'user_id', $this->generateDummyFavorite(persist: false), self::getEntityDefaultOptions(), $testCases);
     }
 
     public function testValidationForeignId()
@@ -92,7 +99,7 @@ class SaveTest extends AppTestCase
             'requirePresence' => self::getRequirePresenceTestCases(),
             'notEmpty' => self::getNotEmptyTestCases(),
         ];
-        $this->assertFieldFormatValidation($this->Favorites, 'foreign_key', $this->generateDummyFavorite(), self::getEntityDefaultOptions(), $testCases);
+        $this->assertFieldFormatValidation($this->Favorites, 'foreign_key', $this->generateDummyFavorite(persist: false), self::getEntityDefaultOptions(), $testCases);
     }
 
     public function testValidationForeignModel()
@@ -102,7 +109,7 @@ class SaveTest extends AppTestCase
             'requirePresence' => self::getRequirePresenceTestCases(),
             'notEmpty' => self::getNotEmptyTestCases(),
         ];
-        $this->assertFieldFormatValidation($this->Favorites, 'foreign_model', $this->generateDummyFavorite(), self::getEntityDefaultOptions(), $testCases);
+        $this->assertFieldFormatValidation($this->Favorites, 'foreign_model', $this->generateDummyFavorite(persist: false), self::getEntityDefaultOptions(), $testCases);
     }
 
     /* LOGIC VALIDATION TESTS */

@@ -61,10 +61,11 @@ class DeleteTest extends AppTestCase
 
     public function testDeleteErrorIsOwnerRule()
     {
-        $user = UserFactory::make()->persist();
-        $commentId = CommentFactory::make()->persist()->id;
+        $owner = UserFactory::make()->persist();
+        $otherUser = UserFactory::make()->persist();
+        $commentId = CommentFactory::make()->withUser($owner)->persist()->id;
         $comment = $this->Comments->get($commentId);
-        $delete = $this->Comments->delete($comment, ['Comments.user_id' => $user->id]);
+        $delete = $this->Comments->delete($comment, ['Comments.user_id' => $otherUser->id]);
         $this->assertFalse($delete);
         $errors = $comment->getErrors();
         $this->assertNotEmpty($errors);

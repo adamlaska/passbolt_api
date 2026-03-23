@@ -11,43 +11,47 @@
  * @link          https://www.passbolt.com Passbolt(tm)
  * @since         2.0.0
  */
-$(function () {
-    $('.see-trace').click(function () {
-        if ($('.trace').hasClass('hidden')) {
-            $('.trace').removeClass('hidden');
-        } else {
-            $('.trace').addClass('hidden');
-        }
+document.addEventListener('DOMContentLoaded', () => {
+    const seeTraceBtn = document.querySelector('.see-trace');
+    const trace = document.querySelector('.trace');
 
-        return false;
-    });
+    if (seeTraceBtn) {
+        seeTraceBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            trace.classList.toggle('hidden');
+        });
+    }
 
-    $.fn.setSmtpConfigInputs = function(authMethod) {
+    /**
+     * Show/hide SMTP config inputs based on the selected authentication method.
+     * @param {string} authMethod
+     */
+    const setSmtpConfigInputs = (authMethod) => {
+        const usernameBlock = document.getElementById('smtp-config-input-username');
+        const passwordBlock = document.getElementById('smtp-config-input-password');
+        const usernameInput = document.querySelector('input[name="username"]');
+        const passwordInput = document.querySelector('input[name="password"]');
+
         if (authMethod === 'username_only') {
-            // Hide from UI
-            $('#smtp-config-input-username').show();
-            $('#smtp-config-input-password').hide();
-            // Clear values from the input
-            $('input[name="password"]').val('');
+            usernameBlock.classList.remove('hidden');
+            passwordBlock.classList.add('hidden');
+            passwordInput.value = '';
         } else if (authMethod === 'none') {
-            // Hide from UI
-            $('#smtp-config-input-username').hide();
-            $('#smtp-config-input-password').hide();
-            // Clear values from the inputs
-            $('input[name="username"]').val('');
-            $('input[name="password"]').val('');
+            usernameBlock.classList.add('hidden');
+            passwordBlock.classList.add('hidden');
+            usernameInput.value = '';
+            passwordInput.value = '';
         } else {
-            // Hide from UI
-            $('#smtp-config-input-username').show();
-            $('#smtp-config-input-password').show();
+            usernameBlock.classList.remove('hidden');
+            passwordBlock.classList.remove('hidden');
         }
     };
 
-    var authMethodElem = $('select[name="authentication_method"]');
+    const authMethodElem = document.querySelector('select[name="authentication_method"]');
 
-    $(this).setSmtpConfigInputs(authMethodElem.val());
+    setSmtpConfigInputs(authMethodElem.value);
 
-    authMethodElem.on('change', function() {
-        $(this).setSmtpConfigInputs(this.value);
+    authMethodElem.addEventListener('change', function() {
+        setSmtpConfigInputs(this.value);
     });
 });

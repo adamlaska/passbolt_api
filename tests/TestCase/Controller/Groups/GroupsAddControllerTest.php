@@ -196,6 +196,49 @@ class GroupsAddControllerTest extends AppIntegrationTestCase
         }
     }
 
+    public function testGroupsAddSuccess_ContainMyGroupUser(): void
+    {
+        $this->logInAsAdmin();
+        $data = $this->_getDummyPostData();
+        $this->postJson('/groups.json?contain[my_group_user]=1', $data);
+        $this->assertResponseSuccess();
+        $response = $this->_responseJsonBody;
+        $this->assertObjectHasAttribute('my_group_user', $response);
+        $this->assertNull($response->my_group_user);
+    }
+
+    public function testGroupsAddSuccess_ContainMyGroupUser_WhenUserIsMember(): void
+    {
+        $admin = $this->logInAsAdmin();
+        $user = UserFactory::make()->persist();
+        $data = [
+            'name' => 'Test group with my_group_user',
+            'groups_users' => [
+                ['user_id' => $admin->id, 'is_admin' => 1],
+                ['user_id' => $user->id],
+            ],
+        ];
+        $this->postJson('/groups.json?contain[my_group_user]=1', $data);
+        $this->assertResponseSuccess();
+        $response = $this->_responseJsonBody;
+        $group = GroupFactory::firstOrFail();
+        $this->assertObjectHasAttribute('my_group_user', $response);
+        $this->assertNotNull($response->my_group_user);
+        $this->assertEquals($admin->id, $response->my_group_user->user_id);
+        $this->assertEquals($group->id, $response->my_group_user->group_id);
+        $this->assertTrue($response->my_group_user->is_admin);
+    }
+
+    public function testGroupsAddSuccess_DoNotContainMyGroupUserByDefault(): void
+    {
+        $this->logInAsAdmin();
+        $data = $this->_getDummyPostData();
+        $this->postJson('/groups.json', $data);
+        $this->assertResponseSuccess();
+        $response = $this->_responseJsonBody;
+        $this->assertObjectNotHasAttribute('my_group_user', $response);
+    }
+
     public function testGroupsAddErrorNotAdmin(): void
     {
         $this->logInAsUser();

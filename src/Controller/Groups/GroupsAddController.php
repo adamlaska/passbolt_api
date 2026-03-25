@@ -54,6 +54,8 @@ class GroupsAddController extends AppController
             'contain' => ['my_group_user'],
         ];
         $options = $this->QueryString->get($whitelist);
+        // Always contain the groups_users in the response
+        $options['contain']['groups_users'] = true;
         if (isset($options['contain']['my_group_user'])) {
             $options['my_user_id'] = $this->User->id();
         }

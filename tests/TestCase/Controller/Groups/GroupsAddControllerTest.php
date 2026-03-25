@@ -89,6 +89,13 @@ class GroupsAddControllerTest extends AppIntegrationTestCase
             $this->logInAsAdmin();
             $this->postJson('/groups.json', $data);
             $this->assertResponseSuccess();
+            $response = $this->getResponseBodyAsArray();
+            $this->assertSame(count($data['groups_users']), count($response['groups_users']));
+            foreach ($data['groups_users'] as $gu) {
+                $responseGroupUser = Hash::extract($response['groups_users'], "{n}[user_id={$gu['user_id']}]");
+                $this->assertNotEmpty($responseGroupUser, "Group user {$gu['user_id']} not found in response");
+                $this->assertSame((bool)($gu['is_admin'] ?? null), $responseGroupUser[0]['is_admin']);
+            }
 
             // Check that the groups and its sub-models are saved as expected.
             $group = $this->Groups->find()

@@ -203,7 +203,7 @@ class GroupsAddControllerTest extends AppIntegrationTestCase
         }
     }
 
-    public function testGroupsAddSuccess_ContainMyGroupUser(): void
+    public function testGroupsAddSuccess_ContainMyGroupUser_WhenUserIsNotMember(): void
     {
         $this->logInAsAdmin();
         $data = $this->_getDummyPostData();

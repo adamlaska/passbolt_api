@@ -1,4 +1,9 @@
 <?php
+// =================================================================
+// ⚠ WARNING
+// This file is patched while building official packages.
+// If you do any changes make sure to notify the SRE/packaging team.
+// =================================================================
 /**
  * Passbolt ~ Open source password manager for teams
  * Copyright (c) Passbolt SA (https://www.passbolt.com)
@@ -323,6 +328,14 @@ return [
             ],
             'exportPolicies' => [
                 'enabled' => filter_var(env('PASSBOLT_PLUGINS_EXPORT_POLICIES_ENABLED', true), FILTER_VALIDATE_BOOLEAN),
+            ],
+            'safari' => [
+                'enabled' => filter_var(env('PASSBOLT_PLUGINS_SAFARI_ENABLED', false), FILTER_VALIDATE_BOOLEAN),
+                'settingsVisibility' => [
+                    'whiteListPublic' => [
+                        'enabled',
+                    ],
+                ],
             ],
         ],
 

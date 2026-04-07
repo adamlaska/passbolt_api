@@ -1,8 +1,8 @@
 Release song: https://www.youtube.com/watch?v=9Nv-WHmjN7s
 
-Passbolt 5.11.0-test.2. Reapply "PB-40266 Health-check issues on Ubuntu 24 when running while being in a directory without the +x permission bit for www-data user (GITHUB #571)".
+Passbolt 5.11.0-test.3. Styleguide bump.
 
-## [5.11.0-test.2] - 2026-04-03
+## [5.11.0-test.3] - 2026-04-07
 ### Added
 - PB-49875 OAuth support for smtp authentication
 - PB-50158 Add a feature flag to enable/disable Safari availability on a Passbolt instance

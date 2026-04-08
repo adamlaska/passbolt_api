@@ -19,7 +19,6 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 - PB-49902 As a user I cannot create a v4 resource with v5 resource type
 
 ### Improved
-- PB-50489 Email digest batch sending improvements
 - PB-50070 Align X-Frame-Options with CSP and add missing X-XSS-Protection header
 
 ### Maintenance
@@ -44,7 +43,6 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 - PB-49902 As a user I cannot create a v4 resource with v5 resource type
 
 ### Improved
-- PB-50489 Email digest batch sending improvements
 - PB-50070 Align X-Frame-Options with CSP and add missing X-XSS-Protection header
 
 ### Maintenance
@@ -69,7 +67,6 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 - PB-49902 As a user I cannot create a v4 resource with v5 resource type
 
 ### Improved
-- PB-50489 Email digest batch sending improvements
 - PB-50070 Align X-Frame-Options with CSP and add missing X-XSS-Protection header
 
 ### Maintenance

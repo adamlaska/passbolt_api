@@ -1,6 +1,6 @@
-Release song: https://www.youtube.com/watch?v=9Nv-WHmjN7s
+Release song: https://www.youtube.com/watch?v=GXbOROT0OuA
 
-Passbolt 5.11.0-test.3. Styleguide bump.
+Passbolt 5.11.0.
 
 ## [5.11.0-test.3] - 2026-04-07
 ### Added
@@ -19,7 +19,6 @@ Passbolt 5.11.0-test.3. Styleguide bump.
 - PB-49902 As a user I cannot create a v4 resource with v5 resource type
 
 ### Improved
-- PB-50489 Email digest batch sending improvements
 - PB-50070 Align X-Frame-Options with CSP and add missing X-XSS-Protection header
 
 ### Maintenance

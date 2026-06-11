@@ -17,12 +17,10 @@ declare(strict_types=1);
 
 namespace App\Test\TestCase\Form\Users;
 
+use App\Form\Users\UsersEditForm;
+use App\Test\Lib\Model\AvatarsIntegrationTestTrait;
 use App\Utility\UuidFactory;
 use Cake\TestSuite\TestCase;
-use App\Form\Users\UsersEditForm;
-use Cake\I18n\DateTime;
-use App\Test\Lib\Model\AvatarsIntegrationTestTrait;
-use Laminas\Diactoros\UploadedFile;
 
 class UsersEditFormTest extends TestCase
 {
@@ -52,8 +50,6 @@ class UsersEditFormTest extends TestCase
 
     public static function usersEditFormDataProvider(): array
     {
-        $uploadFile = FIXTURES . 'Avatar' . DS . 'ada.png';
-
         return [
             [
                 [], //input data
@@ -74,93 +70,13 @@ class UsersEditFormTest extends TestCase
             [
                 [
                     'id' => UuidFactory::uuid(),
-                    'profile' => [
-                        'first_name' => 1
-                    ],
-                ],
-                false,
-            ],
-            [
-                [
-                    'id' => UuidFactory::uuid(),
-                    'profile' => [
-                        'first_name' => 'addddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd'
-                    ],
-                ],
-                false,
-            ],
-            [
-                [
-                    'id' => UuidFactory::uuid(),
-                    'profile' => [
-                        'last_name' => 1
-                    ],
-                ],
-                false,
-            ],
-            [
-                [
-                    'id' => UuidFactory::uuid(),
-                    'profile' => [
-                        'last_name' => 'addddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd'
-                    ],
-                ],
-                false,
-            ],
-            [
-                [
-                    'id' => UuidFactory::uuid(),
-                    'disabled' => '2006-12-27',
-                ],
-                false,
-            ],
-            [
-                [
-                    'id' => UuidFactory::uuid(),
-                    'profile' => [
-                        'avatar' => [
-                            'file' => 'not a file'
-                        ],
-                    ],
-                ],
-                false,
-            ],
-            [
-                [
-                    'id' => UuidFactory::uuid(),
-                    'profile' => [
-                        'avatar' => [
-                            'file' => new UploadedFile(
-                                $uploadFile,
-                                filesize($uploadFile),
-                                UPLOAD_ERR_OK,
-                                $uploadFile,
-                                'image/png'
-                            )
-                        ],
-                    ],
                 ],
                 true,
             ],
             [
                 [
                     'id' => UuidFactory::uuid(),
-                    'profile' => [
-                        'first_name' => 'ddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd'
-                    ],
-                ],
-                true,
-            ],
-            [
-                [
-                    'id' => UuidFactory::uuid(),
-                ],
-                true,
-            ],
-            [
-                [
-                    'id' => UuidFactory::uuid(),
-                    'disabled' => DateTime::yesterday(),
+                    'role_id' => UuidFactory::uuid(),
                 ],
                 true,
             ],

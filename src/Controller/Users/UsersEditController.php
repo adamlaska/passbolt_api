@@ -59,6 +59,8 @@ class UsersEditController extends AppController
         ResourcesExpireResourcesServiceInterface $resourcesExpireResourcesService
     ) {
         $this->assertJson();
+        $data = $this->request->getData();
+        $data['id'] = $id;
 
         // Admin can edit all users, other users can only edit themselves
         if ($this->User->role() !== Role::ADMIN && $id !== $this->User->id()) {
@@ -68,14 +70,12 @@ class UsersEditController extends AppController
             throw new ForbiddenException(__('You are not authorized to edit the role.'));
         }
 
-        $data = $this->request->getData();
-        $data['id'] = $id;
-
-        $this->_validateRequestData($data);
         $form = new UsersEditForm();
         if (!$form->execute($data)) {
             throw new FormValidationException(__('Could not validate user data.'), $form);
         }
+
+        $this->_validateRequestData($data);
 
         // Try to find the user and validate changes it
         /** @var \App\Model\Table\UsersTable $usersTable */
@@ -143,15 +143,15 @@ class UsersEditController extends AppController
     }
 
     /**
-     * Assert request sanity and return the sanitized data
+     * Validate the data coming from the request
      *
-     * @param string $id user uuid
-     * @return array
+     * @param array $data user data
+     * @return void
      * @throws \Cake\Http\Exception\BadRequestException if gpgkey is sent (v2 only)
      * @throws \Cake\Http\Exception\BadRequestException if groups data is sent (v2 only)
      * @throws \Cake\Http\Exception\BadRequestException if role data is sent (v2 only)
      * @throws \Cake\Http\Exception\ForbiddenException if the user is not admin or not editing themselves
-     * @throws \Cake\Http\Exception\BadRequestException if the user id is invalid, if data is not provided or invalid
+     * @throws \Cake\Http\Exception\BadRequestException if data is not provided or invalid
      */
     protected function _validateRequestData(array $data): void
     {

@@ -1,5 +1,4 @@
 <?php
-
 declare(strict_types=1);
 
 /**
@@ -20,7 +19,6 @@ namespace App\Form\Users;
 
 use Cake\Form\Form;
 use Cake\Form\Schema;
-use Cake\Utility\Hash;
 use Cake\Validation\Validator;
 
 class UsersEditForm extends Form
@@ -36,7 +34,7 @@ class UsersEditForm extends Form
         return $schema
             ->addField('id', ['type' => 'string'])
             ->addField('role_id', ['type' => 'string'])
-            ->addField('disabled', ['type' => 'string'])
+            ->addField('disabled', ['type' => 'datetime'])
             ->addField('profile', ['type' => 'array']);
     }
 
@@ -45,30 +43,6 @@ class UsersEditForm extends Form
      */
     public function validationDefault(Validator $validator): Validator
     {
-        $avatarValidator = new Validator();
-        $avatarValidator
-            ->allowEmptyFile('file')
-            ->uploadedFile('file', ['types' => ['image/jpg', 'image/jpeg', 'image/png', 'image/gif']]);
-
-        $profileValidator = new Validator();
-        $profileValidator
-            ->utf8('first_name', 'First name should be a valid utf8 string.')
-            ->maxLength('first_name', 255)
-            ->allowEmptyString('first_name');
-
-        $profileValidator
-            ->utf8('last_name', 'Last name should be a valid utf8 string.')
-            ->maxLength('last_name', 255)
-            ->allowEmptyString('last_name');
-
-        $profileValidator
-            ->addNested('avatar', $avatarValidator)
-            ->allowEmptyArray('avatar');
-
-        $validator
-            ->addNested('profile', $profileValidator)
-            ->allowEmptyArray('profile');
-
         $validator
             ->requirePresence('id')
             ->uuid('id', 'The user identifier should be a valid UUID.');
@@ -76,11 +50,6 @@ class UsersEditForm extends Form
         $validator
             ->allowEmptyString('role_id')
             ->uuid('role_id', 'The user role id should be a valid UUID.');
-
-        $validator
-            ->allowEmptyString('disabled')
-            ->datetime('disabled');
-
 
         return $validator;
     }
@@ -101,15 +70,36 @@ class UsersEditForm extends Form
      */
     protected function sanitizeData(array $data): array
     {
-        return array_filter([
-            'id' => Hash::get($data, 'id'),
-            'role_id' => Hash::get($data, 'role_id'),
-            'disabled' => Hash::get($data, 'disabled'),
-            'profile' => array_filter([
-                'first_name' => Hash::get($data, 'profile.first_name'),
-                'last_name' => Hash::get($data, 'profile.last_name'),
-                'avatar' => Hash::get($data, 'profile.avatar'),
-            ]),
-        ]);
+        $sanitizedData = [];
+        $allowedKeys = [
+            'id',
+            'role_id',
+            'disabled',
+            'profile' => [
+                'first_name',
+                'last_name',
+                'avatar',
+            ],
+        ];
+
+        foreach ($allowedKeys as $allowedMainKey => $allowedKey) {
+            if (!is_array($allowedKey)) {
+                if (array_key_exists($allowedKey, $data)) {
+                    $sanitizedData[$allowedKey] = $data[$allowedKey];
+                }
+            } else {
+                foreach ($allowedKey as $allowedNestedKey) {
+                    if (!array_key_exists($allowedMainKey, $data)) {
+                        break;
+                    }
+
+                    if (array_key_exists($allowedNestedKey, $data[$allowedMainKey])) {
+                        $sanitizedData[$allowedMainKey][$allowedNestedKey] = $data[$allowedMainKey][$allowedNestedKey];
+                    }
+                }
+            }
+        }
+
+        return $sanitizedData;
     }
 }

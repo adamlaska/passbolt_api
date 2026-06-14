@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: 41c2572bd9bd4cc908d3e09e0cbed6e5\n"
 "POT-Creation-Date: 2026-05-07 04:01+0000\n"
-"PO-Revision-Date: 2026-06-14 20:41\n"
+"PO-Revision-Date: 2026-06-14 22:47\n"
 "Last-Translator: NAME <EMAIL@ADDRESS>\n"
 "Language-Team: Polish\n"
 "MIME-Version: 1.0\n"
@@ -1034,7 +1034,7 @@ msgid "The username is already in use."
 msgstr "Nazwa użytkownika jest już używana."
 
 msgid "The role does not exist."
-msgstr ""
+msgstr "Rola nie istnieje."
 
 msgid "The user should not be sole owner of shared content, transfer the ownership to other users."
 msgstr "Użytkownik nie powinien być jedynym właścicielem współdzielonych treści. Przenieś własność na innych użytkowników."
@@ -1172,10 +1172,10 @@ msgid "{0} edited the resource {1}"
 msgstr "Użytkownik {0} edytował zasób {1}"
 
 msgid "{0} created a new role {1}"
-msgstr ""
+msgstr "Użytkownik {0} utworzył nową rolę {1}"
 
 msgid "{0} updated the role {1}"
-msgstr ""
+msgstr "Użytkownik {0} zaktualizował rolę {1}"
 
 msgid "{0} cannot complete the account recovery process!"
 msgstr "Użytkownik {0} nie może ukończyć procesu odzyskiwania konta!"
@@ -2471,10 +2471,10 @@ msgid "A folder of type personal cannot be shared with other users or a group."
 msgstr "Folder typu prywatnego nie może być udostępniany innym użytkownikom ani grupie."
 
 msgid "You made changes on several folders"
-msgstr ""
+msgstr "Wprowadziłeś/łaś zmiany w kilku folderach"
 
 msgid "{0} has made changes on several folders"
-msgstr ""
+msgstr "Użytkownik {0} wprowadził zmiany w kilku folderach"
 
 msgid "You added the folder {0}"
 msgstr "Udało Ci się dodać folder {0}"
@@ -2573,7 +2573,7 @@ msgid "{0} edited a folder"
 msgstr "Użytkownik {0} edytował folder"
 
 msgid "{0} folders were affected."
-msgstr ""
+msgstr "Naruszone foldery: {0}"
 
 msgid "It would be too much to list them here, but you can go check them on passbolt."
 msgstr "Nie damy rady ich tu wszystkich zmieścić, ale możesz je sprawdzić bezpośrednio w passbolt."
@@ -3632,7 +3632,7 @@ msgid "Multi Factor Authentication is configured!"
 msgstr "Uwierzytelnianie wieloskładnikowe jest skonfigurowane!"
 
 msgid "Unable to configure Multi Factor Authentication."
-msgstr ""
+msgstr "Nie można skonfigurować uwierzytelniania wieloskładnikowego."
 
 msgid "MFA authentication is required."
 msgstr "Uwierzytelnienie MFA jest wymagane."
@@ -4073,10 +4073,10 @@ msgid "The password generator exclude look alike chars should be a boolean type.
 msgstr "Funkcja wykluczania podobnych znaków powinna być typem logicznym."
 
 msgid "The rbacs could not be saved."
-msgstr ""
+msgstr "Nie udało się zapisać ustawień rbac (kontroli dostępu na podstawie ról)."
 
 msgid "Could not save the rbacs, please try again later."
-msgstr ""
+msgstr "Nie udało się zapisać ustawień rbac (kontroli dostępu na podstawie ról), spróbuj ponownie później."
 
 msgid "Record not found"
 msgstr "Nie znaleziono rekordu"
@@ -4496,19 +4496,19 @@ msgid "The tenant ID should not be empty."
 msgstr ""
 
 msgid "The client ID is required."
-msgstr ""
+msgstr "ID klienta jest wymagane."
 
 msgid "The client ID should not be empty."
-msgstr ""
+msgstr "ID klienta nie powinno być puste."
 
 msgid "The client secret is required."
-msgstr ""
+msgstr "Sekret klienta jest wymagany."
 
 msgid "The client secret should not be empty."
 msgstr "Sekret klienta nie powinien być pusty."
 
 msgid "The OAuth2 username is required."
-msgstr ""
+msgstr "Nazwa użytkownika OAuth2 jest wymagana."
 
 msgid "The OAuth2 username should not be empty."
 msgstr ""
@@ -6287,7 +6287,7 @@ msgid "An unexpected error occurred while creating the user in the database"
 msgstr ""
 
 msgid "An administrator user cannot be suspended via SCIM."
-msgstr ""
+msgstr "Użytkownik administratora nie może zostać zawieszony przez SCIM."
 
 msgid "Email"
 msgstr "Adres e-mail"
@@ -6464,16 +6464,16 @@ msgid "The scope is too large."
 msgstr "Zakres jest zbyt duży."
 
 msgid "The URL must be a valid PingOne authentication domain."
-msgstr ""
+msgstr "Adres URL musi być prawidłową domeną uwierzytelniania PingOne."
 
 msgid "An environment id is required."
-msgstr ""
+msgstr "ID środowiska jest wymagane."
 
 msgid "The environment id should not be empty."
-msgstr ""
+msgstr "ID środowiska nie powinno być puste."
 
 msgid "The environment id should be a valid UUID."
-msgstr ""
+msgstr "ID środowiska powinno być prawidłowym UUID."
 
 msgid "SSO settings edit endpoints are disabled."
 msgstr "Wyłączono endpointy edycji ustawień SSO."
@@ -6638,10 +6638,10 @@ msgid "Provided root CA file does not exist"
 msgstr "Podany główny plik CA nie istnieje"
 
 msgid "Invalid provider. Expected PingOne."
-msgstr ""
+msgstr "Nieprawidłowy dostawca. Oczekiwano PingOne."
 
 msgid "Invalid provider data. Expected PingOne settings."
-msgstr ""
+msgstr "Nieprawidłowe dane dostawcy. Oczekiwano ustawień PingOne."
 
 msgid "The user id should be a valid UUID."
 msgstr "ID użytkownika powinno być prawidłowym UUID."

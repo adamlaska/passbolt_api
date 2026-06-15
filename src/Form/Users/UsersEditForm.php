@@ -18,26 +18,10 @@ declare(strict_types=1);
 namespace App\Form\Users;
 
 use Cake\Form\Form;
-use Cake\Form\Schema;
 use Cake\Validation\Validator;
 
 class UsersEditForm extends Form
 {
-    /**
-     * User edition schema.
-     *
-     * @param \Cake\Form\Schema $schema schema
-     * @return \Cake\Form\Schema
-     */
-    protected function _buildSchema(Schema $schema): Schema
-    {
-        return $schema
-            ->addField('id', ['type' => 'string'])
-            ->addField('role_id', ['type' => 'string'])
-            ->addField('disabled', ['type' => 'datetime'])
-            ->addField('profile', ['type' => 'array']);
-    }
-
     /**
      * @inheritDoc
      */
@@ -46,10 +30,6 @@ class UsersEditForm extends Form
         $validator
             ->requirePresence('id')
             ->uuid('id', 'The user identifier should be a valid UUID.');
-
-        $validator
-            ->allowEmptyString('role_id')
-            ->uuid('role_id', 'The user role id should be a valid UUID.');
 
         return $validator;
     }

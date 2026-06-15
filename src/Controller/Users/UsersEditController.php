@@ -62,20 +62,14 @@ class UsersEditController extends AppController
         $data = $this->request->getData();
         $data['id'] = $id;
 
-        // Admin can edit all users, other users can only edit themselves
-        if ($this->User->role() !== Role::ADMIN && $id !== $this->User->id()) {
-            throw new ForbiddenException(__('You are not authorized to access that location.'));
-        }
-        if ($this->User->role() !== Role::ADMIN && (isset($data['role']) || isset($data['role_id']))) {
-            throw new ForbiddenException(__('You are not authorized to edit the role.'));
-        }
+        $this->assertCanEdit($data);
 
         $form = new UsersEditForm();
         if (!$form->execute($data)) {
             throw new FormValidationException(__('Could not validate user data.'), $form);
         }
 
-        $this->_validateRequestData($data);
+        $this->assertRequestData($data);
 
         // Try to find the user and validate changes it
         /** @var \App\Model\Table\UsersTable $usersTable */
@@ -143,17 +137,34 @@ class UsersEditController extends AppController
     }
 
     /**
+     * Validate if the user is authorized to edit the data
+     *
+     * @param array $data user data
+     * @return void
+     * @throws \Cake\Http\Exception\ForbiddenException if the user is not admin or not editing themselves
+     * @throws \Cake\Http\Exception\ForbiddenException if the user is not admin and editing role
+     */
+    protected function assertCanEdit(array $data): void
+    {
+        // Admin can edit all users, other users can only edit themselves
+        if ($this->User->role() !== Role::ADMIN && $data['id'] !== $this->User->id()) {
+            throw new ForbiddenException(__('You are not authorized to access that location.'));
+        }
+        if ($this->User->role() !== Role::ADMIN && (isset($data['role']) || isset($data['role_id']))) {
+            throw new ForbiddenException(__('You are not authorized to edit the role.'));
+        }
+    }
+
+    /**
      * Validate the data coming from the request
      *
      * @param array $data user data
      * @return void
      * @throws \Cake\Http\Exception\BadRequestException if gpgkey is sent (v2 only)
      * @throws \Cake\Http\Exception\BadRequestException if groups data is sent (v2 only)
-     * @throws \Cake\Http\Exception\BadRequestException if role data is sent (v2 only)
-     * @throws \Cake\Http\Exception\ForbiddenException if the user is not admin or not editing themselves
      * @throws \Cake\Http\Exception\BadRequestException if data is not provided or invalid
      */
-    protected function _validateRequestData(array $data): void
+    protected function assertRequestData(array $data): void
     {
         if (empty($data) || count($data) < 2) {
             throw new BadRequestException(__('Some user data should be provided.'));

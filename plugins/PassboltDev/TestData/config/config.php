@@ -35,6 +35,7 @@ use Passbolt\TestData\Command\Base\RolesDataCommand;
 use Passbolt\TestData\Command\Base\SecretsDataCommand as BaseSecretsDataCommand;
 use Passbolt\TestData\Command\Base\UsersDataCommand as BaseUsersDataCommand;
 use Passbolt\TestData\Command\Large\CommentsDataCommand as LargeCommentsDataCommand;
+use Passbolt\TestData\Command\Large\EmailQueueDataCommand as LargeEmailQueueDataCommand;
 use Passbolt\TestData\Command\Large\FavoritesDataCommand as LargeFavoritesDataCommand;
 use Passbolt\TestData\Command\Large\GroupsDataCommand as LargeGroupsDataCommand;
 use Passbolt\TestData\Command\Large\GroupsUsersDataCommand as LargeGroupsUsersDataCommand;
@@ -185,6 +186,7 @@ return [
                         'resources_foreach_user' => 50,
                         'tags_personal' => 1,
                         'tags_shared' => 2,
+                        'email_queue' => 1000,
                     ],
                     'shellTasks' => [
                         ResourceTypesDataCommand::class,
@@ -202,6 +204,7 @@ return [
                         LargeSecretsDataCommand::class,
                         LargeTagsDataCommand::class,
                         LargeResourcesTagsDataCommand::class,
+                        LargeEmailQueueDataCommand::class,
                     ],
                 ],
             ],

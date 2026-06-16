@@ -274,4 +274,15 @@ class TestDataInsertWithFactoriesCommandTest extends TestCase
         $this->assertExitError();
         $this->assertOutputContains('There is already dummy data in the DB, try with the --truncate option.');
     }
+
+    public function testTestDataInsertWithFactoriesCommand_Large_Truncate_Scenario()
+    {
+        $this->exec('passbolt insert_with_factories large --truncate');
+        $this->assertOutputContains('<success>' . __('Data inserted successfully in '));
+        $this->assertExitSuccess();
+
+        // EmailQueue
+        $emailQueueCount = Configure::read('PassboltTestData.scenarios.large.install.count.email_queue');
+        $this->assertEquals($emailQueueCount, EmailQueueFactory::count());
+    }
 }

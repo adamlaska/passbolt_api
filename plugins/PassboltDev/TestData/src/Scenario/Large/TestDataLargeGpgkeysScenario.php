@@ -14,13 +14,13 @@ declare(strict_types=1);
  * @link          https://www.passbolt.com Passbolt(tm)
  * @since         5.14.0
  */
-namespace Passbolt\TestData\Scenario\Security;
+namespace Passbolt\TestData\Scenario\Large;
 
-use App\Test\Factory\CommentFactory;
+use App\Test\Factory\GpgkeyFactory;
 use CakephpFixtureFactories\Scenario\FixtureScenarioInterface;
-use Passbolt\TestData\Command\Security\XssCommentsDataCommand;
+use Passbolt\TestData\Command\Base\GpgkeysDataCommand;
 
-class TestDataSecurityXssCommentsScenario implements FixtureScenarioInterface
+class TestDataLargeGpgkeysScenario implements FixtureScenarioInterface
 {
     /**
      * @param mixed ...$args
@@ -28,10 +28,12 @@ class TestDataSecurityXssCommentsScenario implements FixtureScenarioInterface
      */
     public function load(mixed ...$args): array
     {
-        $data = (new XssCommentsDataCommand())->getData();
-        /** @var array $comments */
-        $comments = CommentFactory::make($data)->persist();
+        $data = (new GpgkeysDataCommand())->getData();
+        $gpgkeys = [];
+        foreach ($data as $gpgkey) {
+            $gpgkeys[] = GpgkeyFactory::make($gpgkey)->persist();
+        }
 
-        return $comments;
+        return $gpgkeys;
     }
 }

@@ -14,13 +14,14 @@ declare(strict_types=1);
  * @link          https://www.passbolt.com Passbolt(tm)
  * @since         5.14.0
  */
-namespace Passbolt\TestData\Scenario\Security;
+namespace Passbolt\TestData\Scenario\Large;
 
-use App\Test\Factory\CommentFactory;
+use App\Test\Factory\UserFactory;
 use CakephpFixtureFactories\Scenario\FixtureScenarioInterface;
-use Passbolt\TestData\Command\Security\XssCommentsDataCommand;
+use Passbolt\EmailDigest\Test\Factory\GroupUserDeleteEmailQueueFactory;
+use Passbolt\TestData\Command\Large\EmailQueueDataCommand;
 
-class TestDataSecurityXssCommentsScenario implements FixtureScenarioInterface
+class TestDataLargeEmailQueueScenario implements FixtureScenarioInterface
 {
     /**
      * @param mixed ...$args
@@ -28,10 +29,17 @@ class TestDataSecurityXssCommentsScenario implements FixtureScenarioInterface
      */
     public function load(mixed ...$args): array
     {
-        $data = (new XssCommentsDataCommand())->getData();
-        /** @var array $comments */
-        $comments = CommentFactory::make($data)->persist();
+        $data = (new EmailQueueDataCommand())->getData();
+        $operatorUser = UserFactory::make()->withAvatar()->getEntity();
+        $emailsQueue = [];
 
-        return $comments;
+        foreach ($data as $emailQueue) {
+            $emailsQueue[] = GroupUserDeleteEmailQueueFactory::make($emailQueue)
+                ->setGroup()
+                ->setOperator($operatorUser)
+                ->persist();
+        }
+
+        return $emailsQueue;
     }
 }

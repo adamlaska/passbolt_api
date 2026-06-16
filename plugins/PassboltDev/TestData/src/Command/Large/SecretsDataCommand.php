@@ -51,6 +51,26 @@ class SecretsDataCommand extends DataCommand
     }
 
     /**
+     * Set gpgkeys
+     *
+     * @return void
+     */
+    protected function setGpgkeys(): void
+    {
+        $gpgkeysTable = $this->fetchTable('Gpgkeys');
+
+        // Retrieve the key info.
+        // As a default key can be shared among user, the encryption will require the key fingerprint.
+        // As the key meta data are already stored in db, get the meta data from the db and avoid performance issue
+        // by avoiding any gpg extra parsing.
+        /** @var array<\App\Model\Entity\Gpgkey> $gpgkeys */
+        $gpgkeys = $gpgkeysTable->find()->all();
+        foreach ($gpgkeys as $gpgkey) {
+            $this->gpgkeys[$gpgkey->user_id] = $gpgkey->fingerprint;
+        }
+    }
+
+    /**
      * Get encrypted secrets
      *
      * @return array
@@ -62,6 +82,7 @@ class SecretsDataCommand extends DataCommand
         }
 
         $secrets = [];
+        $this->setGpgkeys();
 
         /** @var \App\Model\Table\UsersTable $usersTable */
         $usersTable = $this->fetchTable('Users');

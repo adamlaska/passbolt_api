@@ -45,7 +45,7 @@ class TotpVerifyPostController extends MfaVerifyController
         MfaFormInterface $verifyForm,
         RememberAMonthSettingInterface $rememberMeForAMonthSetting
     ) {
-        $this->_handleVerifiedNotRequired($sessionIdentificationService);
+        $this->_handleVerifiedNotRequired($sessionIdentificationService, $rememberMeForAMonthSetting);
         $this->_handleInvalidSettings(MfaSettings::PROVIDER_TOTP);
 
         // Verify totp

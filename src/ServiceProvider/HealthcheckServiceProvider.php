@@ -119,6 +119,7 @@ class HealthcheckServiceProvider extends ServiceProvider
         HostAvailabilityCheckEnabledApplicationHealthcheck::class,
         JsProdApplicationHealthcheck::class,
         EmailNotificationEnabledApplicationHealthcheck::class,
+        ConnectDatabaseHealthcheck::class,
     ];
 
     /**

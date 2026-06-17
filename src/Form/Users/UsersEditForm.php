@@ -22,6 +22,19 @@ use Cake\Validation\Validator;
 
 class UsersEditForm extends Form
 {
+    protected array $allowedKeys = [
+        'id',
+        'role_id',
+        'disabled',
+        'profile' => [
+            'first_name',
+            'last_name',
+            'avatar' => [
+                'file',
+            ],
+        ],
+    ];
+
     /**
      * @inheritDoc
      */
@@ -39,7 +52,7 @@ class UsersEditForm extends Form
      */
     public function execute(array $data, array $options = []): bool
     {
-        $data = $this->sanitizeData($data);
+        $data = $this->sanitizeData($data, $this->allowedKeys);
 
         return parent::execute($data, $options);
     }
@@ -48,35 +61,29 @@ class UsersEditForm extends Form
      * @param array $data Data to sanitize
      * @return array
      */
-    protected function sanitizeData(array $data): array
+    protected function sanitizeData(array $data, array $allowedKeys): array
     {
         $sanitizedData = [];
-        $allowedKeys = [
-            'id',
-            'role_id',
-            'disabled',
-            'profile' => [
-                'first_name',
-                'last_name',
-                'avatar',
-            ],
-        ];
 
-        foreach ($allowedKeys as $allowedMainKey => $allowedKey) {
-            if (!is_array($allowedKey)) {
-                if (array_key_exists($allowedKey, $data)) {
-                    $sanitizedData[$allowedKey] = $data[$allowedKey];
+        foreach ($allowedKeys as $key => $allowed) {
+            if (is_int($key)) {
+                if (array_key_exists($allowed, $data)) {
+                    $sanitizedData[$allowed] = $data[$allowed];
                 }
+                continue;
+            }
+
+            if (!array_key_exists($key, $data) || !is_array($data[$key])) {
+                continue;
+            }
+
+            if (array_is_list($allowed)) {
+                $sanitizedData[$key] = array_intersect_key(
+                    $data[$key],
+                    array_flip($allowed)
+                );
             } else {
-                foreach ($allowedKey as $allowedNestedKey) {
-                    if (!array_key_exists($allowedMainKey, $data)) {
-                        break;
-                    }
-
-                    if (array_key_exists($allowedNestedKey, $data[$allowedMainKey])) {
-                        $sanitizedData[$allowedMainKey][$allowedNestedKey] = $data[$allowedMainKey][$allowedNestedKey];
-                    }
-                }
+                $sanitizedData[$key] = $this->sanitizeData($data[$key], $allowed);
             }
         }
 

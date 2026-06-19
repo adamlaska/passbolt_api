@@ -25,6 +25,7 @@ use App\Utility\UuidFactory;
 use Cake\Http\ServerRequest;
 use Cake\ORM\TableRegistry;
 use Exception;
+use Passbolt\MultiFactorAuthentication\Service\MfaPolicies\RememberAMonthSettingInterface;
 
 class MfaVerifiedToken
 {
@@ -76,19 +77,27 @@ class MfaVerifiedToken
     }
 
     /**
-     * Check if a mfa verified token is legit
+     * Check if a mfa verified token is legit.
+     *
+     * Production call paths MUST supply $rememberMeForAMonthSetting so a row claiming
+     * remember-me can be re-validated against the live policy. If the policy disables
+     * remember-me, the token is invalidated outright (hard logout) — see PB-29515.
+     * When the parameter is null, legacy behaviour is preserved for the benefit of
+     * test/internal callers without the policy in scope.
      *
      * @param \App\Utility\UserAccessControl $uac user access control
      * @param string $tokenString token
      * @param \App\Authenticator\SessionIdentificationServiceInterface|null $sessionIdentificationService Session ID identifier, required unless logging in
      * @param \Cake\Http\ServerRequest|null $request Server request, required only if $sessionIdentificationService is required
+     * @param \Passbolt\MultiFactorAuthentication\Service\MfaPolicies\RememberAMonthSettingInterface|null $rememberMeForAMonthSetting Live remember-me policy setting; null preserves legacy behaviour
      * @return bool
      */
     public static function check(
         UserAccessControl $uac,
         string $tokenString,
         ?SessionIdentificationServiceInterface $sessionIdentificationService = null,
-        ?ServerRequest $request = null
+        ?ServerRequest $request = null,
+        ?RememberAMonthSettingInterface $rememberMeForAMonthSetting = null
     ): bool {
         // Baseline validity check
         /** @var \App\Model\Table\AuthenticationTokensTable $auth */
@@ -113,6 +122,12 @@ class MfaVerifiedToken
 
         // Remember me
         if (isset($data->remember) && $data->remember === true) {
+            // Only allow to remember me if policy allows it.
+            if ($rememberMeForAMonthSetting !== null && !$rememberMeForAMonthSetting->isEnabled()) {
+                $auth->setInactive($token->token);
+
+                return false;
+            }
             if (!$token->isExpired(MfaVerifiedCookie::MAX_DURATION)) {
                 return true;
             }

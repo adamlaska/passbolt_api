@@ -54,19 +54,29 @@ abstract class MfaVerifyController extends MfaController
     }
 
     /**
-     * Trigger a redirect if MFA verification is not required
+     * Trigger a redirect if MFA verification is not required.
      *
      * @param \App\Authenticator\SessionIdentificationServiceInterface $sessionIdentificationService session ID service
+     * @param \Passbolt\MultiFactorAuthentication\Service\MfaPolicies\RememberAMonthSettingInterface|null $rememberMeForAMonthSetting Live remember-me policy setting
      * @throws \Cake\Http\Exception\BadRequestException if valid Verification token is already present in cookie
      * @return void
      */
-    protected function _handleVerifiedNotRequired(SessionIdentificationServiceInterface $sessionIdentificationService)
-    {
+    protected function _handleVerifiedNotRequired(
+        SessionIdentificationServiceInterface $sessionIdentificationService,
+        ?RememberAMonthSettingInterface $rememberMeForAMonthSetting = null
+    ) {
         // Mfa cookie is set and a valid token
         $uac = $this->User->getAccessControl();
         $mfaVerifiedToken = $this->request->getCookie(MfaVerifiedCookie::MFA_COOKIE_ALIAS);
         if (isset($mfaVerifiedToken)) {
-            if (MfaVerifiedToken::check($uac, $mfaVerifiedToken, $sessionIdentificationService, $this->getRequest())) {
+            $isValid = MfaVerifiedToken::check(
+                $uac,
+                $mfaVerifiedToken,
+                $sessionIdentificationService,
+                $this->getRequest(),
+                $rememberMeForAMonthSetting
+            );
+            if ($isValid) {
                 throw new BadRequestException(__('The multi-factor authentication is not required.'));
             }
         }
@@ -117,18 +127,16 @@ abstract class MfaVerifyController extends MfaController
     ) {
         $uac = $this->User->getAccessControl();
         $sessionId = $sessionIdentificationService->getSessionIdentifier($this->getRequest());
-        $token = MfaVerifiedToken::get($uac, $provider, $sessionId, (bool)$this->request->getData('remember'));
 
-        /**
-         * Set expiry to null(Session) by default, i.e. setting is disabled.
-         * Only check for remember request data field if "remember me for a month" setting is enabled.
-         */
-        $expiryAt = null;
-        if ($rememberMeForAMonthSetting->isEnabled()) {
-            $expiryAt = $this->request->getData('remember') ?
-                (new DateTime())->addDays(MfaVerifiedCookie::MAX_DURATION_IN_DAYS) :
-                null;
-        }
+        // Honour "remember this device" only when the org policy allows it. Without this gate,
+        // a client can persist a long-lived MFA token by submitting remember=true while the policy is disabled.
+        $remember = $rememberMeForAMonthSetting->isEnabled() && (bool)$this->request->getData('remember');
+
+        $token = MfaVerifiedToken::get($uac, $provider, $sessionId, $remember);
+
+        $expiryAt = $remember
+            ? (new DateTime())->addDays(MfaVerifiedCookie::MAX_DURATION_IN_DAYS)
+            : null;
 
         $cookie = MfaVerifiedCookie::get($this->getRequest(), $token, $expiryAt);
         $this->response = $this->response->withCookie($cookie);

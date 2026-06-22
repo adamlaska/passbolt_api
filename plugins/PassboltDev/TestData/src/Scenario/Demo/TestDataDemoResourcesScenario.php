@@ -18,6 +18,7 @@ namespace Passbolt\TestData\Scenario\Demo;
 
 use CakephpFixtureFactories\Scenario\FixtureScenarioInterface;
 use Passbolt\Folders\Test\Factory\ResourceFactory;
+use Passbolt\SecretRevisions\Test\Factory\SecretRevisionFactory;
 use Passbolt\TestData\Command\Base\ResourcesDataCommand;
 
 class TestDataDemoResourcesScenario implements FixtureScenarioInterface
@@ -29,8 +30,14 @@ class TestDataDemoResourcesScenario implements FixtureScenarioInterface
     public function load(mixed ...$args): array
     {
         $data = (new ResourcesDataCommand())->getData();
-        /** @var array $resources */
-        $resources = ResourceFactory::make($data)->persist();
+        $resources = [];
+
+        foreach ($data as $resource) {
+            $secretRevisionFactory = SecretRevisionFactory::make()
+                ->resourceId($resource['id'])
+                ->resourceTypeId($resource['resource_type_id']);
+            $resources[] = ResourceFactory::make($resource)->withSecretRevisions($secretRevisionFactory)->persist();
+        }
 
         return $resources;
     }

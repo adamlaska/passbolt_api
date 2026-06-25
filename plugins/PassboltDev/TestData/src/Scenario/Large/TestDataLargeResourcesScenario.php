@@ -18,6 +18,7 @@ namespace Passbolt\TestData\Scenario\Large;
 
 use CakephpFixtureFactories\Scenario\FixtureScenarioInterface;
 use Passbolt\Folders\Test\Factory\ResourceFactory;
+use Passbolt\SecretRevisions\Test\Factory\SecretRevisionFactory;
 use Passbolt\TestData\Command\Large\ResourcesDataCommand;
 
 class TestDataLargeResourcesScenario implements FixtureScenarioInterface
@@ -32,7 +33,10 @@ class TestDataLargeResourcesScenario implements FixtureScenarioInterface
         $resources = [];
 
         foreach ($data as $resource) {
-            $resources[] = ResourceFactory::make($resource)->persist();
+            $secretRevisionFactory = SecretRevisionFactory::make()
+                ->resourceId($resource['id'])
+                ->resourceTypeId($resource['resource_type_id']);
+            $resources[] = ResourceFactory::make($resource)->withSecretRevisions($secretRevisionFactory)->persist();
         }
 
         return $resources;

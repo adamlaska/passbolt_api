@@ -22,6 +22,8 @@ use Passbolt\TestData\Lib\DataCommand;
 
 class EmailQueueDataCommand extends DataCommand
 {
+    public string $entityName = 'EmailQueue';
+
     /**
      * Get email_queue data
      *

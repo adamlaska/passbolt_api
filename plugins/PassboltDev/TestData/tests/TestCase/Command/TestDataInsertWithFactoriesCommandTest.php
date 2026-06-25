@@ -112,6 +112,16 @@ class TestDataInsertWithFactoriesCommandTest extends TestCase
 
         // Folders Permissions
         // 36 part of Permissions
+
+        // Resources / SecretRevisions
+        $resources = ResourceFactory::find('all')->contain(['Secrets', 'SecretRevisions'])->toArray();
+        foreach ($resources as $resource) {
+            $resourceSecretRevisionsId = $resource['secret_revisions'][0]['id'];
+            foreach ($resource['secrets'] as $secret) {
+                $this->assertNotNull($secret['secret_revision_id']);
+                $this->assertSame($resourceSecretRevisionsId, $secret['secret_revision_id']);
+            }
+        }
     }
 
     public function testTestDataInsertWithFactoriesCommand_Demo_withData_Fail_Scenario()
@@ -284,5 +294,15 @@ class TestDataInsertWithFactoriesCommandTest extends TestCase
         // EmailQueue
         $emailQueueCount = Configure::read('PassboltTestData.scenarios.large.install.count.email_queue');
         $this->assertEquals($emailQueueCount, EmailQueueFactory::count());
+
+        // Resources / SecretRevisions
+        $resources = ResourceFactory::find('all')->contain(['Secrets', 'SecretRevisions'])->toArray();
+        foreach ($resources as $resource) {
+            $resourceSecretRevisionsId = $resource['secret_revisions'][0]['id'];
+            foreach ($resource['secrets'] as $secret) {
+                $this->assertNotNull($secret['secret_revision_id']);
+                $this->assertSame($resourceSecretRevisionsId, $secret['secret_revision_id']);
+            }
+        }
     }
 }

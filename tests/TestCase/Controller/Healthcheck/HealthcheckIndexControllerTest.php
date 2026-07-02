@@ -134,6 +134,7 @@ class HealthcheckIndexControllerTest extends AppIntegrationTestCase
                 'supportedBackend' => true,
                 'defaultContent' => true,
                 'mariadbMysqlVersionDeprecate' => $dbVersionCheck,
+                'modelCache' => true,
             ],
             'application' => [
                 'info' => [

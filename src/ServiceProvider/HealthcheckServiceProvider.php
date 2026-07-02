@@ -39,6 +39,7 @@ use App\Service\Healthcheck\Core\ValidFullBaseUrlCoreHealthcheck;
 use App\Service\Healthcheck\Database\ConnectDatabaseHealthcheck;
 use App\Service\Healthcheck\Database\DefaultContentDatabaseHealthcheck;
 use App\Service\Healthcheck\Database\MariadbMysqlVersionDeprecateHealthcheck;
+use App\Service\Healthcheck\Database\ModelCacheDatabaseHealthcheck;
 use App\Service\Healthcheck\Database\SchemaUpToDateApplicationHealthcheck;
 use App\Service\Healthcheck\Database\TablesCountDatabaseHealthcheck;
 use App\Service\Healthcheck\Environment\DistributionHealthcheck;
@@ -120,6 +121,7 @@ class HealthcheckServiceProvider extends ServiceProvider
         JsProdApplicationHealthcheck::class,
         EmailNotificationEnabledApplicationHealthcheck::class,
         ConnectDatabaseHealthcheck::class,
+        ModelCacheDatabaseHealthcheck::class,
     ];
 
     /**
@@ -218,6 +220,7 @@ class HealthcheckServiceProvider extends ServiceProvider
         $container->add(DefaultContentDatabaseHealthcheck::class);
         $container->add(MariadbMysqlVersionDeprecateHealthcheck::class);
         $container->add(SchemaUpToDateApplicationHealthcheck::class);
+        $container->add(ModelCacheDatabaseHealthcheck::class);
 
         // Append core health checks to service collector
         $container->add(HealthcheckServiceCollector::class)
@@ -278,7 +281,8 @@ class HealthcheckServiceProvider extends ServiceProvider
             ->addMethodCall('addService', [TablesCountDatabaseHealthcheck::class])
             ->addMethodCall('addService', [DefaultContentDatabaseHealthcheck::class])
             ->addMethodCall('addService', [MariadbMysqlVersionDeprecateHealthcheck::class])
-            ->addMethodCall('addService', [SchemaUpToDateApplicationHealthcheck::class]);
+            ->addMethodCall('addService', [SchemaUpToDateApplicationHealthcheck::class])
+            ->addMethodCall('addService', [ModelCacheDatabaseHealthcheck::class]);
 
         // Required for Healthcheck endpoint
         $container->add(IsRequestHttpsSslHealthcheck::class)->addArgument(ServerRequest::class);

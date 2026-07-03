@@ -8400,20 +8400,20 @@
         },
         {
             "name": "seec/phpunit-consecutive-params",
-            "version": "1.1.4",
+            "version": "1.2",
             "source": {
                 "type": "git",
                 "url": "https://github.com/bytes-commerce/phpunit-consecutive-params.git",
-                "reference": "5575488a9af675c6d23299d4f3317d236b002641"
+                "reference": "0459921733421396f10a4956d5b860cbf1756eb9"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/bytes-commerce/phpunit-consecutive-params/zipball/5575488a9af675c6d23299d4f3317d236b002641",
-                "reference": "5575488a9af675c6d23299d4f3317d236b002641",
+                "url": "https://api.github.com/repos/bytes-commerce/phpunit-consecutive-params/zipball/0459921733421396f10a4956d5b860cbf1756eb9",
+                "reference": "0459921733421396f10a4956d5b860cbf1756eb9",
                 "shasum": ""
             },
             "require": {
-                "php": "^7.4|^8.0"
+                "php": "^8.0"
             },
             "require-dev": {
                 "phpstan/phpstan": "^1.10",
@@ -8435,13 +8435,13 @@
             "authors": [
                 {
                     "name": "Maximilian Graf Schimmelmann",
-                    "email": "max@schimmelmann.org",
-                    "homepage": "https://www.schimmelmann.org",
+                    "email": "office@bytes-commerce.de",
+                    "homepage": "https://www.bytes-commerce.de",
                     "role": "Developer"
                 }
             ],
             "description": "Drop-in Trait to use removed ConsecutiveParams from PhpUnit",
-            "homepage": "https://github.com/nopenopenope/behat-test-runner",
+            "homepage": "https://www.bytes-commerce.de",
             "keywords": [
                 "TDD",
                 "consecutive params",
@@ -8450,10 +8450,10 @@
                 "variadic"
             ],
             "support": {
-                "issues": "https://github.com/nopenopenope/phpunit-consecutive-params/issues",
-                "source": "https://github.com/nopenopenope/phpunit-consecutive-params/tree/1.1.4"
+                "issues": "https://github.com/bytes-commerce/phpunit-consecutive-params/issues",
+                "source": "https://github.com/bytes-commerce/phpunit-consecutive-params/tree/1.2"
             },
-            "time": "2023-12-18T22:50:18+00:00"
+            "time": "2025-04-20T11:15:56+00:00"
         },
         {
             "name": "slevomat/coding-standard",

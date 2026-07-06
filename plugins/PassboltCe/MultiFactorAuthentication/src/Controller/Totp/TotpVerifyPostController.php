@@ -38,7 +38,7 @@ class TotpVerifyPostController extends MfaVerifyController
      * @param \Passbolt\MultiFactorAuthentication\Service\MfaPolicies\RememberAMonthSettingInterface $rememberMeForAMonthSetting Remember a month setting.
      * @throws \Cake\Http\Exception\InternalErrorException
      * @throws \Cake\Http\Exception\BadRequestException
-     * @return void
+     * @return \Cake\Http\Response|null|void
      */
     public function post(
         SessionIdentificationServiceInterface $sessionIdentificationService,
@@ -46,7 +46,10 @@ class TotpVerifyPostController extends MfaVerifyController
         RememberAMonthSettingInterface $rememberMeForAMonthSetting
     ) {
         $this->_handleVerifiedNotRequired($sessionIdentificationService, $rememberMeForAMonthSetting);
-        $this->_handleInvalidSettings(MfaSettings::PROVIDER_TOTP);
+        $redirect = $this->_handleInvalidSettings(MfaSettings::PROVIDER_TOTP);
+        if ($redirect !== null) {
+            return $redirect;
+        }
 
         // Verify totp
         try {

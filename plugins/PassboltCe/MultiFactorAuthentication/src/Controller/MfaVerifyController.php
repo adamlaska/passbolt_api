@@ -19,6 +19,7 @@ namespace Passbolt\MultiFactorAuthentication\Controller;
 use App\Authenticator\SessionIdentificationServiceInterface;
 use Cake\Event\EventInterface;
 use Cake\Http\Exception\BadRequestException;
+use Cake\Http\Response;
 use Cake\I18n\DateTime;
 use Cake\Routing\Router;
 use Passbolt\MultiFactorAuthentication\Service\MfaPolicies\RememberAMonthSettingInterface;
@@ -83,15 +84,16 @@ abstract class MfaVerifyController extends MfaController
     }
 
     /**
-     * Trigger an error if current MFA settings do not allow verify for the given provider
-     * Redirect to password workspace if not JSON
+     * Trigger an error if current MFA settings do not allow verify for the given provider.
      *
-     * @throws \Cake\Http\Exception\InternalErrorException if there is no MFA settings for the user
-     * @throws \Cake\Http\Exception\BadRequestException if there is no MFA settings for this provider
+     * Callers MUST return the response when a non-null value is returned; otherwise the request
+     * will continue to execute past a disabled provider and can mint an MFA cookie.
+     *
      * @param string $provider name of the provider
-     * @return \Cake\Http\Response|void
+     * @return \Cake\Http\Response|null redirect response for non-JSON requests, null when settings are valid
+     * @throws \Cake\Http\Exception\BadRequestException on JSON requests with invalid settings
      */
-    protected function _handleInvalidSettings(string $provider)
+    protected function _handleInvalidSettings(string $provider): ?Response
     {
         if ($this->mfaSettings->getAccountSettings() === null) {
             if ($this->getRequest()->is('json')) {
@@ -110,6 +112,8 @@ abstract class MfaVerifyController extends MfaController
                 return $this->redirect('/');
             }
         }
+
+        return null;
     }
 
     /**

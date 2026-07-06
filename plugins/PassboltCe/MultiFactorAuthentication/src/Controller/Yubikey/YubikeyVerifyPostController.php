@@ -33,7 +33,7 @@ class YubikeyVerifyPostController extends MfaVerifyController
      * @param \Passbolt\MultiFactorAuthentication\Service\MfaPolicies\RememberAMonthSettingInterface $rememberMeForAMonthSetting Remember a month setting.
      * @throws \Cake\Http\Exception\InternalErrorException
      * @throws \Cake\Http\Exception\BadRequestException
-     * @return void
+     * @return \Cake\Http\Response|null|void
      */
     public function post(
         SessionIdentificationServiceInterface $sessionIdentificationService,
@@ -41,7 +41,10 @@ class YubikeyVerifyPostController extends MfaVerifyController
         RememberAMonthSettingInterface $rememberMeForAMonthSetting
     ) {
         $this->_handleVerifiedNotRequired($sessionIdentificationService, $rememberMeForAMonthSetting);
-        $this->_handleInvalidSettings(MfaSettings::PROVIDER_YUBIKEY);
+        $redirect = $this->_handleInvalidSettings(MfaSettings::PROVIDER_YUBIKEY);
+        if ($redirect !== null) {
+            return $redirect;
+        }
 
         // Verify hotp
         try {

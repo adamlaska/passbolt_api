@@ -81,18 +81,38 @@ abstract class RefreshTokenAbstractService
      * Throw a security error if this token is inactive.
      * Set it to inactive.
      *
-     * @param \App\Model\Entity\AuthenticationToken $refreshToken User ID.
+     * @param \App\Model\Entity\AuthenticationToken $refreshToken Token to consume.
      * @return \App\Model\Entity\AuthenticationToken
-     * @throws \Passbolt\JwtAuthentication\Error\Exception\RefreshToken\RefreshTokenNotFoundException if the token is not found
      * @throws \Passbolt\JwtAuthentication\Error\Exception\RefreshToken\ConsumedRefreshTokenAccessException if the token was already consumed
      * @throws \Passbolt\JwtAuthentication\Error\Exception\RefreshToken\ExpiredRefreshTokenAccessException if the token is expired
      */
     protected function consumeToken(AuthenticationToken $refreshToken): AuthenticationToken
     {
         $this->throwSecurityExceptionsOnInvalidRefreshToken($refreshToken);
-        $refreshToken->set('active', false);
 
-        return $this->AuthenticationTokens->saveOrFail($refreshToken);
+        $modified = DateTime::now();
+        $affected = $this->AuthenticationTokens->updateAll(
+            [
+                'active' => false,
+                'modified' => $modified,
+            ],
+            [
+                $this->AuthenticationTokens->aliasField('id') => $refreshToken->id,
+                $this->AuthenticationTokens->aliasField('active') => true,
+            ]
+        );
+
+        if ($affected !== 1) {
+            throw new ConsumedRefreshTokenAccessException(__('The refresh token provided was already used.'));
+        }
+
+        // Reflect the persisted state on the returned entity so callers do not operate on stale data
+        $refreshToken->set('active', false);
+        $refreshToken->set('modified', $modified);
+        $refreshToken->setDirty('active', false);
+        $refreshToken->setDirty('modified', false);
+
+        return $refreshToken;
     }
 
     /**

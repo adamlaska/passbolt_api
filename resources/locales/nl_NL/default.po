@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: 41c2572bd9bd4cc908d3e09e0cbed6e5\n"
 "POT-Creation-Date: 2026-05-07 04:01+0000\n"
-"PO-Revision-Date: 2026-05-07 09:35\n"
+"PO-Revision-Date: 2026-07-09 14:54\n"
 "Last-Translator: NAME <EMAIL@ADDRESS>\n"
 "Language-Team: Dutch\n"
 "MIME-Version: 1.0\n"
@@ -5558,7 +5558,7 @@ msgid "{0} has initiated an account recovery request."
 msgstr "{0} is een account-herstelverzoek gestart."
 
 msgid "Since you’re authorized to handle account recovery requests, please process this one."
-msgstr ""
+msgstr "Aangezien u gemachtigd bent om verzoeken voor accountherstel af te handelen, verzoeken we u dit verzoek te verwerken."
 
 msgid "You will need your organization recovery key to continue."
 msgstr "Je hebt je organisatieherstelsleutel nodig om door te gaan."
@@ -6218,7 +6218,7 @@ msgid "The ID for the SCIM settings should be a valid UUID."
 msgstr "De ID voor de SCIM-instellingen moet een geldig UUID zijn."
 
 msgid "The SCIM secret token is expired, you are requested to rotate it."
-msgstr ""
+msgstr "Het geheime SCIM-token is verlopen, u wordt verzocht het te roteren."
 
 msgid "Simultaneous SCIM and session authentication is not permitted."
 msgstr "Gelijktijdige SCIM- en sessie-authenticatie is niet toegestaan."
@@ -6230,7 +6230,7 @@ msgid "An entry for the same related entity already exists"
 msgstr "Er bestaat al een item voor dezelfde gerelateerde entiteit."
 
 msgid "An entry with the same `scim_name` and `foreign_model` already exist."
-msgstr ""
+msgstr "Er bestaat al een item met dezelfde `scim_name` en `foreign_model`."
 
 msgid "Users"
 msgstr "Gebruikers"
@@ -6248,10 +6248,10 @@ msgid "SCIM plugin is disabled."
 msgstr "SCIM-plugin is uitgeschakeld."
 
 msgid "The SCIM secret token is not expired."
-msgstr ""
+msgstr "Het geheime SCIM-token is niet verlopen."
 
 msgid "Rotate the SCIM secret token in the administration settings."
-msgstr ""
+msgstr "Roteer het geheime SCIM-token in de beheerinstellingen."
 
 msgid "The SCIM settings could not be decrypted with the server gpg key."
 msgstr "De SCIM-instellingen konden niet worden ontsleuteld met de server-GPG-sleutel."
@@ -6278,16 +6278,16 @@ msgid "The uuid in the url doesn't match any known setting record."
 msgstr "De UUID in de URL komt niet overeen met een bekende instellingsrecord."
 
 msgid "The SCIM secret token expiry configuration is invalid."
-msgstr ""
+msgstr "De configuratie voor de vervaldatum van het geheime SCIM-token is ongeldig."
 
 msgid "Missing or invalid SCIM user in configuration settings"
-msgstr ""
+msgstr "Ontbrekende of ongeldige SCIM-gebruiker in de configuratie-instellingen"
 
 msgid "An unexpected error occurred while creating the user in the database"
-msgstr ""
+msgstr "Er is een onverwachte fout opgetreden tijdens het aanmaken van de gebruiker in de database"
 
 msgid "An administrator user cannot be suspended via SCIM."
-msgstr ""
+msgstr "Een beheerdersgebruiker kan niet via SCIM worden geschorst."
 
 msgid "Email"
 msgstr "E-mailadres"
@@ -6464,16 +6464,16 @@ msgid "The scope is too large."
 msgstr "De scope is te groot."
 
 msgid "The URL must be a valid PingOne authentication domain."
-msgstr ""
+msgstr "De URL moet een geldig PingOne-authenticatiedomein zijn."
 
 msgid "An environment id is required."
-msgstr ""
+msgstr "Een omgevings-id is vereist."
 
 msgid "The environment id should not be empty."
-msgstr ""
+msgstr "De omgevings-id mag niet leeg zijn."
 
 msgid "The environment id should be a valid UUID."
-msgstr ""
+msgstr "De omgevings-id moet een geldige UUID zijn."
 
 msgid "SSO settings edit endpoints are disabled."
 msgstr "Bewerkingsendpoints voor SSO-instellingen zijn uitgeschakeld."
@@ -6638,10 +6638,10 @@ msgid "Provided root CA file does not exist"
 msgstr "Het opgegeven root CA-bestand bestaat niet"
 
 msgid "Invalid provider. Expected PingOne."
-msgstr ""
+msgstr "Ongeldige provider. PingOne verwacht."
 
 msgid "Invalid provider data. Expected PingOne settings."
-msgstr ""
+msgstr "Ongeldige providergegevens. PingOne-instellingen verwacht."
 
 msgid "The user id should be a valid UUID."
 msgstr "De gebruikers-ID moet een geldige UUID zijn."

@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: 41c2572bd9bd4cc908d3e09e0cbed6e5\n"
 "POT-Creation-Date: 2026-05-07 04:01+0000\n"
-"PO-Revision-Date: 2026-05-07 09:34\n"
+"PO-Revision-Date: 2026-07-09 14:54\n"
 "Last-Translator: NAME <EMAIL@ADDRESS>\n"
 "Language-Team: Romanian\n"
 "MIME-Version: 1.0\n"
@@ -5558,7 +5558,7 @@ msgid "{0} has initiated an account recovery request."
 msgstr "{0} a inițiat o cerere de recuperare a contului."
 
 msgid "Since you’re authorized to handle account recovery requests, please process this one."
-msgstr ""
+msgstr "Deoarece sunteți autorizat să gestionați cererile de recuperare a contului, vă rugăm să o procesați pe aceasta."
 
 msgid "You will need your organization recovery key to continue."
 msgstr "Veți avea nevoie de cheia de recuperare a organizației dvs. pentru a continua."
@@ -6218,7 +6218,7 @@ msgid "The ID for the SCIM settings should be a valid UUID."
 msgstr "ID-ul setărilor SCIM ar trebui să fie un UUID valid."
 
 msgid "The SCIM secret token is expired, you are requested to rotate it."
-msgstr ""
+msgstr "Tokenul secret SCIM a expirat, vi se solicită să îl rotiți."
 
 msgid "Simultaneous SCIM and session authentication is not permitted."
 msgstr "Autentificarea simultană SCIM și pe sesiune nu este permisă."
@@ -6230,7 +6230,7 @@ msgid "An entry for the same related entity already exists"
 msgstr "Există deja o intrare pentru aceeași entitate asociată."
 
 msgid "An entry with the same `scim_name` and `foreign_model` already exist."
-msgstr ""
+msgstr "Există deja o intrare cu același `scim_name` și același `foreign_model`."
 
 msgid "Users"
 msgstr "Utilizatori"
@@ -6248,10 +6248,10 @@ msgid "SCIM plugin is disabled."
 msgstr "Pluginul SCIM este dezactivat."
 
 msgid "The SCIM secret token is not expired."
-msgstr ""
+msgstr "Tokenul secret SCIM nu a expirat."
 
 msgid "Rotate the SCIM secret token in the administration settings."
-msgstr ""
+msgstr "Rotiți tokenul secret SCIM în setările de administrare."
 
 msgid "The SCIM settings could not be decrypted with the server gpg key."
 msgstr "Setările SCIM nu au putut fi decriptate cu cheia gpg a serverului."
@@ -6278,16 +6278,16 @@ msgid "The uuid in the url doesn't match any known setting record."
 msgstr "UUID-ul din URL nu se potrivește cu nicio înregistrare de setări cunoscută."
 
 msgid "The SCIM secret token expiry configuration is invalid."
-msgstr ""
+msgstr "Configurația expirării tokenului secret SCIM este nevalidă."
 
 msgid "Missing or invalid SCIM user in configuration settings"
-msgstr ""
+msgstr "Utilizator SCIM lipsă sau nevalid în setările de configurare"
 
 msgid "An unexpected error occurred while creating the user in the database"
-msgstr ""
+msgstr "A apărut o eroare neașteptată la crearea utilizatorului în baza de date"
 
 msgid "An administrator user cannot be suspended via SCIM."
-msgstr ""
+msgstr "Un utilizator administrator nu poate fi suspendat prin SCIM."
 
 msgid "Email"
 msgstr "E-mail"
@@ -6464,16 +6464,16 @@ msgid "The scope is too large."
 msgstr "Domeniul este prea mare."
 
 msgid "The URL must be a valid PingOne authentication domain."
-msgstr ""
+msgstr "URL-ul trebuie să fie un domeniu de autentificare PingOne valid."
 
 msgid "An environment id is required."
-msgstr ""
+msgstr "Este necesar un id de mediu."
 
 msgid "The environment id should not be empty."
-msgstr ""
+msgstr "Id-ul de mediu nu trebuie să fie gol."
 
 msgid "The environment id should be a valid UUID."
-msgstr ""
+msgstr "Id-ul de mediu trebuie să fie un UUID valid."
 
 msgid "SSO settings edit endpoints are disabled."
 msgstr "Punctele finale pentru editarea setărilor SSO sunt dezactivate."
@@ -6638,10 +6638,10 @@ msgid "Provided root CA file does not exist"
 msgstr "Fișierul root CA furnizat nu există"
 
 msgid "Invalid provider. Expected PingOne."
-msgstr ""
+msgstr "Furnizor nevalid. Era așteptat PingOne."
 
 msgid "Invalid provider data. Expected PingOne settings."
-msgstr ""
+msgstr "Date de furnizor nevalide. Erau așteptate setările PingOne."
 
 msgid "The user id should be a valid UUID."
 msgstr "ID-ul utilizatorului ar trebui să fie un UUID valid."

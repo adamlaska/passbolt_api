@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: 41c2572bd9bd4cc908d3e09e0cbed6e5\n"
 "POT-Creation-Date: 2026-05-07 04:01+0000\n"
-"PO-Revision-Date: 2026-05-07 09:35\n"
+"PO-Revision-Date: 2026-07-09 14:54\n"
 "Last-Translator: NAME <EMAIL@ADDRESS>\n"
 "Language-Team: Japanese\n"
 "MIME-Version: 1.0\n"
@@ -5558,7 +5558,7 @@ msgid "{0} has initiated an account recovery request."
 msgstr "{0} がアカウント復旧リクエストを開始しました。"
 
 msgid "Since you’re authorized to handle account recovery requests, please process this one."
-msgstr ""
+msgstr "アカウント復旧リクエストを処理する権限があるため、このリクエストを処理してください。"
 
 msgid "You will need your organization recovery key to continue."
 msgstr "続行するには、組織のアカウント復旧鍵が必要です。"
@@ -6218,7 +6218,7 @@ msgid "The ID for the SCIM settings should be a valid UUID."
 msgstr "SCIM設定のIDは有効なUUIDである必要があります。"
 
 msgid "The SCIM secret token is expired, you are requested to rotate it."
-msgstr ""
+msgstr "SCIM秘密トークンの有効期限が切れているため、ローテーションする必要があります。"
 
 msgid "Simultaneous SCIM and session authentication is not permitted."
 msgstr "SCIM認証とセッション認証を同時に行うことは許可されていません。"
@@ -6230,7 +6230,7 @@ msgid "An entry for the same related entity already exists"
 msgstr "同じ関連エンティティのエントリーがすでに存在します。"
 
 msgid "An entry with the same `scim_name` and `foreign_model` already exist."
-msgstr ""
+msgstr "同じ`scim_name`および`foreign_model`を持つエントリーはすでに存在します。"
 
 msgid "Users"
 msgstr "ユーザー"
@@ -6248,10 +6248,10 @@ msgid "SCIM plugin is disabled."
 msgstr "SCIMプラグインが無効になっています。"
 
 msgid "The SCIM secret token is not expired."
-msgstr ""
+msgstr "SCIM秘密トークンの有効期限は切れていません。"
 
 msgid "Rotate the SCIM secret token in the administration settings."
-msgstr ""
+msgstr "管理設定でSCIM秘密トークンをローテーションしてください。"
 
 msgid "The SCIM settings could not be decrypted with the server gpg key."
 msgstr "SCIM設定をサーバーのGPGキーで復号できませんでした。"
@@ -6278,16 +6278,16 @@ msgid "The uuid in the url doesn't match any known setting record."
 msgstr "URL 内の UUID が既知の設定レコードと一致しません。"
 
 msgid "The SCIM secret token expiry configuration is invalid."
-msgstr ""
+msgstr "SCIM秘密トークンの有効期限設定が無効です。"
 
 msgid "Missing or invalid SCIM user in configuration settings"
-msgstr ""
+msgstr "設定にSCIMユーザーがないか、無効です"
 
 msgid "An unexpected error occurred while creating the user in the database"
-msgstr ""
+msgstr "データベースでユーザーを作成中に予期しないエラーが発生しました"
 
 msgid "An administrator user cannot be suspended via SCIM."
-msgstr ""
+msgstr "管理者ユーザーをSCIM経由で停止することはできません。"
 
 msgid "Email"
 msgstr "メール"
@@ -6464,16 +6464,16 @@ msgid "The scope is too large."
 msgstr "Scopeが大きすぎます。"
 
 msgid "The URL must be a valid PingOne authentication domain."
-msgstr ""
+msgstr "URLは有効なPingOne認証ドメインである必要があります。"
 
 msgid "An environment id is required."
-msgstr ""
+msgstr "environment idは必須です。"
 
 msgid "The environment id should not be empty."
-msgstr ""
+msgstr "environment idは空にできません。"
 
 msgid "The environment id should be a valid UUID."
-msgstr ""
+msgstr "environment idは有効なUUIDである必要があります。"
 
 msgid "SSO settings edit endpoints are disabled."
 msgstr "SSO設定編集エンドポイントは無効になっています。"
@@ -6638,10 +6638,10 @@ msgid "Provided root CA file does not exist"
 msgstr "指定されたルートCAファイルが存在しません"
 
 msgid "Invalid provider. Expected PingOne."
-msgstr ""
+msgstr "無効なプロバイダーです。PingOneが必要です。"
 
 msgid "Invalid provider data. Expected PingOne settings."
-msgstr ""
+msgstr "無効なプロバイダーデータです。PingOne設定が必要です。"
 
 msgid "The user id should be a valid UUID."
 msgstr "ユーザーIDは有効なUUIDである必要があります。"

@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: 41c2572bd9bd4cc908d3e09e0cbed6e5\n"
 "POT-Creation-Date: 2026-05-07 04:01+0000\n"
-"PO-Revision-Date: 2026-05-07 09:35\n"
+"PO-Revision-Date: 2026-07-09 14:54\n"
 "Last-Translator: NAME <EMAIL@ADDRESS>\n"
 "Language-Team: Swedish\n"
 "MIME-Version: 1.0\n"
@@ -5558,7 +5558,7 @@ msgid "{0} has initiated an account recovery request."
 msgstr "\"{0} har initierat en begäran om kontoåterställning.\""
 
 msgid "Since you’re authorized to handle account recovery requests, please process this one."
-msgstr ""
+msgstr "Eftersom du är behörig att hantera begäranden om kontoåterställning, vänligen behandla denna."
 
 msgid "You will need your organization recovery key to continue."
 msgstr "Du behöver din organisations återställningsnyckel för att fortsätta."
@@ -6218,7 +6218,7 @@ msgid "The ID for the SCIM settings should be a valid UUID."
 msgstr "ID:t för SCIM-inställningarna ska vara ett giltigt UUID."
 
 msgid "The SCIM secret token is expired, you are requested to rotate it."
-msgstr ""
+msgstr "Den hemliga SCIM-token har löpt ut, du ombeds att rotera den."
 
 msgid "Simultaneous SCIM and session authentication is not permitted."
 msgstr "Samtidig SCIM- och sessionsautentisering är inte tillåten."
@@ -6230,7 +6230,7 @@ msgid "An entry for the same related entity already exists"
 msgstr "En post för samma relaterade entitet finns redan."
 
 msgid "An entry with the same `scim_name` and `foreign_model` already exist."
-msgstr ""
+msgstr "En post med samma `scim_name` och `foreign_model` finns redan."
 
 msgid "Users"
 msgstr "Användare"
@@ -6248,10 +6248,10 @@ msgid "SCIM plugin is disabled."
 msgstr "SCIM-insticksmodulen är inaktiverad."
 
 msgid "The SCIM secret token is not expired."
-msgstr ""
+msgstr "Den hemliga SCIM-token har inte löpt ut."
 
 msgid "Rotate the SCIM secret token in the administration settings."
-msgstr ""
+msgstr "Rotera den hemliga SCIM-token i administrationsinställningarna."
 
 msgid "The SCIM settings could not be decrypted with the server gpg key."
 msgstr "SCIM-inställningarna kunde inte dekrypteras med serverns GPG-nyckel."
@@ -6278,16 +6278,16 @@ msgid "The uuid in the url doesn't match any known setting record."
 msgstr "UUID:t i URL:en matchar ingen känd inställningspost."
 
 msgid "The SCIM secret token expiry configuration is invalid."
-msgstr ""
+msgstr "Konfigurationen för utgångstid för den hemliga SCIM-token är ogiltig."
 
 msgid "Missing or invalid SCIM user in configuration settings"
-msgstr ""
+msgstr "SCIM-användare saknas i konfigurationsinställningarna eller är ogiltig"
 
 msgid "An unexpected error occurred while creating the user in the database"
-msgstr ""
+msgstr "Ett oväntat fel uppstod när användaren skapades i databasen"
 
 msgid "An administrator user cannot be suspended via SCIM."
-msgstr ""
+msgstr "En administratörsanvändare kan inte suspenderas via SCIM."
 
 msgid "Email"
 msgstr "E-post"
@@ -6464,16 +6464,16 @@ msgid "The scope is too large."
 msgstr "\"Scope är för stort.\""
 
 msgid "The URL must be a valid PingOne authentication domain."
-msgstr ""
+msgstr "URL:en måste vara en giltig PingOne-autentiseringsdomän."
 
 msgid "An environment id is required."
-msgstr ""
+msgstr "Ett miljö-id krävs."
 
 msgid "The environment id should not be empty."
-msgstr ""
+msgstr "Miljö-id får inte vara tomt."
 
 msgid "The environment id should be a valid UUID."
-msgstr ""
+msgstr "Miljö-id måste vara ett giltigt UUID."
 
 msgid "SSO settings edit endpoints are disabled."
 msgstr "Redigeringsändpunkter för SSO-inställningar är inaktiverade."
@@ -6638,10 +6638,10 @@ msgid "Provided root CA file does not exist"
 msgstr "\"Angiven root-CA-fil finns inte\""
 
 msgid "Invalid provider. Expected PingOne."
-msgstr ""
+msgstr "Ogiltig leverantör. PingOne förväntades."
 
 msgid "Invalid provider data. Expected PingOne settings."
-msgstr ""
+msgstr "Ogiltiga leverantörsdata. PingOne-inställningar förväntades."
 
 msgid "The user id should be a valid UUID."
 msgstr "Användar-id bör vara ett giltigt UUID."

@@ -12,7 +12,7 @@ declare(strict_types=1);
  * @copyright     Copyright (c) Passbolt SA (https://www.passbolt.com)
  * @license       https://opensource.org/licenses/AGPL-3.0 AGPL License
  * @link          https://www.passbolt.com Passbolt(tm)
- * @since         5.8.0
+ * @since         5.14.0
  */
 
 namespace Passbolt\AccountRecovery\Test\TestCase\Notification\Request;
@@ -21,26 +21,25 @@ use App\Test\Factory\UserFactory;
 use Cake\Event\Event;
 use Cake\TestSuite\TestCase;
 use CakephpTestSuiteLight\Fixture\TruncateDirtyTables;
-use Passbolt\AccountRecovery\Notification\Request\AccountRecoveryRequestCreatedAdminEmailRedactor;
-use Passbolt\AccountRecovery\Test\Factory\AccountRecoveryRequestFactory;
+use Passbolt\AccountRecovery\Notification\Request\AccountRecoveryGetBadRequestAdminEmailRedactor;
 use Passbolt\Locale\LocalePlugin;
 use Passbolt\Log\Test\Factory\ActionFactory;
 use Passbolt\Rbacs\RbacsPlugin;
 use Passbolt\Rbacs\Test\Factory\RbacFactory;
 
 /**
- * @covers \Passbolt\AccountRecovery\Notification\Request\AccountRecoveryRequestCreatedAdminEmailRedactor
+ * @covers \Passbolt\AccountRecovery\Notification\Request\AccountRecoveryGetBadRequestAdminEmailRedactor
  */
-class AccountRecoveryRequestCreatedAdminEmailRedactorTest extends TestCase
+class AccountRecoveryGetBadRequestAdminEmailRedactorTest extends TestCase
 {
     use TruncateDirtyTables;
 
-    private AccountRecoveryRequestCreatedAdminEmailRedactor $redactor;
+    private AccountRecoveryGetBadRequestAdminEmailRedactor $redactor;
 
     public function setUp(): void
     {
         parent::setUp();
-        $this->redactor = new AccountRecoveryRequestCreatedAdminEmailRedactor();
+        $this->redactor = new AccountRecoveryGetBadRequestAdminEmailRedactor();
         $this->loadPlugins([
             LocalePlugin::class => [],
             RbacsPlugin::class => [],
@@ -59,11 +58,14 @@ class AccountRecoveryRequestCreatedAdminEmailRedactorTest extends TestCase
         RbacFactory::make()->setAction($action)->setField('role_id', $roleId)->persist();
     }
 
-    private function collectRecipients(string $requesterId): array
+    private function collectRecipients(string $userId): array
     {
-        $request = AccountRecoveryRequestFactory::make()->withUser($requesterId)->persist();
         /** @var \Cake\Event\Event<object> $event */
-        $event = new Event('Foo', $request);
+        $event = new Event('Foo', null, [
+            'userId' => $userId,
+            'requestId' => 'a0000000-0000-0000-0000-000000000000',
+            'clientIp' => '1.2.3.4',
+        ]);
         $collection = $this->redactor->onSubscribedEvent($event);
         $recipients = [];
         foreach ($collection->getEmails() as $email) {
@@ -73,53 +75,38 @@ class AccountRecoveryRequestCreatedAdminEmailRedactorTest extends TestCase
         return $recipients;
     }
 
-    public function testAccountRecoveryRequestCreatedAdminEmailRedactor_AdminsAndRbacViewersNotified(): void
+    public function testAccountRecoveryGetBadRequestAdminEmailRedactor_AdminsAndRbacViewersNotified(): void
     {
         /** @var \App\Model\Entity\User[] $admins */
         $admins = UserFactory::make(2)->admin()->persist();
         /** @var \App\Model\Entity\User $rbacViewer */
         $rbacViewer = UserFactory::make()->persist();
         $this->grantViewActionToRole($rbacViewer->role_id);
-        /** @var \App\Model\Entity\User $requester */
-        $requester = UserFactory::make()->persist();
+        /** @var \App\Model\Entity\User $targetedUser */
+        $targetedUser = UserFactory::make()->persist();
 
-        $recipients = $this->collectRecipients($requester->id);
+        $recipients = $this->collectRecipients($targetedUser->id);
 
         $expected = [$admins[0]->username, $admins[1]->username, $rbacViewer->username];
         $this->assertEmpty(array_diff($expected, $recipients));
         $this->assertCount(3, $recipients);
     }
 
-    public function testAccountRecoveryRequestCreatedAdminEmailRedactor_RequesterExcludedWhenAdmin(): void
+    public function testAccountRecoveryGetBadRequestAdminEmailRedactor_TargetedUserExcludedWhenAdmin(): void
     {
         /** @var \App\Model\Entity\User $otherAdmin */
         $otherAdmin = UserFactory::make()->admin()->persist();
-        /** @var \App\Model\Entity\User $requester */
-        $requester = UserFactory::make()->admin()->persist();
+        /** @var \App\Model\Entity\User $targetedAdmin */
+        $targetedAdmin = UserFactory::make()->admin()->persist();
 
-        $recipients = $this->collectRecipients($requester->id);
+        $recipients = $this->collectRecipients($targetedAdmin->id);
 
         $this->assertContains($otherAdmin->username, $recipients);
-        $this->assertNotContains($requester->username, $recipients);
+        $this->assertNotContains($targetedAdmin->username, $recipients);
         $this->assertCount(1, $recipients);
     }
 
-    public function testAccountRecoveryRequestCreatedAdminEmailRedactor_RequesterExcludedWhenRbacViewer(): void
-    {
-        /** @var \App\Model\Entity\User $admin */
-        $admin = UserFactory::make()->admin()->persist();
-        /** @var \App\Model\Entity\User $requester */
-        $requester = UserFactory::make()->persist();
-        $this->grantViewActionToRole($requester->role_id);
-
-        $recipients = $this->collectRecipients($requester->id);
-
-        $this->assertContains($admin->username, $recipients);
-        $this->assertNotContains($requester->username, $recipients);
-        $this->assertCount(1, $recipients);
-    }
-
-    public function testAccountRecoveryRequestCreatedAdminEmailRedactor_DisabledUsersExcluded(): void
+    public function testAccountRecoveryGetBadRequestAdminEmailRedactor_DisabledUsersExcluded(): void
     {
         /** @var \App\Model\Entity\User $activeAdmin */
         $activeAdmin = UserFactory::make()->admin()->persist();
@@ -127,10 +114,10 @@ class AccountRecoveryRequestCreatedAdminEmailRedactorTest extends TestCase
         /** @var \App\Model\Entity\User $disabledRbacViewer */
         $disabledRbacViewer = UserFactory::make()->disabled()->persist();
         $this->grantViewActionToRole($disabledRbacViewer->role_id);
-        /** @var \App\Model\Entity\User $requester */
-        $requester = UserFactory::make()->persist();
+        /** @var \App\Model\Entity\User $targetedUser */
+        $targetedUser = UserFactory::make()->persist();
 
-        $recipients = $this->collectRecipients($requester->id);
+        $recipients = $this->collectRecipients($targetedUser->id);
 
         $this->assertSame([$activeAdmin->username], $recipients);
     }

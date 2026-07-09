@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: 41c2572bd9bd4cc908d3e09e0cbed6e5\n"
 "POT-Creation-Date: 2026-05-07 04:01+0000\n"
-"PO-Revision-Date: 2026-07-01 14:43\n"
+"PO-Revision-Date: 2026-07-09 14:54\n"
 "Last-Translator: NAME <EMAIL@ADDRESS>\n"
 "Language-Team: French\n"
 "MIME-Version: 1.0\n"
@@ -5558,7 +5558,7 @@ msgid "{0} has initiated an account recovery request."
 msgstr "{0} a lancé une demande de récupération de compte."
 
 msgid "Since you’re authorized to handle account recovery requests, please process this one."
-msgstr ""
+msgstr "Puisque vous êtes autorisé à traiter les demandes de récupération de compte, veuillez traiter celle-ci."
 
 msgid "You will need your organization recovery key to continue."
 msgstr "Vous aurez besoin de la clé de récupération de votre organisation pour continuer."
@@ -6218,7 +6218,7 @@ msgid "The ID for the SCIM settings should be a valid UUID."
 msgstr "L'ID des paramètres SCIM doit être un UUID valide."
 
 msgid "The SCIM secret token is expired, you are requested to rotate it."
-msgstr ""
+msgstr "Le token secret SCIM a expiré, il vous est demandé de le faire pivoter."
 
 msgid "Simultaneous SCIM and session authentication is not permitted."
 msgstr "L'authentification simultanée SCIM et par session n'est pas autorisée."
@@ -6230,7 +6230,7 @@ msgid "An entry for the same related entity already exists"
 msgstr "Une entrée pour la même entité associée existe déjà."
 
 msgid "An entry with the same `scim_name` and `foreign_model` already exist."
-msgstr ""
+msgstr "Une entrée avec le même `scim_name` et `foreign_model` existe déjà."
 
 msgid "Users"
 msgstr "Utilisateurs"
@@ -6248,10 +6248,10 @@ msgid "SCIM plugin is disabled."
 msgstr "Le plugin SCIM est désactivé."
 
 msgid "The SCIM secret token is not expired."
-msgstr ""
+msgstr "Le token secret SCIM n’a pas expiré."
 
 msgid "Rotate the SCIM secret token in the administration settings."
-msgstr ""
+msgstr "Faites pivoter le token secret SCIM dans les paramètres d’administration."
 
 msgid "The SCIM settings could not be decrypted with the server gpg key."
 msgstr "Les paramètres SCIM n'ont pas pu être déchiffrés avec la clé GPG du serveur."
@@ -6278,16 +6278,16 @@ msgid "The uuid in the url doesn't match any known setting record."
 msgstr "L'UUID dans l'URL ne correspond à aucun enregistrement de paramètre connu."
 
 msgid "The SCIM secret token expiry configuration is invalid."
-msgstr ""
+msgstr "La configuration d’expiration du token secret SCIM n’est pas valide."
 
 msgid "Missing or invalid SCIM user in configuration settings"
-msgstr ""
+msgstr "Utilisateur SCIM manquant ou invalide dans les paramètres de configuration"
 
 msgid "An unexpected error occurred while creating the user in the database"
-msgstr ""
+msgstr "Une erreur inattendue s’est produite lors de la création de l’utilisateur dans la base de données"
 
 msgid "An administrator user cannot be suspended via SCIM."
-msgstr ""
+msgstr "Un utilisateur administrateur ne peut pas être suspendu via SCIM."
 
 msgid "Email"
 msgstr "E-mail"
@@ -6464,16 +6464,16 @@ msgid "The scope is too large."
 msgstr "La portée est trop grande."
 
 msgid "The URL must be a valid PingOne authentication domain."
-msgstr ""
+msgstr "L’URL doit être un domaine d’authentification PingOne valide."
 
 msgid "An environment id is required."
-msgstr ""
+msgstr "Un identifiant d’environnement est requis."
 
 msgid "The environment id should not be empty."
-msgstr ""
+msgstr "L’identifiant d’environnement ne doit pas être vide."
 
 msgid "The environment id should be a valid UUID."
-msgstr ""
+msgstr "L’identifiant d’environnement doit être un UUID valide."
 
 msgid "SSO settings edit endpoints are disabled."
 msgstr "Les points de terminaison d'édition des paramètres SSO sont désactivés."
@@ -6638,10 +6638,10 @@ msgid "Provided root CA file does not exist"
 msgstr "Le fichier CA racine fourni n'existe pas"
 
 msgid "Invalid provider. Expected PingOne."
-msgstr ""
+msgstr "Fournisseur invalide. PingOne attendu."
 
 msgid "Invalid provider data. Expected PingOne settings."
-msgstr ""
+msgstr "Données du fournisseur invalides. Paramètres PingOne attendus."
 
 msgid "The user id should be a valid UUID."
 msgstr "L'identifiant de l'utilisateur doit être un UUID valide."

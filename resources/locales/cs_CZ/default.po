@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: 41c2572bd9bd4cc908d3e09e0cbed6e5\n"
 "POT-Creation-Date: 2026-05-07 04:01+0000\n"
-"PO-Revision-Date: 2026-05-07 09:34\n"
+"PO-Revision-Date: 2026-07-09 14:54\n"
 "Last-Translator: NAME <EMAIL@ADDRESS>\n"
 "Language-Team: Czech\n"
 "MIME-Version: 1.0\n"
@@ -5558,7 +5558,7 @@ msgid "{0} has initiated an account recovery request."
 msgstr "{0} zahájil(a) žádost o obnovení účtu."
 
 msgid "Since you’re authorized to handle account recovery requests, please process this one."
-msgstr ""
+msgstr "Protože jste oprávněni zpracovávat žádosti o obnovení účtu, zpracujte prosím tuto."
 
 msgid "You will need your organization recovery key to continue."
 msgstr "K pokračování budete potřebovat svůj klíč organizace pro obnovení."
@@ -6218,7 +6218,7 @@ msgid "The ID for the SCIM settings should be a valid UUID."
 msgstr "ID nastavení SCIM by mělo být platné UUID."
 
 msgid "The SCIM secret token is expired, you are requested to rotate it."
-msgstr ""
+msgstr "Platnost tajného tokenu SCIM vypršela, jste vyzváni k jeho obměně."
 
 msgid "Simultaneous SCIM and session authentication is not permitted."
 msgstr "Současné ověřování pomocí SCIM a relace není povoleno."
@@ -6230,7 +6230,7 @@ msgid "An entry for the same related entity already exists"
 msgstr "Záznam pro stejnou související entitu již existuje"
 
 msgid "An entry with the same `scim_name` and `foreign_model` already exist."
-msgstr ""
+msgstr "Položka se stejnými hodnotami `scim_name` a `foreign_model` již existuje."
 
 msgid "Users"
 msgstr "Uživatelé"
@@ -6248,10 +6248,10 @@ msgid "SCIM plugin is disabled."
 msgstr "Plugin SCIM je zakázán."
 
 msgid "The SCIM secret token is not expired."
-msgstr ""
+msgstr "Platnost tajného tokenu SCIM nevypršela."
 
 msgid "Rotate the SCIM secret token in the administration settings."
-msgstr ""
+msgstr "Obměňte tajný token SCIM v nastavení administrace."
 
 msgid "The SCIM settings could not be decrypted with the server gpg key."
 msgstr "Nastavení SCIM se nepodařilo dešifrovat pomocí serverového klíče GPG."
@@ -6278,16 +6278,16 @@ msgid "The uuid in the url doesn't match any known setting record."
 msgstr "UUID v adrese URL neodpovídá žádnému známému záznamu nastavení."
 
 msgid "The SCIM secret token expiry configuration is invalid."
-msgstr ""
+msgstr "Konfigurace vypršení platnosti tajného tokenu SCIM je neplatná."
 
 msgid "Missing or invalid SCIM user in configuration settings"
-msgstr ""
+msgstr "V nastavení konfigurace chybí uživatel SCIM nebo je neplatný"
 
 msgid "An unexpected error occurred while creating the user in the database"
-msgstr ""
+msgstr "Při vytváření uživatele v databázi došlo k neočekávané chybě"
 
 msgid "An administrator user cannot be suspended via SCIM."
-msgstr ""
+msgstr "Uživatele správce nelze pozastavit prostřednictvím SCIM."
 
 msgid "Email"
 msgstr "E-mail"
@@ -6464,16 +6464,16 @@ msgid "The scope is too large."
 msgstr "Scope je příliš dlouhý."
 
 msgid "The URL must be a valid PingOne authentication domain."
-msgstr ""
+msgstr "URL musí být platná autentizační doména PingOne."
 
 msgid "An environment id is required."
-msgstr ""
+msgstr "Je vyžadováno ID prostředí."
 
 msgid "The environment id should not be empty."
-msgstr ""
+msgstr "ID prostředí by nemělo být prázdné."
 
 msgid "The environment id should be a valid UUID."
-msgstr ""
+msgstr "ID prostředí musí být platné UUID."
 
 msgid "SSO settings edit endpoints are disabled."
 msgstr "Úprava koncových bodů nastavení SSO je zakázána."
@@ -6638,10 +6638,10 @@ msgid "Provided root CA file does not exist"
 msgstr "Zadaný soubor kořenové CA neexistuje."
 
 msgid "Invalid provider. Expected PingOne."
-msgstr ""
+msgstr "Neplatný poskytovatel. Očekává se PingOne."
 
 msgid "Invalid provider data. Expected PingOne settings."
-msgstr ""
+msgstr "Neplatná data poskytovatele. Očekává se nastavení PingOne."
 
 msgid "The user id should be a valid UUID."
 msgstr "ID uživatele by mělo být platný UUID."

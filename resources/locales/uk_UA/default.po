@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: 41c2572bd9bd4cc908d3e09e0cbed6e5\n"
 "POT-Creation-Date: 2026-05-07 04:01+0000\n"
-"PO-Revision-Date: 2026-05-07 09:34\n"
+"PO-Revision-Date: 2026-07-09 14:55\n"
 "Last-Translator: NAME <EMAIL@ADDRESS>\n"
 "Language-Team: Ukrainian\n"
 "MIME-Version: 1.0\n"
@@ -5558,7 +5558,7 @@ msgid "{0} has initiated an account recovery request."
 msgstr "{0} ініціював(ла) запит на відновлення облікового запису."
 
 msgid "Since you’re authorized to handle account recovery requests, please process this one."
-msgstr ""
+msgstr "Оскільки ви маєте повноваження обробляти запити на відновлення облікового запису, будь ласка, обробіть цей."
 
 msgid "You will need your organization recovery key to continue."
 msgstr "Вам знадобиться ключ відновлення організації, щоб продовжити."
@@ -6218,7 +6218,7 @@ msgid "The ID for the SCIM settings should be a valid UUID."
 msgstr "Ідентифікатор налаштувань SCIM має бути дійсним UUID."
 
 msgid "The SCIM secret token is expired, you are requested to rotate it."
-msgstr ""
+msgstr "Термін дії секретного токена SCIM закінчився, вам потрібно його ротувати."
 
 msgid "Simultaneous SCIM and session authentication is not permitted."
 msgstr "Одночасна автентифікація SCIM і сесійна автентифікація не дозволяється."
@@ -6230,7 +6230,7 @@ msgid "An entry for the same related entity already exists"
 msgstr "Запис для тієї ж пов'язаної сутності вже існує"
 
 msgid "An entry with the same `scim_name` and `foreign_model` already exist."
-msgstr ""
+msgstr "Запис із таким самим `scim_name` і `foreign_model` уже існує."
 
 msgid "Users"
 msgstr "Користувачі"
@@ -6248,10 +6248,10 @@ msgid "SCIM plugin is disabled."
 msgstr "Плагін SCIM вимкнено."
 
 msgid "The SCIM secret token is not expired."
-msgstr ""
+msgstr "Термін дії секретного токена SCIM не закінчився."
 
 msgid "Rotate the SCIM secret token in the administration settings."
-msgstr ""
+msgstr "Ротуйте секретний токен SCIM у налаштуваннях адміністрування."
 
 msgid "The SCIM settings could not be decrypted with the server gpg key."
 msgstr "Не вдалося розшифрувати налаштування SCIM за допомогою серверного ключа gpg."
@@ -6278,16 +6278,16 @@ msgid "The uuid in the url doesn't match any known setting record."
 msgstr "UUID у URL не збігається з жодним відомим записом налаштування."
 
 msgid "The SCIM secret token expiry configuration is invalid."
-msgstr ""
+msgstr "Налаштування строку дії секретного токена SCIM є недійсним."
 
 msgid "Missing or invalid SCIM user in configuration settings"
-msgstr ""
+msgstr "У налаштуваннях конфігурації відсутній користувач SCIM або вказано недійсного користувача"
 
 msgid "An unexpected error occurred while creating the user in the database"
-msgstr ""
+msgstr "Під час створення користувача в базі даних сталася неочікувана помилка"
 
 msgid "An administrator user cannot be suspended via SCIM."
-msgstr ""
+msgstr "Користувача-адміністратора не можна призупинити через SCIM."
 
 msgid "Email"
 msgstr "Електронна пошта"
@@ -6464,16 +6464,16 @@ msgid "The scope is too large."
 msgstr "Параметр scope завеликий."
 
 msgid "The URL must be a valid PingOne authentication domain."
-msgstr ""
+msgstr "URL-адреса має бути дійсним доменом автентифікації PingOne."
 
 msgid "An environment id is required."
-msgstr ""
+msgstr "Потрібен ідентифікатор середовища."
 
 msgid "The environment id should not be empty."
-msgstr ""
+msgstr "Ідентифікатор середовища не повинен бути порожнім."
 
 msgid "The environment id should be a valid UUID."
-msgstr ""
+msgstr "Ідентифікатор середовища має бути дійсним UUID."
 
 msgid "SSO settings edit endpoints are disabled."
 msgstr "Кінцеві точки редагування налаштувань SSO вимкнено."
@@ -6638,10 +6638,10 @@ msgid "Provided root CA file does not exist"
 msgstr "Наданого файлу кореневого CA не існує."
 
 msgid "Invalid provider. Expected PingOne."
-msgstr ""
+msgstr "Недійсний постачальник. Очікувався PingOne."
 
 msgid "Invalid provider data. Expected PingOne settings."
-msgstr ""
+msgstr "Недійсні дані постачальника. Очікувалися налаштування PingOne."
 
 msgid "The user id should be a valid UUID."
 msgstr "Ідентифікатор користувача має бути дійсним UUID."

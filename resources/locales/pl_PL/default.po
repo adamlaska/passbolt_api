@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: 41c2572bd9bd4cc908d3e09e0cbed6e5\n"
 "POT-Creation-Date: 2026-05-07 04:01+0000\n"
-"PO-Revision-Date: 2026-06-14 22:47\n"
+"PO-Revision-Date: 2026-07-09 14:54\n"
 "Last-Translator: NAME <EMAIL@ADDRESS>\n"
 "Language-Team: Polish\n"
 "MIME-Version: 1.0\n"
@@ -5558,7 +5558,7 @@ msgid "{0} has initiated an account recovery request."
 msgstr "Użytkownik {0} rozpoczął prośbę o odzyskanie konta."
 
 msgid "Since you’re authorized to handle account recovery requests, please process this one."
-msgstr ""
+msgstr "Ponieważ masz uprawnienia do obsługi próśb o odzyskanie konta, prosimy o przetworzenie tej prośby."
 
 msgid "You will need your organization recovery key to continue."
 msgstr "Aby kontynuować, będziesz potrzebować klucza odzyskiwania Twojej organizacji."
@@ -6218,7 +6218,7 @@ msgid "The ID for the SCIM settings should be a valid UUID."
 msgstr "ID ustawień SCIM powinno być prawidłowym UUID."
 
 msgid "The SCIM secret token is expired, you are requested to rotate it."
-msgstr ""
+msgstr "Tajny token SCIM wygasł, należy go obrócić."
 
 msgid "Simultaneous SCIM and session authentication is not permitted."
 msgstr "Jednoczesne uwierzytelnianie SCIM i sesyjne nie jest dozwolone."
@@ -6230,7 +6230,7 @@ msgid "An entry for the same related entity already exists"
 msgstr "Istnieje już wpis dla tego samego powiązanego elementu."
 
 msgid "An entry with the same `scim_name` and `foreign_model` already exist."
-msgstr ""
+msgstr "Wpis z taką samą wartością `scim_name` i `foreign_model` już istnieje."
 
 msgid "Users"
 msgstr "Użytkownicy"
@@ -6248,10 +6248,10 @@ msgid "SCIM plugin is disabled."
 msgstr "Wtyczka SCIM jest wyłączona."
 
 msgid "The SCIM secret token is not expired."
-msgstr ""
+msgstr "Tajny token SCIM nie wygasł."
 
 msgid "Rotate the SCIM secret token in the administration settings."
-msgstr ""
+msgstr "Obróć tajny token SCIM w ustawieniach administracyjnych."
 
 msgid "The SCIM settings could not be decrypted with the server gpg key."
 msgstr "Nie można odszyfrować ustawień SCIM kluczem GPG serwera."
@@ -6278,13 +6278,13 @@ msgid "The uuid in the url doesn't match any known setting record."
 msgstr "UUID w adresie URL nie pasuje do żadnego znanego rekordu ustawień."
 
 msgid "The SCIM secret token expiry configuration is invalid."
-msgstr ""
+msgstr "Konfiguracja wygaśnięcia tajnego tokenu SCIM jest nieprawidłowa."
 
 msgid "Missing or invalid SCIM user in configuration settings"
-msgstr ""
+msgstr "Brak użytkownika SCIM w ustawieniach konfiguracji lub jest on nieprawidłowy"
 
 msgid "An unexpected error occurred while creating the user in the database"
-msgstr ""
+msgstr "Wystąpił nieoczekiwany błąd podczas tworzenia użytkownika w bazie danych"
 
 msgid "An administrator user cannot be suspended via SCIM."
 msgstr "Użytkownik administratora nie może zostać zawieszony przez SCIM."

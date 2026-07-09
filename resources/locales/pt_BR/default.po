@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: 41c2572bd9bd4cc908d3e09e0cbed6e5\n"
 "POT-Creation-Date: 2026-05-07 04:01+0000\n"
-"PO-Revision-Date: 2026-06-02 07:53\n"
+"PO-Revision-Date: 2026-07-09 14:55\n"
 "Last-Translator: NAME <EMAIL@ADDRESS>\n"
 "Language-Team: Portuguese, Brazilian\n"
 "MIME-Version: 1.0\n"
@@ -5558,7 +5558,7 @@ msgid "{0} has initiated an account recovery request."
 msgstr "{0} iniciou uma solicitação de recuperação de conta."
 
 msgid "Since you’re authorized to handle account recovery requests, please process this one."
-msgstr ""
+msgstr "Como você está autorizado a lidar com solicitações de recuperação de conta, processe esta."
 
 msgid "You will need your organization recovery key to continue."
 msgstr "Você precisará da chave de recuperação da organização para continuar."
@@ -6218,7 +6218,7 @@ msgid "The ID for the SCIM settings should be a valid UUID."
 msgstr "O ID das configurações do SCIM deve ser um UUID válido."
 
 msgid "The SCIM secret token is expired, you are requested to rotate it."
-msgstr ""
+msgstr "O token secreto do SCIM expirou, é solicitado que você o rotacione."
 
 msgid "Simultaneous SCIM and session authentication is not permitted."
 msgstr "A autenticação simultânea via SCIM e sessão não é permitida."
@@ -6230,7 +6230,7 @@ msgid "An entry for the same related entity already exists"
 msgstr "Uma entrada para a mesma entidade relacionada já existe."
 
 msgid "An entry with the same `scim_name` and `foreign_model` already exist."
-msgstr ""
+msgstr "Já existe uma entrada com o mesmo `scim_name` e `foreign_model`."
 
 msgid "Users"
 msgstr "Usuários"
@@ -6248,10 +6248,10 @@ msgid "SCIM plugin is disabled."
 msgstr "O plugin SCIM está desativado."
 
 msgid "The SCIM secret token is not expired."
-msgstr ""
+msgstr "O token secreto do SCIM não expirou."
 
 msgid "Rotate the SCIM secret token in the administration settings."
-msgstr ""
+msgstr "Rotacione o token secreto do SCIM nas configurações de administração."
 
 msgid "The SCIM settings could not be decrypted with the server gpg key."
 msgstr "Não foi possível descriptografar as configurações do SCIM com a chave GPG do servidor."
@@ -6278,16 +6278,16 @@ msgid "The uuid in the url doesn't match any known setting record."
 msgstr "O UUID na URL não corresponde a nenhum registro de configuração conhecido."
 
 msgid "The SCIM secret token expiry configuration is invalid."
-msgstr ""
+msgstr "A configuração de expiração do token secreto do SCIM é inválida."
 
 msgid "Missing or invalid SCIM user in configuration settings"
-msgstr ""
+msgstr "Usuário SCIM ausente ou inválido nas configurações"
 
 msgid "An unexpected error occurred while creating the user in the database"
-msgstr ""
+msgstr "Ocorreu um erro inesperado ao criar o usuário no banco de dados"
 
 msgid "An administrator user cannot be suspended via SCIM."
-msgstr ""
+msgstr "Um usuário administrador não pode ser suspenso via SCIM."
 
 msgid "Email"
 msgstr "E-mail"
@@ -6464,16 +6464,16 @@ msgid "The scope is too large."
 msgstr "O escopo é muito grande."
 
 msgid "The URL must be a valid PingOne authentication domain."
-msgstr ""
+msgstr "A URL deve ser um domínio de autenticação do PingOne válido."
 
 msgid "An environment id is required."
-msgstr ""
+msgstr "Um id de ambiente é obrigatório."
 
 msgid "The environment id should not be empty."
-msgstr ""
+msgstr "O id de ambiente não deve estar vazio."
 
 msgid "The environment id should be a valid UUID."
-msgstr ""
+msgstr "O id de ambiente deve ser um UUID válido."
 
 msgid "SSO settings edit endpoints are disabled."
 msgstr "As configurações de SSO editar endpoints estão desativadas."
@@ -6638,10 +6638,10 @@ msgid "Provided root CA file does not exist"
 msgstr "O arquivo CA raiz fornecido não existe"
 
 msgid "Invalid provider. Expected PingOne."
-msgstr ""
+msgstr "Provedor inválido. Esperado: PingOne."
 
 msgid "Invalid provider data. Expected PingOne settings."
-msgstr ""
+msgstr "Dados de provedor inválidos. Esperadas configurações do PingOne."
 
 msgid "The user id should be a valid UUID."
 msgstr "O id do usuário deve ser um UUID válido."

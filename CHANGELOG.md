@@ -37,18 +37,18 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 - PB-52146 Allow additional database drivers to be registered in the healthcheck via dependency injection
 - PB-52285 Add test to verify JWT refresh token behaviour with a suspended user
 - PB-52553 Add PostgreSQL support to the create_passbolt_db script
-- Update dependency bacon/bacon-qr-code to v3.1.1
-- Update dependency cakephp/debug_kit to v5.2.4
-- Update dependency cakephp/plugin-installer to v2.0.2
-- Update dependency composer/composer to v2.10.2
-- Update dependency directorytree/ldaprecord to v3.8.6
-- Update dependency donatj/phpuseragentparser to v1.12.0
-- Update dependency ergebnis/phpunit-slow-test-detector to v2.24.0
-- Update dependency imagine/imagine to v1.5.4
-- Update dependency phpstan/phpstan to v1.12.33
-- Update dependency phpunit/phpunit to v11.5.55
-- Update dependency psalm/phar to v6.16.1
-- Update dependency seec/phpunit-consecutive-params to v1.2
+- Renovate: Update dependency bacon/bacon-qr-code to v3.1.1
+- Renovate: Update dependency cakephp/debug_kit to v5.2.4
+- Renovate: Update dependency cakephp/plugin-installer to v2.0.2
+- Renovate: Update dependency composer/composer to v2.10.2
+- Renovate: Update dependency directorytree/ldaprecord to v3.8.6
+- Renovate: Update dependency donatj/phpuseragentparser to v1.12.0
+- Renovate: Update dependency ergebnis/phpunit-slow-test-detector to v2.24.0
+- Renovate: Update dependency imagine/imagine to v1.5.4
+- Renovate: Update dependency phpstan/phpstan to v1.12.33
+- Renovate: Update dependency phpunit/phpunit to v11.5.55
+- Renovate: Update dependency psalm/phar to v6.16.1
+- Renovate: Update dependency seec/phpunit-consecutive-params to v1.2
 
 ## [5.13.0] - 2026-06-11
 ### Added

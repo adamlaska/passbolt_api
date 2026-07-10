@@ -36,7 +36,9 @@ class DuoVerifyPromptPostControllerTest extends MfaIntegrationTestCase
     {
         $this->post('/mfa/verify/duo/prompt');
         $this->assertRedirect();
-        $this->assertRedirectContains('/auth/login?redirect=%2Fmfa%2Fverify%2Fduo%2Fprompt');
+        // cakephp/authentication >= 3.3.3 no longer appends the ?redirect=...
+        // query parameter on non-GET requests (CVE-2026-55590 hardening).
+        $this->assertRedirectContains('/auth/login');
     }
 
     public function testDuoVerifyPromptPostController_Error_JsonNotAllowed()

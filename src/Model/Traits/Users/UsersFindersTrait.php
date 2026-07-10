@@ -35,6 +35,7 @@ use Cake\Utility\Hash;
 use Cake\Validation\Validation;
 use Exception;
 use InvalidArgumentException;
+use Passbolt\Rbacs\Model\Entity\Rbac;
 
 /**
  * @method \Cake\Event\EventManager getEventManager()
@@ -591,6 +592,40 @@ trait UsersFindersTrait
             )
             ->orderBy(['Users.created' => 'ASC'])
             ->contain(['Roles']);
+    }
+
+    /**
+     * Filter users to those allowed to perform an RBAC-controlled action:
+     * admins by role, plus non-admins whose role has the given RBAC action granted with control_function=Allow.
+     *
+     * Only returns admins-only when the Rbacs association is not registered (i.e. the Rbacs plugin is not loaded).
+     *
+     * @param \Cake\ORM\Query\SelectQuery $query Query to augment.
+     * @param string $rbacActionName Fully-qualified RBAC action name (e.g. 'AccountRecoveryRequestsView.view').
+     * @return \Cake\ORM\Query\SelectQuery
+     */
+    public function findAdminsOrRbacActionGrantees(SelectQuery $query, string $rbacActionName): SelectQuery
+    {
+        $query->innerJoinWith('Roles');
+
+        if (!$this->Roles->hasAssociation('Rbacs')) {
+            return $query->where(['Roles.name' => Role::ADMIN]);
+        }
+
+        $grantedRoleIds = $this->Roles->getAssociation('Rbacs')->find()
+            ->select(['Rbacs.role_id'])
+            ->where([
+                'Rbacs.foreign_model' => Rbac::FOREIGN_MODEL_ACTION,
+                'Rbacs.foreign_id' => UuidFactory::uuid($rbacActionName),
+                'Rbacs.control_function' => Rbac::CONTROL_FUNCTION_ALLOW,
+            ]);
+
+        return $query->where(function (QueryExpression $exp) use ($grantedRoleIds): QueryExpression {
+            return $exp->or([
+                'Roles.name' => Role::ADMIN,
+                'Users.role_id IN' => $grantedRoleIds,
+            ]);
+        });
     }
 
     /**

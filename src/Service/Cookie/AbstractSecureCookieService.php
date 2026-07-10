@@ -26,16 +26,16 @@ abstract class AbstractSecureCookieService
     public const PASSBOLT_SECURITY_COOKIES_SECURE_CONFIG = 'passbolt.security.cookies.secure';
 
     /**
-     * Read in the config and in the request is ssl is required.
+     * Read in the config and in the request is https is required.
      *
      * Set to true in the configs by default.
      *
      * @param \Cake\Http\ServerRequest $request Server request
      * @return bool
      */
-    public static function isSslOrCookiesSecure(ServerRequest $request): bool
+    public static function isHttpsOrCookiesSecure(ServerRequest $request): bool
     {
-        return Configure::read(self::PASSBOLT_SECURITY_COOKIES_SECURE_CONFIG) || $request->is('ssl');
+        return Configure::read(self::PASSBOLT_SECURITY_COOKIES_SECURE_CONFIG) || $request->is('https');
     }
 
     /**

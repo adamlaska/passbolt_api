@@ -41,10 +41,6 @@ class CsrfProtectionMiddlewareTest extends AppIntegrationTestCase
         $this->assertTrue($csrfToken->isSecure());
     }
 
-    /**
-     * @TODO v5 cookie should be secure if cookie secure is true
-     * @see CsrfProtectionMiddleware::makeCsrfCookieSecureIfRequestIsSsl()
-     */
     public function testCsrfProtectionMiddleware_Non_SSL_And_Cookie_Secure_Activated()
     {
         $request = new ServerRequest();
@@ -54,7 +50,7 @@ class CsrfProtectionMiddlewareTest extends AppIntegrationTestCase
         $response = $middleware->process($request, new TestRequestHandler());
 
         $csrfToken = $response->getCookieCollection()->get('csrfToken');
-        $this->assertFalse($csrfToken->isSecure());
+        $this->assertTrue($csrfToken->isSecure());
     }
 
     public function testCsrfProtectionMiddleware_SSL_And_Cookie_Secure_Deactivated()

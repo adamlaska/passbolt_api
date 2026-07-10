@@ -282,13 +282,14 @@ class UserScimResource implements ScimResourceInterface
     /**
      * Validate preconditions before attempting user creation.
      *
-     * @throws \Passbolt\Scim\Exception\ConflictException
+     * @throws \Passbolt\Scim\Exception\BadRequestException When "work" email is missing in the payload.
+     * @throws \Passbolt\Scim\Exception\ConflictException When resource id is already present.
      */
     private function validateCreatePreconditions(): void
     {
         if (!$this->email) {
-            throw new ConflictException(
-                sprintf('The email was not found for the %s resource', $this->getType()),
+            throw new BadRequestException(
+                sprintf('No email with type "work" was found in the %s payload.', $this->getType()),
                 scimType: ScimException::SCIM_TYPE_INVALID_VALUE,
             );
         }

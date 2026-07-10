@@ -1865,11 +1865,6 @@
       <code><![CDATA[$data['options']['maxLimit'] ?? $data['defaults']['maxLimit']]]></code>
     </InvalidArgument>
   </file>
-  <file src="src/Model/Dto/EntitiesChangesDto.php">
-    <InvalidArgument>
-      <code><![CDATA[$entities]]></code>
-    </InvalidArgument>
-  </file>
   <file src="src/Model/Table/AuthenticationTokensTable.php">
     <ImplementedReturnTypeMismatch>
       <code><![CDATA[\App\Model\Entity\AuthenticationToken]]></code>

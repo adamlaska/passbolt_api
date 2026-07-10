@@ -106,15 +106,16 @@ class MultiFactorAuthenticationPlugin extends BasePlugin
      */
     public function services(ContainerInterface $container): void
     {
-        if ($this->isFeaturePluginEnabled('JwtAuthentication')) {
-            $container
-                ->extend(JwtArmoredChallengeInterface::class)
-                ->setConcrete(MfaJwtArmoredChallengeService::class);
-        }
-
         $container
             ->add(RememberAMonthSettingInterface::class)
             ->setConcrete(DefaultRememberAMonthSettingService::class);
+
+        if ($this->isFeaturePluginEnabled('JwtAuthentication')) {
+            $container
+                ->extend(JwtArmoredChallengeInterface::class)
+                ->setConcrete(MfaJwtArmoredChallengeService::class)
+                ->addArgument(RememberAMonthSettingInterface::class);
+        }
 
         $container->add(Client::class)->setConcrete(null);
 

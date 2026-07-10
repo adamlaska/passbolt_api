@@ -67,7 +67,7 @@ class PingOneRecoverSuccessController extends AbstractSsoController
         $this->viewBuilder()
             ->setTheme('Passbolt/Sso')
             ->setLayout('default')
-            ->setTemplatePath('azure')
+            ->setTemplatePath('success')
             ->setTemplate('stage3');
     }
 }

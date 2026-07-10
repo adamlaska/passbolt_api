@@ -202,14 +202,13 @@ class SecretsUpdateSecretsService
     private function deleteLostAccessSecrets(string $resourceId): array
     {
         $usersIds = $this->accessService->getUsersIdsHavingAccessTo($resourceId);
-        if (empty($usersIds)) {
-            return [];
-        }
 
-        $lostAccessSecretsConditions = [
-            'resource_id' => $resourceId,
-            'user_id NOT IN' => $usersIds,
-        ];
+        // When no user retains access, delete every secret row for the resource. Branching here
+        // avoids `user_id NOT IN ()`, which is not portable across MySQL/MariaDB/Postgres.
+        $lostAccessSecretsConditions = ['resource_id' => $resourceId];
+        if (!empty($usersIds)) {
+            $lostAccessSecretsConditions['user_id NOT IN'] = $usersIds;
+        }
         /** @var array<\App\Model\Entity\Secret> $lostAccessSecrets */
         $lostAccessSecrets = $this->secretsTable->find()
             ->select(['id', 'resource_id', 'user_id'])

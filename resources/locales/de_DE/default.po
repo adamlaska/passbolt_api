@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: 41c2572bd9bd4cc908d3e09e0cbed6e5\n"
 "POT-Creation-Date: 2026-07-10 05:55+0000\n"
-"PO-Revision-Date: 2026-07-10 08:16\n"
+"PO-Revision-Date: 2026-07-10 09:22\n"
 "Last-Translator: NAME <EMAIL@ADDRESS>\n"
 "Language-Team: German\n"
 "MIME-Version: 1.0\n"
@@ -971,7 +971,7 @@ msgid "Only maximum of {0} active roles are allowed."
 msgstr ""
 
 msgid "A reserved role cannot be renamed."
-msgstr ""
+msgstr "Eine reservierte Rolle kann nicht umbenannt werden."
 
 msgid "The resource identifier is required."
 msgstr "Der Ressourcenbezeichner ist erforderlich."
@@ -1619,19 +1619,19 @@ msgid "The database version is deprecated."
 msgstr ""
 
 msgid "The model schema cache shows no discrepancies with the database schema."
-msgstr ""
+msgstr "Der Modell-Schema-Cache zeigt keine Abweichungen vom Datenbankschema."
 
 msgid "The model schema cache shows discrepancies with the database schema."
-msgstr ""
+msgstr "Der Modell-Schema-Cache zeigt Abweichungen vom Datenbankschema."
 
 msgid "{0}: {1}."
-msgstr ""
+msgstr "{0}: {1}."
 
 msgid "Clear the model schema cache so it is rebuilt from the database."
-msgstr ""
+msgstr "Leeren Sie den Modell-Schema-Cache, damit er aus der Datenbank neu erstellt wird."
 
 msgid "Consider running `{0}`. More information: {1}"
-msgstr ""
+msgstr "Erwägen Sie, `{0}` auszuführen. Weitere Informationen: {1}"
 
 msgid "The database schema is up to date."
 msgstr "Das Datenbankschema ist aktuell."
@@ -2369,61 +2369,61 @@ msgid "The subscription was created."
 msgstr "Das Abonnement wurde erstellt."
 
 msgid "The instance is already on PRO."
-msgstr ""
+msgstr "Die Instanz ist bereits auf PRO."
 
 msgid "A subscription key is already present."
-msgstr ""
+msgstr "Ein Subscription key ist bereits vorhanden."
 
 msgid "You are not allowed to access this location."
 msgstr "Sie sind nicht berechtigt, auf diesen Standort zuzugreifen."
 
 msgid "The instance was downgraded to CE."
-msgstr ""
+msgstr "Die Instanz wurde auf CE zurückgestuft."
 
 msgid "Edition downgrade is disabled."
-msgstr ""
+msgstr "Die Herabstufung der Edition ist deaktiviert."
 
 msgid "Your session expired due to an edition change. Please log in again."
-msgstr ""
+msgstr "Ihre Sitzung ist aufgrund einer Editionsänderung abgelaufen. Bitte melden Sie sich erneut an."
 
 msgid "{0} downgraded this Passbolt instance to Community Edition"
-msgstr ""
+msgstr "{0} hat diese Passbolt-Instanz auf Community Edition zurückgestuft"
 
 msgid "{0} upgraded this Passbolt instance to Pro Edition"
-msgstr ""
+msgstr "{0} hat diese Passbolt-Instanz auf Pro Edition hochgestuft"
 
 msgid "The instance is already on CE."
-msgstr ""
+msgstr "Die Instanz ist bereits auf CE."
 
 msgid "The edition served is {0}."
-msgstr ""
+msgstr "Die bereitgestellte Edition ist {0}."
 
 msgid "Edition row is missing from organization_settings; defaulting to CE."
-msgstr ""
+msgstr "Die Editionszeile fehlt in organization_settings; standardmäßig wird CE verwendet."
 
 msgid "No edition is recorded in organization_settings — the instance is falling back to CE by default."
-msgstr ""
+msgstr "In organization_settings ist keine Edition gespeichert — die Instanz greift standardmäßig auf CE zurück."
 
 msgid "Run \"bin/cake passbolt populate_edition\" or upload a subscription key from the admin UI."
-msgstr ""
+msgstr "Führen Sie \"bin/cake passbolt populate_edition\" aus oder laden Sie einen Subscription key über die Admin-Oberfläche hoch."
 
 msgid "{0} downgraded the instance to Community Edition"
-msgstr ""
+msgstr "{0} hat die Instanz auf Community Edition zurückgestuft"
 
 msgid "Your Passbolt instance was downgraded from Pro to Community Edition. Pro-only features and data have been removed."
-msgstr ""
+msgstr "Ihre Passbolt-Instanz wurde von Pro auf Community Edition zurückgestuft. Funktionen und Daten, die nur in Pro verfügbar sind, wurden entfernt."
 
 msgid "Log in to Passbolt"
-msgstr ""
+msgstr "Bei Passbolt anmelden"
 
 msgid "{0} upgraded the instance to Pro Edition"
-msgstr ""
+msgstr "{0} hat die Instanz auf Pro Edition hochgestuft"
 
 msgid "Your Passbolt instance was upgraded from Community Edition to Pro. Pro features are now available."
-msgstr ""
+msgstr "Ihre Passbolt-Instanz wurde von Community Edition auf Pro hochgestuft. Pro-Funktionen sind jetzt verfügbar."
 
 msgid "Subscription seats: {0}. Valid until {1}."
-msgstr ""
+msgstr "Subscription seats: {0}. Gültig bis {1}."
 
 msgid "This is not a valid Ajax/Json request."
 msgstr "Dies ist keine gültige Ajax/Json-Anfrage."
@@ -5099,7 +5099,7 @@ msgid "Copy paste your Passbolt Pro subscription key here"
 msgstr "Kopieren Sie Ihren Passbolt Pro Abonnementschlüssel hier hinein"
 
 msgid "Skip"
-msgstr ""
+msgstr "Überspringen"
 
 msgid "Welcome to Passbolt Pro! Let's get started with the configuration."
 msgstr "Willkommen bei Passbolt Pro! Lassen Sie uns mit der Konfiguration beginnen."
@@ -7040,7 +7040,7 @@ msgid "kindly contact us at <info>sales@passbolt.com</info>"
 msgstr "bitte kontaktieren Sie uns unter <info>sales@passbolt.com</info>"
 
 msgid "Only administrators can delete the subscription."
-msgstr ""
+msgstr "Nur Administratoren können das Abonnement löschen."
 
 msgid "Only administrators can view the subscription details."
 msgstr "Nur Administratoren können die Abo-Details einsehen."

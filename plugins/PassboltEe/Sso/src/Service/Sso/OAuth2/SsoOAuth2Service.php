@@ -30,6 +30,7 @@ use Passbolt\Sso\Model\Entity\SsoSetting;
 use Passbolt\Sso\Service\Sso\AbstractSsoService;
 use Passbolt\Sso\Service\SsoSettings\SsoSettingsGetService;
 use Passbolt\Sso\Utility\OAuth2\Provider\OAuth2Provider;
+use Passbolt\Sso\Utility\Provider\SsoProviderFactory;
 
 class SsoOAuth2Service extends AbstractSsoService
 {
@@ -105,7 +106,8 @@ class SsoOAuth2Service extends AbstractSsoService
             $collaborators['httpClient'] = $httpClient;
         }
 
-        return new OAuth2Provider(
+        return SsoProviderFactory::create(
+            OAuth2Provider::class,
             [
                 'clientId' => $data->client_id,
                 'clientSecret' => $data->client_secret,

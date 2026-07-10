@@ -162,7 +162,14 @@ abstract class AbstractOauth2Provider extends AbstractProvider
     public function validateOpenIdConfiguration(mixed $response): void
     {
         if (!is_array($response)) {
-            throw new InternalErrorException('Invalid response.');
+            $msg = sprintf('Invalid response. Expected array, got "%s".', gettype($response));
+            if (is_string($response)) {
+                // Cap excerpt to limit log volume on large/HTML responses; mb_strcut is UTF-8-safe.
+                $excerpt = mb_strcut($response, 0, 200, 'UTF-8');
+                // Escape newlines and control characters via JSON encoding so they don't corrupt log output.
+                $msg .= ' ' . sprintf('Response text (truncated): %s', json_encode($excerpt));
+            }
+            throw new InternalErrorException($msg);
         }
         if (!isset($response['jwks_uri'])) {
             throw new InternalErrorException('Invalid response. Missing JWKS URI');

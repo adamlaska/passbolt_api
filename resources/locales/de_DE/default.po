@@ -1,8 +1,8 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: 41c2572bd9bd4cc908d3e09e0cbed6e5\n"
-"POT-Creation-Date: 2026-04-02 12:51+0000\n"
-"PO-Revision-Date: 2026-04-22 14:06\n"
+"POT-Creation-Date: 2026-07-10 05:55+0000\n"
+"PO-Revision-Date: 2026-07-10 08:16\n"
 "Last-Translator: NAME <EMAIL@ADDRESS>\n"
 "Language-Team: German\n"
 "MIME-Version: 1.0\n"
@@ -346,17 +346,20 @@ msgstr "Benutzer kann nicht gelöscht werden."
 msgid "The groups users identifiers must be valid UUID."
 msgstr "Der Gruppen-Benutzer-Identifikator muss eine gültige UUID sein."
 
-msgid "The user does not exist or has been deleted."
-msgstr "Benutzer existiert nicht oder wurde gelöscht."
-
 msgid "Could not validate user data."
 msgstr "Konnte Benutzer-Daten nicht validieren."
+
+msgid "The user does not exist or has been deleted."
+msgstr "Benutzer existiert nicht oder wurde gelöscht."
 
 msgid "Could not find the user data after save. Maybe it has been deleted in the meantime."
 msgstr "Die Benutzer-Daten konnten nach dem Speichern nicht gefunden werden. Möglicherweise wurden sie in der Zwischenzeit gelöscht."
 
 msgid "The user has been updated successfully."
 msgstr "Benutzer wurde erfolgreich aktualisiert."
+
+msgid "You are not authorized to edit the role."
+msgstr "Sie sind nicht berechtigt, die Rolle zu bearbeiten."
 
 msgid "Some user data should be provided."
 msgstr "Irgendwelche Benutzer-Daten müssen angegeben werden."
@@ -366,9 +369,6 @@ msgstr "Es ist nicht erlaubt den OpenPGG-Schlüssel zu bearbeiten."
 
 msgid "Updating the groups is not allowed."
 msgstr "Es ist nicht erlaubt die Gruppe zu bearbeiten."
-
-msgid "You are not authorized to edit the role."
-msgstr "Sie sind nicht berechtigt, die Rolle zu bearbeiten."
 
 msgid "Multiple has-access filters are not supported."
 msgstr "Mehrere Zugriffsfilter werden nicht unterstützt."
@@ -968,6 +968,9 @@ msgid "A role already exists for the given name."
 msgstr "Für diesen Namen existiert bereits eine Rolle."
 
 msgid "Only maximum of {0} active roles are allowed."
+msgstr ""
+
+msgid "A reserved role cannot be renamed."
 msgstr ""
 
 msgid "The resource identifier is required."
@@ -1613,6 +1616,21 @@ msgid "The database version is supported."
 msgstr ""
 
 msgid "The database version is deprecated."
+msgstr ""
+
+msgid "The model schema cache shows no discrepancies with the database schema."
+msgstr ""
+
+msgid "The model schema cache shows discrepancies with the database schema."
+msgstr ""
+
+msgid "{0}: {1}."
+msgstr ""
+
+msgid "Clear the model schema cache so it is rebuilt from the database."
+msgstr ""
+
+msgid "Consider running `{0}`. More information: {1}"
 msgstr ""
 
 msgid "The database schema is up to date."
@@ -2344,8 +2362,68 @@ msgstr "Der Parameter {0} ist nicht gesetzt."
 msgid "This theme is not supported."
 msgstr "Diese Benutzeroberfläche wird nicht unterstützt."
 
+msgid "Subscription key data is required."
+msgstr "Abo-Schlüsseldaten sind erforderlich."
+
+msgid "The subscription was created."
+msgstr "Das Abonnement wurde erstellt."
+
+msgid "The instance is already on PRO."
+msgstr ""
+
+msgid "A subscription key is already present."
+msgstr ""
+
 msgid "You are not allowed to access this location."
 msgstr "Sie sind nicht berechtigt, auf diesen Standort zuzugreifen."
+
+msgid "The instance was downgraded to CE."
+msgstr ""
+
+msgid "Edition downgrade is disabled."
+msgstr ""
+
+msgid "Your session expired due to an edition change. Please log in again."
+msgstr ""
+
+msgid "{0} downgraded this Passbolt instance to Community Edition"
+msgstr ""
+
+msgid "{0} upgraded this Passbolt instance to Pro Edition"
+msgstr ""
+
+msgid "The instance is already on CE."
+msgstr ""
+
+msgid "The edition served is {0}."
+msgstr ""
+
+msgid "Edition row is missing from organization_settings; defaulting to CE."
+msgstr ""
+
+msgid "No edition is recorded in organization_settings — the instance is falling back to CE by default."
+msgstr ""
+
+msgid "Run \"bin/cake passbolt populate_edition\" or upload a subscription key from the admin UI."
+msgstr ""
+
+msgid "{0} downgraded the instance to Community Edition"
+msgstr ""
+
+msgid "Your Passbolt instance was downgraded from Pro to Community Edition. Pro-only features and data have been removed."
+msgstr ""
+
+msgid "Log in to Passbolt"
+msgstr ""
+
+msgid "{0} upgraded the instance to Pro Edition"
+msgstr ""
+
+msgid "Your Passbolt instance was upgraded from Community Edition to Pro. Pro features are now available."
+msgstr ""
+
+msgid "Subscription seats: {0}. Valid until {1}."
+msgstr ""
 
 msgid "This is not a valid Ajax/Json request."
 msgstr "Dies ist keine gültige Ajax/Json-Anfrage."
@@ -2683,14 +2761,14 @@ msgstr "Ein gültiges JWT-Schlüsselpaar fehlt."
 msgid "Run the create JWT keys script to create a valid JWT secret and public key pair:"
 msgstr "Führen Sie das Skript zum Erstellen von JWT-Schlüsseln aus, um ein gültiges JWT-Geheimnis und ein öffentliches Schlüsselpaar zu erstellen:"
 
+msgid "The refresh token provided was already used."
+msgstr "Der Aktualisierungstoken wurde bereits verwendet."
+
 msgid "The refresh token should be a valid UUID."
 msgstr "Das Aktualisierungstoken sollte eine gültige UUID sein."
 
 msgid "The user ID should be a valid UUID."
 msgstr "Die Benutzer-ID sollte eine gültige UUID sein."
-
-msgid "The refresh token provided was already used."
-msgstr "Der Aktualisierungstoken wurde bereits verwendet."
 
 msgid "Expired refresh token provided."
 msgstr "Abgelaufenes Aktualisierungstoken angegeben."
@@ -4678,9 +4756,6 @@ msgstr "Die Sitzung ist abgelaufen. Bitte beginnen Sie die Konfiguration erneut.
 msgid "System check"
 msgstr "Systemüberprüfung"
 
-msgid "Subscription key"
-msgstr "Abo-Schlüssel"
-
 msgid "Server keys"
 msgstr "Serverschlüssel"
 
@@ -4692,6 +4767,9 @@ msgstr "E-Mails"
 
 msgid "First user"
 msgstr "Erster Benutzer"
+
+msgid "Subscription key"
+msgstr "Abo-Schlüssel"
 
 msgid "Installation"
 msgstr "Installation"
@@ -4846,6 +4924,9 @@ msgstr "Nachname"
 msgid "mail@yourdomain.com"
 msgstr "mail@yourdomain.com"
 
+msgid "Cancel"
+msgstr "Abbrechen"
+
 msgid "Next"
 msgstr "Weiter"
 
@@ -4887,9 +4968,6 @@ msgstr "schema"
 
 msgid "Schema"
 msgstr "Schema"
-
-msgid "Cancel"
-msgstr "Abbrechen"
 
 msgid "Enter your SMTP server settings."
 msgstr "Geben Sie Ihre SMTP-Server-Einstellungen ein."
@@ -5019,6 +5097,9 @@ msgstr "Passbolt Pro Aktivierung."
 
 msgid "Copy paste your Passbolt Pro subscription key here"
 msgstr "Kopieren Sie Ihren Passbolt Pro Abonnementschlüssel hier hinein"
+
+msgid "Skip"
+msgstr ""
 
 msgid "Welcome to Passbolt Pro! Let's get started with the configuration."
 msgstr "Willkommen bei Passbolt Pro! Lassen Sie uns mit der Konfiguration beginnen."
@@ -5558,7 +5639,7 @@ msgid "{0} has initiated an account recovery request."
 msgstr "{0} hat eine Anfrage zur Kontowiederherstellung initiiert."
 
 msgid "Since you’re authorized to handle account recovery requests, please process this one."
-msgstr ""
+msgstr "Da Sie berechtigt sind, Anfragen zur Kontowiederherstellung zu bearbeiten, bearbeiten Sie bitte diese."
 
 msgid "You will need your organization recovery key to continue."
 msgstr "Zum Fortfahren benötigen Sie den Schlüssel zur Wiederherstellung Ihrer Organisation."
@@ -6193,9 +6274,6 @@ msgstr "Die Einstellungen für die Kennwortrichtlinien wurden durch {0} aktualis
 msgid "you"
 msgstr "sie"
 
-msgid "view it in passbolt"
-msgstr "in Passbolt anzeigen"
-
 msgid "The SCIM setting id should be a valid UUID."
 msgstr "Die SCIM-Einstellungs-ID sollte eine gültige UUID sein."
 
@@ -6218,7 +6296,7 @@ msgid "The ID for the SCIM settings should be a valid UUID."
 msgstr "Die ID der SCIM-Einstellungen sollte eine gültige UUID sein."
 
 msgid "The SCIM secret token is expired, you are requested to rotate it."
-msgstr ""
+msgstr "Das geheime SCIM-Token ist abgelaufen, Sie werden aufgefordert, es zu rotieren."
 
 msgid "Simultaneous SCIM and session authentication is not permitted."
 msgstr "Gleichzeitige SCIM- und Sitzungs-Authentifizierung ist nicht zulässig."
@@ -6230,7 +6308,7 @@ msgid "An entry for the same related entity already exists"
 msgstr "Ein Eintrag für dieselbe zugehörige Entität existiert bereits."
 
 msgid "An entry with the same `scim_name` and `foreign_model` already exist."
-msgstr ""
+msgstr "Ein Eintrag mit demselben `scim_name` und `foreign_model` existiert bereits."
 
 msgid "Users"
 msgstr "Benutzer"
@@ -6248,10 +6326,10 @@ msgid "SCIM plugin is disabled."
 msgstr "Das SCIM-Plugin ist deaktiviert."
 
 msgid "The SCIM secret token is not expired."
-msgstr ""
+msgstr "Das geheime SCIM-Token ist nicht abgelaufen."
 
 msgid "Rotate the SCIM secret token in the administration settings."
-msgstr ""
+msgstr "Rotieren Sie das geheime SCIM-Token in den Administrationseinstellungen."
 
 msgid "The SCIM settings could not be decrypted with the server gpg key."
 msgstr "Die SCIM-Einstellungen konnten nicht mit dem Server-GPG-Schlüssel entschlüsselt werden."
@@ -6278,16 +6356,16 @@ msgid "The uuid in the url doesn't match any known setting record."
 msgstr "Die UUID in der URL entspricht keinem bekannten Einstellungsdatensatz."
 
 msgid "The SCIM secret token expiry configuration is invalid."
-msgstr ""
+msgstr "Die Konfiguration für den Ablauf des geheimen SCIM-Tokens ist ungültig."
 
 msgid "Missing or invalid SCIM user in configuration settings"
-msgstr ""
+msgstr "Fehlender oder ungültiger SCIM-Benutzer in den Konfigurationseinstellungen"
 
 msgid "An unexpected error occurred while creating the user in the database"
-msgstr ""
+msgstr "Beim Erstellen des Benutzers in der Datenbank ist ein unerwarteter Fehler aufgetreten"
 
 msgid "An administrator user cannot be suspended via SCIM."
-msgstr ""
+msgstr "Ein Administratorbenutzer kann nicht über SCIM gesperrt werden."
 
 msgid "Email"
 msgstr "E-Mail"
@@ -6464,16 +6542,16 @@ msgid "The scope is too large."
 msgstr "Die Daten sind zu lange."
 
 msgid "The URL must be a valid PingOne authentication domain."
-msgstr ""
+msgstr "Die URL muss eine gültige PingOne-Authentifizierungsdomain sein."
 
 msgid "An environment id is required."
-msgstr ""
+msgstr "Eine Umgebungs-ID ist erforderlich."
 
 msgid "The environment id should not be empty."
-msgstr ""
+msgstr "Die Umgebungs-ID darf nicht leer sein."
 
 msgid "The environment id should be a valid UUID."
-msgstr ""
+msgstr "Die Umgebungs-ID muss eine gültige UUID sein."
 
 msgid "SSO settings edit endpoints are disabled."
 msgstr "SSO-Einstellungen Bearbeiten-Endpunkte sind deaktiviert."
@@ -6638,10 +6716,10 @@ msgid "Provided root CA file does not exist"
 msgstr "Angegebene Root-CA-Datei existiert nicht"
 
 msgid "Invalid provider. Expected PingOne."
-msgstr ""
+msgstr "Ungültiger Anbieter. PingOne erwartet."
 
 msgid "Invalid provider data. Expected PingOne settings."
-msgstr ""
+msgstr "Ungültige Anbieterdaten. PingOne-Einstellungen erwartet."
 
 msgid "The user id should be a valid UUID."
 msgstr "Die Benutzer-ID sollte eine gültige UUID sein."
@@ -6763,9 +6841,6 @@ msgstr "Der {0} Konfigurationswert sollte ein String oder NULL sein."
 msgid "The {0} configuration value should be one of the following: {1}."
 msgstr "Der Authentifizierungstyp muss einer der folgenden sein: {0}."
 
-msgid "Single-sign on was a success"
-msgstr "Single-Sign-On war ein Erfolg"
-
 msgid "Users are unable to log in via Azure SSO."
 msgstr "Benutzer können sich nicht über Azure SSO anmelden."
 
@@ -6802,11 +6877,11 @@ msgstr "Der SSO-Provider {0} wurde erfolgreich durch {1} getestet und aktiviert.
 msgid "All users can now use Single Sign-on to perform authentication."
 msgstr "Alle Benutzer können nun das Single-Sign-on zur Authentifizierung verwenden."
 
-msgid "Viewq  it in passbolt"
-msgstr "In Passbolt anzeigen"
-
 msgid "The SSO setting has been deleted by {0}."
 msgstr "Die SSO-Einstellung wurde von {0} gelöscht."
+
+msgid "Single-sign on was a success"
+msgstr "Single-Sign-On war ein Erfolg"
 
 msgid "The authentication token does not exist or has been deleted."
 msgstr "Das Authentifizierungs-Token existiert nicht oder wurde gelöscht."
@@ -6834,12 +6909,6 @@ msgstr "Der Zugriff auf diesen Service erfordert eine Einladung. "
 
 msgid "Please contact your administrator to request an invitation link."
 msgstr "Bitte wenden Sie sich an Ihren Administrator, um einen Einladungslink anzufordern."
-
-msgid "Subscription key data is required."
-msgstr "Abo-Schlüsseldaten sind erforderlich."
-
-msgid "The subscription was created."
-msgstr "Das Abonnement wurde erstellt."
 
 msgid "The subscription was updated."
 msgstr "Das Abonnement wurde aktualisiert."
@@ -6970,6 +7039,9 @@ msgstr "Für jede Frage / Feedback / Abonnementverlängerung,"
 msgid "kindly contact us at <info>sales@passbolt.com</info>"
 msgstr "bitte kontaktieren Sie uns unter <info>sales@passbolt.com</info>"
 
+msgid "Only administrators can delete the subscription."
+msgstr ""
+
 msgid "Only administrators can view the subscription details."
 msgstr "Nur Administratoren können die Abo-Details einsehen."
 
@@ -6978,9 +7050,6 @@ msgstr "Die Datei {0} konnte nicht gefunden werden."
 
 msgid "The file {0} could not be read."
 msgstr "Die Datei {0} konnte nicht gelesen werden."
-
-msgid "No active admins were found."
-msgstr "Es wurden keine aktiven Admins gefunden."
 
 msgid "Only administrators can update the subscription details."
 msgstr "Nur Administratoren können die Abo-Details aktualisieren."

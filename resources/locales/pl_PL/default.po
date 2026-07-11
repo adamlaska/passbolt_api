@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: 41c2572bd9bd4cc908d3e09e0cbed6e5\n"
 "POT-Creation-Date: 2026-07-10 05:55+0000\n"
-"PO-Revision-Date: 2026-07-10 09:22\n"
+"PO-Revision-Date: 2026-07-11 19:11\n"
 "Last-Translator: NAME <EMAIL@ADDRESS>\n"
 "Language-Team: Polish\n"
 "MIME-Version: 1.0\n"
@@ -4397,7 +4397,7 @@ msgid "The identifier of the user who modified the secret revision should be a v
 msgstr ""
 
 msgid "Could not save secret revision"
-msgstr ""
+msgstr "Nie udało się zapisać poprawki sekretu"
 
 msgid "The self registration setting id should be a valid UUID."
 msgstr "ID ustawienia samodzielnej rejestracji powinno być prawidłowym UUID."
@@ -4541,7 +4541,7 @@ msgid "The tenant ID should be a valid UUID."
 msgstr ""
 
 msgid "The client ID should be a valid UUID."
-msgstr ""
+msgstr "ID klienta powinien być prawidłowym UUID."
 
 msgid "The client secret should be a valid BMP-UTF8 string."
 msgstr ""

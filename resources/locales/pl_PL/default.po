@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: 41c2572bd9bd4cc908d3e09e0cbed6e5\n"
 "POT-Creation-Date: 2026-07-10 05:55+0000\n"
-"PO-Revision-Date: 2026-07-10 09:22\n"
+"PO-Revision-Date: 2026-07-11 20:11\n"
 "Last-Translator: NAME <EMAIL@ADDRESS>\n"
 "Language-Team: Polish\n"
 "MIME-Version: 1.0\n"
@@ -410,7 +410,7 @@ msgid "Invalid expiry time {0}."
 msgstr "Nieprawidłowy czas wygaśnięcia {0}."
 
 msgid "The user role ID must not be of the guest role."
-msgstr ""
+msgstr "ID roli użytkownika nie może być rolą gościa."
 
 msgid "The identifier should not be empty."
 msgstr "Identyfikator nie powinien być pusty."
@@ -959,7 +959,7 @@ msgid "The description should be a valid BMP-UTF8 string."
 msgstr "Opis powinien być prawidłowym ciągiem BMP-UTF8."
 
 msgid "The role cannot be deleted as it is associated with another user."
-msgstr ""
+msgstr "Rola nie może zostać usunięta, ponieważ jest powiązana z innym użytkownikiem."
 
 msgid "A reserved role cannot be deleted."
 msgstr "Nie można usunąć zarezerwowanej roli."
@@ -968,7 +968,7 @@ msgid "A role already exists for the given name."
 msgstr "Rola o tej nazwie już istnieje."
 
 msgid "Only maximum of {0} active roles are allowed."
-msgstr ""
+msgstr "System pozwala maksymalnie na {0} aktywnych ról."
 
 msgid "A reserved role cannot be renamed."
 msgstr "Zarezerwowana rola nie może zostać zmieniona nazwą."
@@ -980,13 +980,13 @@ msgid "The resource identifier should not be empty."
 msgstr "Identyfikator zasobu nie powinien być pusty."
 
 msgid "The secret revision identifier should be a valid UUID."
-msgstr ""
+msgstr "Identyfikator wersji sekretu powinien być prawidłowym UUID."
 
 msgid "A secret revision identifier is required."
-msgstr ""
+msgstr "Identyfikator wersji sekretu jest wymagany."
 
 msgid "The secret revision identifier should not be empty."
-msgstr ""
+msgstr "Identyfikator wersji sekretu nie powinien być pusty."
 
 msgid "The message should be a valid ASCII string."
 msgstr "Wiadomość powinna być prawidłowym ciągiem ASCII."
@@ -1001,10 +1001,10 @@ msgid "A secret already exists for the given user and resource."
 msgstr "Sekret już występuje u danego użytkownika i zasobu."
 
 msgid "A secret already exists for the given user, resource and secret revision."
-msgstr ""
+msgstr "Sekret już istnieje dla podanego użytkownika, zasobu i wersji sekretu."
 
 msgid "The secret revision does not exist or is deleted."
-msgstr ""
+msgstr "Wersja sekretu nie istnieje lub została usunięta."
 
 msgid "The user identifier by should be a valid UUID."
 msgstr "Identyfikator użytkownika powinien być prawidłowym UUID."
@@ -1382,7 +1382,7 @@ msgid "Could not validate group user data."
 msgstr "Nie udało się zweryfikować danych użytkownika grupy."
 
 msgid "The resource with ID {0} does not have a secret revision."
-msgstr ""
+msgstr "Zasób z ID {0} nie posiada wersji sekretu."
 
 msgid "All email notifications will be sent."
 msgstr "Wszystkie powiadomienia e-mail zostaną wysłane."
@@ -2132,7 +2132,7 @@ msgid "The resource types associated to this resource does not exist."
 msgstr "Powiązane z tym zasobem typy zasobów nie istnieją."
 
 msgid "No secret revision were found for this resource."
-msgstr ""
+msgstr "Nie znaleziono wersji sekretu dla tego zasobu."
 
 msgid "You are not allowed to update this resource."
 msgstr "Nie masz uprawnień do aktualizowania tego zasobu."
@@ -2435,10 +2435,10 @@ msgid "The supplied email notification settings are not valid"
 msgstr "Podane ustawienia powiadomień e-mail są nieprawidłowe"
 
 msgid "The allow CSV format setting is required."
-msgstr ""
+msgstr "Ustawienie zezwolenia formatu CSV jest wymagane."
 
 msgid "The allow CSV format setting should be a boolean."
-msgstr ""
+msgstr "Ustawienie zezwolenia formatu CSV powinno być wartością logiczną."
 
 msgid "The folder has been added successfully."
 msgstr "Folder został dodany."
@@ -3254,13 +3254,13 @@ msgid "The server metadata private key is not valid."
 msgstr "Prywatny klucz metadanych serwera jest nieprawidłowy."
 
 msgid "The server does not have access to the server metadata private key in Zero-knowledge mode."
-msgstr ""
+msgstr "Serwer nie ma dostępu do klucza prywatnego metadanych serwera w trybie Zero-knowledge."
 
 msgid "The server has access to the server metadata private key while in Zero-knowledge mode."
-msgstr ""
+msgstr "Serwer ma dostęp do klucza prywatnego metadanych serwera w trybie Zero-knowledge."
 
 msgid "When Zero-knowledge mode is enabled, the server should not have access to the server metadata private key."
-msgstr ""
+msgstr "Gdy tryb Zero-knowledge jest włączony, serwer nie powinien mieć dostępu do prywatnego klucza metadanych serwera."
 
 msgid "The metadata key does not exist or has been deleted."
 msgstr "Klucz metadanych nie istnieje lub został usunięty."
@@ -4187,7 +4187,7 @@ msgid "The control function is not allowed for this UI Action."
 msgstr "Funkcja kontrolna nie jest dozwolona dla tej akcji interfejsu."
 
 msgid "The control function is not allowed for this Action."
-msgstr ""
+msgstr "Funkcja kontrolna nie jest dozwolona dla tej akcji."
 
 msgid "An action identifier should be a valid UUID."
 msgstr "Identyfikator akcji powinien być prawidłowym UUID."
@@ -4367,37 +4367,37 @@ msgid "The resource type is not deleted."
 msgstr "Ten typ zasobu nie został usunięty."
 
 msgid "The max revisions should be a valid integer."
-msgstr ""
+msgstr "Maksymalna liczba wersji powinna być prawidłową liczbą całkowitą."
 
 msgid "The max revisions is required."
-msgstr ""
+msgstr "Maksymalna liczba wersji jest wymagana."
 
 msgid "The max revisions should be greater than 0."
-msgstr ""
+msgstr "Maksymalna liczba wersji powinna być większa niż 0."
 
 msgid "The max revisions should not exceed the max revisions limit set by the administrator."
-msgstr ""
+msgstr "Maksymalna liczba wersji nie powinna przekraczać limitu maksymalnej liczby wersji ustawionego przez administratora."
 
 msgid "The allow sharing revisions should be a valid boolean."
-msgstr ""
+msgstr "Ustawienie zezwalania na współdzielenie wersji powinno być prawidłową wartością logiczną."
 
 msgid "The allow sharing revisions is required."
-msgstr ""
+msgstr "Ustawienie zezwalania na współdzielenie wersji jest wymagane."
 
 msgid "The allow sharing revisions is not enabled by the administrator."
-msgstr ""
+msgstr "Ustawienie zezwalania na współdzielenie wersji nie jest włączone przez administratora."
 
 msgid "Secret revisions settings endpoints are disabled."
-msgstr ""
+msgstr "Endpointy ustawień wersji sekretów są wyłączone."
 
 msgid "The identifier of the user who created the secret revision should be a valid UUID."
-msgstr ""
+msgstr "Identyfikator użytkownika, który stworzył wersję sekretu, powinien być prawidłowym UUID."
 
 msgid "The identifier of the user who modified the secret revision should be a valid UUID."
-msgstr ""
+msgstr "Identyfikator użytkownika, który stworzył wersję sekretu, powinien być prawidłowym UUID."
 
 msgid "Could not save secret revision"
-msgstr ""
+msgstr "Nie udało się zapisać wersji sekretu"
 
 msgid "The self registration setting id should be a valid UUID."
 msgstr "ID ustawienia samodzielnej rejestracji powinno być prawidłowym UUID."
@@ -4538,22 +4538,22 @@ msgid "The test email should be a valid email address."
 msgstr "Testowy adres e-mail powinien być prawidłowym adresem e-mail."
 
 msgid "The tenant ID should be a valid UUID."
-msgstr ""
+msgstr "ID grupy dostępowej powinno być prawidłowym UUID."
 
 msgid "The client ID should be a valid UUID."
-msgstr ""
+msgstr "ID klienta powinien być prawidłowym UUID."
 
 msgid "The client secret should be a valid BMP-UTF8 string."
-msgstr ""
+msgstr "Sekret klienta powinien być prawidłowym ciągiem BMP-UTF8."
 
 msgid "The client secret should not exceed 256 characters."
-msgstr ""
+msgstr "Sekret klienta nie powinien przekraczać 256 znaków."
 
 msgid "The OAuth2 username should be a valid email address."
-msgstr ""
+msgstr "Nazwa użytkownika OAuth2 powinna być prawidłowym adresem e-mail."
 
 msgid "The OAuth2 username should not exceed 256 characters."
-msgstr ""
+msgstr "Nazwa użytkownika OAuth2 nie powinna przekraczać 256 znaków."
 
 msgid "The authentication method is required."
 msgstr "Metoda uwierzytelnienia jest wymagana."
@@ -4568,10 +4568,10 @@ msgid "A test recipient is required."
 msgstr "Wymagany jest odbiorca testowy."
 
 msgid "The tenant ID is required."
-msgstr "Tenant ID jest wymagany."
+msgstr "ID grupy dostępowej jest wymagane."
 
 msgid "The tenant ID should not be empty."
-msgstr ""
+msgstr "ID grupy dostępowej nie powinno być puste."
 
 msgid "The client ID is required."
 msgstr "ID klienta jest wymagane."
@@ -4589,7 +4589,7 @@ msgid "The OAuth2 username is required."
 msgstr "Nazwa użytkownika OAuth2 jest wymagana."
 
 msgid "The OAuth2 username should not be empty."
-msgstr ""
+msgstr "Nazwa użytkownika OAuth2 nie powinna być pusta."
 
 msgid "SMTP settings endpoints disabled."
 msgstr "Wyłączono endpointy ustawień SMTP."
@@ -4646,7 +4646,7 @@ msgid "env variables"
 msgstr "zmienne środowiskowe"
 
 msgid "Tenant ID should be a valid UUID."
-msgstr "Tenant ID powinien być prawidłowym UUID."
+msgstr "ID grupy dostępowej powinno być prawidłowym UUID."
 
 msgid "Client ID should be a valid UUID."
 msgstr "ID klienta powinien być prawidłowym UUID."
@@ -4655,7 +4655,7 @@ msgid "Failed to obtain SMTP OAuth2 access token."
 msgstr "Nie udało się uzyskać tokenu dostępu SMTP OAuth2."
 
 msgid "SMTP OAuth2 token response from Microsoft did not contain an access token."
-msgstr ""
+msgstr "Odpowiedź tokenu SMTP OAuth2 z Microsoft nie zawierała tokena dostępu."
 
 msgid "Could not validate the smtp settings."
 msgstr "Nie można zweryfikować ustawień smtp."

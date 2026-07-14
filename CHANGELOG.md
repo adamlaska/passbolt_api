@@ -31,6 +31,7 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 - PB-52687 Fix composer security advisory affecting the cakephp/authentication package (CVE-2026-55590)
 - PB-52695 Fix Aikido advisory in the guzzlehttp/guzzle library (AIKIDO-2026-646305)
 - PB-52696 Upgrade phpseclib/phpseclib (GHSA-m557-wrgg-6rp4)
+- PB-53143 Update CakePHP version to 5.3.7
 
 ### Maintenance
 - PB-50620 Move the SSO Azure `stage3.php` template to `success/stage3.php`

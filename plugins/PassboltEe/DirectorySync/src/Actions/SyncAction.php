@@ -688,7 +688,7 @@ abstract class SyncAction
         $entity = null;
         $existingEntityIsDisabledAndNotDeleted = $this->isDeletedOrDisabled($existingEntity) &&
             !$existingEntity->isDeleted();
-        if ($data['directory_created']->lessThan($existingEntity->get('modified'))) {
+        if ($this->shouldBlockRestore($data, $existingEntity)) {
             $this->DirectoryEntries->updateForeignKey($entry, null);
             $reportData = new SyncError($entry, null);
             if ($existingEntityIsDisabledAndNotDeleted) {
@@ -750,6 +750,37 @@ abstract class SyncAction
         );
 
         return $entity;
+    }
+
+    /**
+     * Decide whether a deleted/disabled passbolt entity must NOT be restored from the directory.
+     *
+     * For Active Directory we additionally treat the entry's last modification (whenChanged) as a restore signal.
+     * Non-AD providers uses `directory_created` (createtimestamp).
+     *
+     * @param array $data Directory data for the entry
+     * @param \Cake\ORM\Entity $existingEntity The deleted/disabled passbolt entity
+     * @return bool True to keep the local state (block restore), false to restore
+     */
+    private function shouldBlockRestore(array $data, Entity $existingEntity): bool
+    {
+        $modified = $existingEntity->get('modified');
+
+        // The directory entry was created at least as recently as the passbolt change: restore.
+        if ($data['directory_created']->greaterThanOrEquals($modified)) {
+            return false;
+        }
+
+        // Active Directory only: the entry was modified (e.g. re-enabled) after the passbolt change: restore.
+        if (
+            $this->directory->getDirectoryType() === DirectoryInterface::TYPE_AD
+            && isset($data['directory_modified'])
+            && $data['directory_modified']->greaterThanOrEquals($modified)
+        ) {
+            return false;
+        }
+
+        return true;
     }
 
     /**

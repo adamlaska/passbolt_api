@@ -1,6 +1,6 @@
 Release song: https://www.youtube.com/watch?v=JfP3sB-hke4
 
-## [5.14.0-test.2] - 2026-07-14
+## [5.14.0-test.3] - 2026-07-15
 ### Added
 - PB-49943 Add a model cache health check service
 - PB-50621 Add recover flow support for OAuth2 & ADFS SSO providers
@@ -13,6 +13,7 @@ Release song: https://www.youtube.com/watch?v=JfP3sB-hke4
 - PB-52727 Fix typo in SSO settings activated email
 - PB-52952 Return 400 instead of 409 when the email is not found in the expected place from a SCIM IdP
 - PB-52592 Fix account recovery response email not being sent to custom RBAC roles
+- PB-53118 Fix unsuspend action using LDAP with AD is not working as expected
 
 ### Security
 - PB-29515 Fix MFA remember me policy bypass (INC-2046)

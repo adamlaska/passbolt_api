@@ -12,44 +12,21 @@ declare(strict_types=1);
  * @copyright     Copyright (c) Passbolt SA (https://www.passbolt.com)
  * @license       https://opensource.org/licenses/AGPL-3.0 AGPL License
  * @link          https://www.passbolt.com Passbolt(tm)
- * @since         5.14.0
+ * @since         5.15.0
  */
 namespace App\Test\TestCase\Service\Settings;
 
 use App\Model\Entity\Role;
-use App\Model\Validation\EmailValidationRule;
 use App\Service\Settings\SettingsGetService;
 use App\Test\Lib\AppTestCase;
 use Cake\Core\Configure;
 
 class SettingsGetServiceTest extends AppTestCase
 {
-    protected SettingsGetService $service;
-
-    public function setUp(): void
+    public function testSettingsGetService_getSettingsAsUser(): void
     {
-        parent::setUp();
-        $this->service = new SettingsGetService();
-    }
+        $service = new SettingsGetService(Role::USER);
 
-    public function tearDown(): void
-    {
-        parent::tearDown();
-        unset($this->service);
-    }
-
-    public function testSettingsGetService_GetEmailValidateRegex(): void
-    {
-        $regex = 'Foo';
-        Configure::write(EmailValidationRule::REGEX_CHECK_KEY, $regex);
-        $baseSettings = [];
-        $baseSettings = $this->service->getEmailValidateRegex($baseSettings);
-
-        $this->assertSame($regex, $baseSettings['passbolt']['email']['validate']['regex']);
-    }
-
-    public function testSettingsGetService_GetSettingsByUserRole_Guest(): void
-    {
         $version = '5.14';
         $name = 'Test Settings';
         $publicPath = 'storage-public';
@@ -62,7 +39,33 @@ class SettingsGetServiceTest extends AppTestCase
             $this->enableFeaturePlugin(ucfirst($plugin));
         }
 
-        $settings = $this->service->getSettingsByUserRole(Role::GUEST);
+        $settings = $service->getSettings()->toArray();
+        $this->assertSame($version, $settings['app']['version']['number']);
+        $this->assertSame($name, $settings['app']['version']['name']);
+        $this->assertSame(1, $settings['app']['debug']);
+        $this->assertSame($publicPath, $settings['app']['image_storage']['public_path']);
+        foreach ($plugins as $plugin) {
+            $this->assertTrue($settings['passbolt']['plugins'][$plugin]['enabled']);
+        }
+    }
+
+    public function testSettingsGetService_getSettingsAsGuest(): void
+    {
+        $service = new SettingsGetService(Role::GUEST);
+
+        $version = '5.14';
+        $name = 'Test Settings';
+        $publicPath = 'storage-public';
+        Configure::write('passbolt.version', $version);
+        Configure::write('passbolt.name', $name);
+        Configure::write('debug', true);
+        Configure::write('ImageStorage.publicPath', $publicPath);
+        $plugins = array_keys(Configure::read('passbolt.plugins'));
+        foreach ($plugins as $plugin) {
+            $this->enableFeaturePlugin(ucfirst($plugin));
+        }
+
+        $settings = $service->getSettings()->toArray();
         $this->assertFalse(isset($settings['app']['version']));
         $this->assertFalse(isset($settings['app']['version']['number']));
         $this->assertFalse(isset($settings['app']['version']['name']));
@@ -72,29 +75,5 @@ class SettingsGetServiceTest extends AppTestCase
         $this->assertFalse(isset($settings['passbolt']['plugins']['disableUser']['enabled']));
         $this->assertTrue(isset($settings['passbolt']['plugins']['accountRecoveryRequestHelp']['enabled']));
         $this->assertTrue(isset($settings['passbolt']['plugins']['safari']['enabled']));
-    }
-
-    public function testSettingsGetService_GetSettingsByUserRole_NotGuest(): void
-    {
-        $version = '5.14';
-        $name = 'Test Settings';
-        $publicPath = 'storage-public';
-        Configure::write('passbolt.version', $version);
-        Configure::write('passbolt.name', $name);
-        Configure::write('debug', true);
-        Configure::write('ImageStorage.publicPath', $publicPath);
-        $plugins = array_keys(Configure::read('passbolt.plugins'));
-        foreach ($plugins as $plugin) {
-            $this->enableFeaturePlugin(ucfirst($plugin));
-        }
-
-        $settings = $this->service->getSettingsByUserRole(Role::USER);
-        $this->assertSame($version, $settings['app']['version']['number']);
-        $this->assertSame($name, $settings['app']['version']['name']);
-        $this->assertSame(1, $settings['app']['debug']);
-        $this->assertSame($publicPath, $settings['app']['image_storage']['public_path']);
-        foreach ($plugins as $plugin) {
-            $this->assertTrue($settings['passbolt']['plugins'][$plugin]['enabled']);
-        }
     }
 }

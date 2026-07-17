@@ -53,7 +53,7 @@ class SettingsIndexController extends AppController
         $options = $this->QueryString->get($whitelist);
         $withHeader = !(isset($options['contain']['header']) && $options['contain']['header'] === false);
 
-        $settings = (new SettingsGetService())->getSettings($role);
+        $settings = (new SettingsGetService($role))->getSettings()->toArray();
 
         if (!$withHeader) {
             $this->set($settings);

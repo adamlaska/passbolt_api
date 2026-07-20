@@ -45,10 +45,6 @@ class SettingsGetService
     /**
      * Keys that will always be whitelisted, in addition to the ones defined in config. (once logged in).
      */
-    protected array $alwaysWhiteListed = [
-        'version',
-        'enabled',
-    ];
 
     private array $appSettings = [];
     private array $passboltSettings = [];
@@ -73,7 +69,7 @@ class SettingsGetService
     {
         $this->setBaseAppSettings();
         $this->setBasePassboltSettings();
-        $this->getEmailValidateRegex();
+        $this->setEmailValidateRegex();
         if ($this->isUser()) {
             $this->setUserAppSettings();
         }
@@ -105,16 +101,13 @@ class SettingsGetService
     }
 
     /**
-     * Get the email validate regex
+     * Set the email validate regex
      */
-    public function getEmailValidateRegex(): void
+    public function setEmailValidateRegex(): void
     {
-        if (is_string(Configure::read(EmailValidationRule::REGEX_CHECK_KEY))) {
-            $this->passboltSettings = Hash::insert(
-                $this->passboltSettings,
-                self::SETTINGS_PASSBOLT_EMAIL_VALIDATE_REGEX,
-                Configure::read(EmailValidationRule::REGEX_CHECK_KEY)
-            );
+        $regexCheckValue = Configure::read(EmailValidationRule::REGEX_CHECK_KEY);
+        if (is_string($regexCheckValue)) {
+            $this->passboltSettings[self::SETTINGS_PASSBOLT_EMAIL_VALIDATE_REGEX] = $regexCheckValue;
         }
     }
 
@@ -153,37 +146,49 @@ class SettingsGetService
      */
     public function setPassboltSettings(): void
     {
-        $this->passboltSettings['plugins'] = $this->_getWhiteListedPluginConfig($this->_getPluginWhiteList());
+        $passboltPluginsConfig = Configure::read(self::SETTINGS_PASSBOLT_PLUGINS);
+
+        foreach ($passboltPluginsConfig as $pluginName => $pluginConfig) {
+            $this->setPassboltPluginSettings($pluginName, $pluginConfig);
+        }
     }
 
     /**
-     * Get plugin options that are whitelisted.
+     * Set the white list plugin settings
      *
-     * @return array list of whiteList
+     * @param string $pluginName plugin's name
+     * @param array $pluginConfig plugin's config
+     * @return void
      */
-    protected function _getPluginWhiteList(): array
+    protected function setPassboltPluginSettings(string $pluginName, array $pluginConfig): void
     {
-        $configKey = $this->isUser() ? 'whiteList' : 'whiteListPublic';
-        $pluginsDefaultConfig = Configure::read(self::SETTINGS_PASSBOLT_PLUGINS, []);
-        $res = [];
-
-        foreach ($pluginsDefaultConfig as $pluginName => $pluginConfig) {
-            foreach ($this->_getWhiteListPath($pluginConfig, $configKey) as $whiteListPath) {
-                $res[] = $pluginName . '.' . $whiteListPath;
+        $pluginConfigPath = self::SETTINGS_PASSBOLT_PLUGINS . '.' . $pluginName;
+        foreach ($this->getPluginWhiteListPath($pluginConfig) as $whiteListPath) {
+            $configValue = Configure::read($pluginConfigPath . '.' . $whiteListPath);
+            if (isset($configValue)) {
+                $this->passboltSettings['plugins'][$pluginName][$whiteListPath] = $configValue;
             }
         }
-
-        return $res;
     }
 
     /**
-     * Get whitelisted options paths.
+     * Get whitelisted options paths of a plugin's config
      *
      * @return array list of whitelist path
      */
-    protected function _getWhiteListPath(array $pluginConfig, string $configKey): array
+    protected function getPluginWhiteListPath(array $pluginConfig): array
     {
-        $whiteListPaths = $this->isUser() ? $this->alwaysWhiteListed : [];
+        if ($this->isUser()) {
+            // For logged-in users, serve the whiteList config, otherwise only the whiteListPublic
+            $configKey = 'whiteList';
+            $whiteListPaths = [
+                'version',
+                'enabled',
+            ];
+        } else {
+            $configKey = 'whiteListPublic';
+            $whiteListPaths = [];
+        }
 
         $whiteListOptions = Hash::extract($pluginConfig, self::SETTINGS_VISIBILITY_KEY . '.' . $configKey);
         if (is_array($whiteListOptions)) {
@@ -191,28 +196,5 @@ class SettingsGetService
         }
 
         return $whiteListPaths;
-    }
-
-    /**
-     * Get white listed config.
-     *
-     * @param array $whiteList white list options array
-     * @return array white listed plugins configurations
-     */
-    protected function _getWhiteListedPluginConfig(array $whiteList): array
-    {
-        $pluginsConfig = [];
-        // Add white listed plugin options.
-        foreach ($whiteList as $path) {
-            if (Configure::check(self::SETTINGS_PASSBOLT_PLUGINS . '.' . $path)) {
-                $pluginsConfig = Hash::insert(
-                    $pluginsConfig,
-                    $path,
-                    Configure::read(self::SETTINGS_PASSBOLT_PLUGINS . '.' . $path)
-                );
-            }
-        }
-
-        return $pluginsConfig;
     }
 }

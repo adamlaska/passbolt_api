@@ -71,7 +71,7 @@ class DuoSetupPromptPostController extends MfaSetupController
         }
         $cookie = (new MfaDuoStateCookieService())->createDuoStateCookie(
             $duoAuthenticationRequest->authenticationToken->token,
-            AbstractSecureCookieService::isSslOrCookiesSecure($this->getRequest())
+            AbstractSecureCookieService::isHttpsOrCookiesSecure($this->getRequest())
         );
 
         $this->setResponse($this->getResponse()->withCookie($cookie));

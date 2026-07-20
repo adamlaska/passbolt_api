@@ -32,8 +32,6 @@ class SettingsGetService
 
     public const SETTINGS_PASSBOLT_EDITION = 'passbolt.edition';
 
-    public const SETTINGS_PASSBOLT_EMAIL_VALIDATE_REGEX = 'email.validate.regex';
-
     public const SETTINGS_PASSBOLT_VERSION = 'passbolt.version';
 
     public const SETTINGS_PASSBOLT_NAME = 'passbolt.name';
@@ -107,7 +105,7 @@ class SettingsGetService
     {
         $regexCheckValue = Configure::read(EmailValidationRule::REGEX_CHECK_KEY);
         if (is_string($regexCheckValue)) {
-            $this->passboltSettings[self::SETTINGS_PASSBOLT_EMAIL_VALIDATE_REGEX] = $regexCheckValue;
+            $this->passboltSettings['email']['validate']['regex'] = $regexCheckValue;
         }
     }
 
@@ -166,7 +164,8 @@ class SettingsGetService
         foreach ($this->getPluginWhiteListPath($pluginConfig) as $whiteListPath) {
             $configValue = Configure::read($pluginConfigPath . '.' . $whiteListPath);
             if (isset($configValue)) {
-                $this->passboltSettings['plugins'][$pluginName][$whiteListPath] = $configValue;
+                $fullPath = 'plugins' . '.' . $pluginName . '.' . $whiteListPath;
+                $this->passboltSettings = Hash::insert($this->passboltSettings, $fullPath, $configValue);
             }
         }
     }

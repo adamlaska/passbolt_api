@@ -141,6 +141,42 @@ class AccountRecoveryResponsesCreateControllerTest extends AccountRecoveryIntegr
         $this->assertResponseOk();
     }
 
+    public function testAccountRecoveryResponsesCreateController_Success_Approved_NotifiesRbacViewer()
+    {
+        $this->enableFeaturePlugin(RbacsPlugin::class);
+        [$request, $policy, $user] = $this->loadFixtureScenario(ResponseCreateScenario::class);
+
+        /** @var \App\Model\Entity\User $rbacViewer */
+        $rbacViewer = UserFactory::make()->persist();
+        $action = ActionFactory::make()->name('AccountRecoveryRequestsView.view')->persist();
+        RbacFactory::make()->setAction($action)->setField('role_id', $rbacViewer->role_id)->persist();
+
+        $password = $this->encrypt($request->fingerprint, $request->armored_key);
+        $status = AccountRecoveryResponse::STATUS_APPROVED;
+        $data = [
+            'account_recovery_request_id' => $request->id,
+            'status' => $status,
+            'responder_foreign_model' => AccountRecoveryResponse::RESPONDER_FOREIGN_MODEL_ORGANIZATION_KEY,
+            'responder_foreign_key' => $policy->public_key_id,
+            'data' => $password,
+        ];
+
+        $admin = $this->logInAsAdmin();
+        $this->postJson('/account-recovery/responses.json', $data);
+        $this->assertResponseOk();
+
+        $adminName = $admin->profile->first_name . ' ' . $admin->profile->last_name;
+        $userName = $user->profile->first_name . ' ' . $user->profile->last_name;
+        $this->assertEmailInBatchContains(
+            "$adminName ({$admin->username}) has updated a recovery request to {$status}.",
+            $rbacViewer->username
+        );
+        $this->assertEmailInBatchContains(
+            "$adminName ({$admin->username}) has set the status of the request initiated by $userName ({$user->username}) to {$status}.",
+            $rbacViewer->username
+        );
+    }
+
     /**
      * Successful test case with response rejected
      */

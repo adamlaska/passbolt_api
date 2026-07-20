@@ -46,7 +46,7 @@ class MfaVerifiedCookie
             ->withValue($token)
             ->withPath('/')
             ->withHttpOnly(true)
-            ->withSecure(AbstractSecureCookieService::isSslOrCookiesSecure($request));
+            ->withSecure(AbstractSecureCookieService::isHttpsOrCookiesSecure($request));
 
         if ($expirationDate !== null) {
             $mfaCookie = $mfaCookie->withExpiry($expirationDate);
@@ -68,6 +68,6 @@ class MfaVerifiedCookie
             ->withExpired()
             ->withPath('/')
             ->withHttpOnly(true)
-            ->withSecure(AbstractSecureCookieService::isSslOrCookiesSecure($request));
+            ->withSecure(AbstractSecureCookieService::isHttpsOrCookiesSecure($request));
     }
 }

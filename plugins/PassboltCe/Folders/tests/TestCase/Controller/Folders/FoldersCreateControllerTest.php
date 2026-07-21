@@ -65,7 +65,7 @@ class FoldersCreateControllerTest extends FoldersIntegrationTestCase
         $userI = UserFactory::make()->user()->persist();
         $data = ['name' => 'A'];
         $this->logInAs($userI);
-        $this->postJson('/folders.json?api-version=2', $data);
+        $this->postJson('/folders.json?contain[creator]=1&contain[modifier]=1&api-version=2', $data);
         $this->assertSuccess();
 
         // Assert controller response
@@ -74,6 +74,8 @@ class FoldersCreateControllerTest extends FoldersIntegrationTestCase
         $this->assertEquals($data['name'], $folder->name);
         $this->assertEquals($userI->get('id'), $folder->created_by);
         $this->assertEquals($userI->get('id'), $folder->modified_by);
+        $this->assertObjectNotHasAttribute('last_logged_in', $folder->creator);
+        $this->assertObjectNotHasAttribute('last_logged_in', $folder->modifier);
     }
 
     public function testFoldersCreateFolder_PersoSuccess2_CreateInFolder()

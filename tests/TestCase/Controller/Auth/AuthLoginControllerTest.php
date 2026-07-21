@@ -482,6 +482,7 @@ class AuthLoginControllerTest extends AppIntegrationTestCase
         ]);
 
         $this->assertSuccess();
+        $this->assertObjectNotHasAttribute('last_logged_in', $this->_responseJsonBody);
         $headers = $this->getHeaders();
         $this->assertSame('true', $headers['X-GPGAuth-Authenticated']);
         $this->assertSame('complete', $headers['X-GPGAuth-Progress']);

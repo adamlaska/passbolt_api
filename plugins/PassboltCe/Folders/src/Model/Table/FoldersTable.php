@@ -26,6 +26,7 @@ use Passbolt\Folders\Model\Behavior\FolderizableBehavior;
 use Passbolt\Folders\Model\Entity\Folder;
 use Passbolt\Folders\Model\Traits\Folders\FoldersFindersTrait;
 use Passbolt\Metadata\Model\Dto\MetadataFolderDto;
+use Passbolt\Metadata\Model\Entity\MetadataKey;
 use Passbolt\Metadata\Model\Rule\IsFolderV5ToV4DowngradeAllowedRule;
 use Passbolt\Metadata\Model\Rule\IsMetadataKeyTypeAllowedBySettingsRule;
 use Passbolt\Metadata\Model\Rule\IsMetadataKeyTypeSharedOnSharedItemRule;
@@ -213,12 +214,14 @@ class FoldersTable extends Table
             ->notEmptyString('metadata', __('The metadata should not be empty.'))
             ->add('metadata', 'isMetadataParsable', new IsParsableMessageValidationRule());
 
+        $allowedMetadataKeyTypes = [MetadataKey::TYPE_USER_KEY, MetadataKey::TYPE_SHARED_KEY];
         $validator
             ->utf8Extended('metadata_key_type', __('The metadata key type should be a valid UTF8 string.'))
-            ->allowEmptyString('metadata_key_type')
-            ->inList('metadata_key_type', ['user_key', 'shared_key'], __(
+            ->requirePresence('metadata_key_type', 'create', __('A metadata key type is required.'))
+            ->notEmptyString('metadata_key_type', __('The metadata key type should not be empty.'))
+            ->inList('metadata_key_type', $allowedMetadataKeyTypes, __(
                 'The metadata key type should be one of the following: {0}.',
-                implode(', ', ['user_key', 'shared_key'])
+                implode(', ', $allowedMetadataKeyTypes)
             ));
 
         return $validator;

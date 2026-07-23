@@ -14,6 +14,8 @@ declare(strict_types=1);
  * @link          https://www.passbolt.com Passbolt(tm)
  * @since         5.15.0
  */
+
+use Cake\Log\Log;
 use Migrations\AbstractMigration;
 
 class V5150CreateSessionsTable extends AbstractMigration
@@ -30,17 +32,23 @@ class V5150CreateSessionsTable extends AbstractMigration
     {
         // Some PRO customers already loaded config/schema/sessions.sql manually; skip in that case.
         if ($this->hasTable('sessions')) {
+            Log::info(__('The table `sessions` already exists.'));
+
             return;
         }
 
         $this
-            ->table('sessions', ['id' => false, 'primary_key' => ['id'], 'collation' => 'utf8mb4_unicode_ci'])
+            ->table('sessions', [
+                'id' => false,
+                'primary_key' => ['id'],
+                'encoding' => 'ascii',
+                'collation' => 'ascii_bin',
+            ])
             ->addColumn('id', 'char', [
-                'default' => null,
                 'limit' => 40,
                 'null' => false,
                 'encoding' => 'ascii',
-                'collation' => 'ascii_bin', // case-sensitive: PHP session ids are opaque tokens
+                'collation' => 'ascii_bin',
             ])
             ->addColumn('created', 'datetime', [
                 'default' => 'CURRENT_TIMESTAMP',

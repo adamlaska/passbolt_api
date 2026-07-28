@@ -494,6 +494,30 @@ class AuthLoginControllerTest extends AppIntegrationTestCase
         DateTime::setTestNow();
     }
 
+    public function testAuthLoginController_Stage2_SecondCallWithSameTokenRejected(): void
+    {
+        $user = UserFactory::make()
+            ->with('Gpgkeys', GpgkeyFactory::make()->withAdaKey())
+            ->user()
+            ->active()
+            ->persist();
+        $authenticationToken = AuthenticationTokenFactory::make(['user_id' => $user->id])
+            ->type(AuthenticationToken::TYPE_LOGIN)
+            ->active()
+            ->persist();
+        $token = 'gpgauthv1.3.0|36|' . $authenticationToken->get('token') . '|gpgauthv1.3.0';
+
+        $payload = ['data' => ['gpg_auth' => ['keyid' => $this->adaKeyId, 'user_token_result' => $token]]];
+
+        $this->postJson('/auth/login.json', $payload);
+        $this->assertSame('true', $this->getHeaders()['X-GPGAuth-Authenticated']);
+
+        $this->postJson('/auth/login.json', $payload);
+        $headers = $this->getHeaders();
+        $this->assertSame('false', $headers['X-GPGAuth-Authenticated']);
+        $this->assertSame('true', $headers['X-GPGAuth-Error']);
+    }
+
     public static function invalidUserTokenProvider(): array
     {
         return [

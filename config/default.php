@@ -405,7 +405,7 @@ return [
                 ),
             ],
             // Check for domain mismatch where possible
-            'checkDomainMismatch' => env('PASSBOLT_CHECK_DOMAIN_MISMATCH', true),
+            'checkDomainMismatch' => filter_var(env('PASSBOLT_CHECK_DOMAIN_MISMATCH', true), FILTER_VALIDATE_BOOLEAN),
             // Disable the edition of metadata settings, allow to lock the configuration and prevent admin edition
             'metadata' => [
                 'settings' => [

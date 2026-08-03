@@ -33,6 +33,7 @@ use Passbolt\MultiFactorAuthentication\Form\Duo\DuoCallbackForm;
 use Passbolt\MultiFactorAuthentication\Model\Dto\MfaDuoCallbackDto;
 use Passbolt\MultiFactorAuthentication\Service\Duo\MfaDuoLoginService;
 use Passbolt\MultiFactorAuthentication\Service\Duo\MfaDuoStateCookieService;
+use Passbolt\MultiFactorAuthentication\Service\MfaPolicies\RememberAMonthSettingInterface;
 use Passbolt\MultiFactorAuthentication\Service\MfaVerifiedCookieService;
 use Passbolt\MultiFactorAuthentication\Utility\MfaSettings;
 use Throwable;
@@ -54,15 +55,17 @@ class DuoVerifyCallbackGetController extends MfaVerifyController
      * contains a redirect property. It is usually the case when a user authenticates to duo on the web application.
      *
      * @param \App\Authenticator\SessionIdentificationServiceInterface $sessionIdentificationService session ID service
+     * @param \Passbolt\MultiFactorAuthentication\Service\MfaPolicies\RememberAMonthSettingInterface $rememberMeForAMonthSetting Remember a month setting.
      * @param \Duo\DuoUniversal\Client|null $duoSdkClient Duo SDK Client
      * @return \Cake\Http\Response|void
      */
     public function get(
         SessionIdentificationServiceInterface $sessionIdentificationService,
+        RememberAMonthSettingInterface $rememberMeForAMonthSetting,
         ?Client $duoSdkClient = null
     ) {
         $this->_assertRequestNotJson();
-        $this->_handleVerifiedNotRequired($sessionIdentificationService);
+        $this->_handleVerifiedNotRequired($sessionIdentificationService, $rememberMeForAMonthSetting);
         $redirect = $this->_handleInvalidSettings(MfaSettings::PROVIDER_DUO);
         if ($redirect) {
             return $redirect;

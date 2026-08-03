@@ -192,7 +192,7 @@ trait ResourcesFindersTrait
         // Handle the sorting of modified for compatibility with the
         // approach prior to pagination.
         if (isset($options['order']['Resources.modified'])) {
-            $query->orderBy('Resources.modified DESC');
+            $query->orderByDesc('Resources.modified');
         }
 
         // Remove resource type if plugin is disabled

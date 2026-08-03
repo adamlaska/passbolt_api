@@ -164,8 +164,8 @@ class ChangelogFileTest extends TestCase
             $line = $file[$position];
             $this->appendErrorIf(substr($line, 0, 2) !== '- ', 'Dash is missing', $position);
             $this->appendErrorIf(
-                substr($line, 2, 3) !== 'PB-',
-                'Each line should start with a ticket number',
+                substr($line, 2, 3) !== 'PB-' && substr($line, 2, 10) !== 'Renovate: ',
+                'Each line should start with a ticket number or "Renovate: "',
                 $position
             );
             $position++;

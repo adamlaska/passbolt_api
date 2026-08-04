@@ -150,7 +150,7 @@ return [
         // Selenium
         'selenium' => [
             'sso' => [
-                'active' => filter_var(env('PASSBOLT_SELENIUM_SSO_ACTIVE', false)),
+                'active' => filter_var(env('PASSBOLT_SELENIUM_SSO_ACTIVE', false), FILTER_VALIDATE_BOOLEAN),
                 'azure' => [
                     'url' => env('PASSBOLT_SELENIUM_SSO_AZURE_URL', 'https://login.microsoftonline.com'),
                     'tenantId' => env('PASSBOLT_SELENIUM_SSO_AZURE_TENANT_ID', ''),

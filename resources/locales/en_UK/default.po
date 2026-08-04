@@ -5,7 +5,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
-"POT-Creation-Date: 2026-07-10 06:49+0000\n"
+"POT-Creation-Date: 2026-08-04 13:36+0000\n"
 "PO-Revision-Date: YYYY-mm-DD HH:MM+ZZZZ\n"
 "Last-Translator: NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <EMAIL@ADDRESS>\n"
@@ -5099,7 +5099,7 @@ msgstr ""
 msgid "Skip"
 msgstr ""
 
-msgid "Welcome to Passbolt! Let's get started with the configuration."
+msgid "Welcome to Passbolt Pro! Let's get started with the configuration."
 msgstr ""
 
 msgid "Nice one! Your environment is ready for passbolt."

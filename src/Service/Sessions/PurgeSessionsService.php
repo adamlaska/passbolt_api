@@ -67,7 +67,7 @@ class PurgeSessionsService
      */
     private function getSessionsToPurge(int $retentionInDays, int $limit): SelectQuery
     {
-        $createdBefore = FrozenTime::now()->subHours($retentionInDays * 24); // Multiplying days for 24 hours
+        $modifiedBefore = FrozenTime::now()->subHours($retentionInDays * 24); // Multiplying days for 24 hours
         $sessionsTable = $this->fetchTable('Sessions');
 
         $query = $sessionsTable
@@ -77,7 +77,7 @@ class PurgeSessionsService
             ->limit($limit);
 
         if ($retentionInDays > 0) {
-            $query->where(['modified < ' => $createdBefore]);
+            $query->where(['modified <' => $modifiedBefore]);
         }
 
         return $query;

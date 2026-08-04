@@ -60,6 +60,29 @@ class PurgeSessionsServiceTest extends AppTestCase
         $this->assertSame(0, SessionFactory::count());
     }
 
+    public function testPurgeSessionsService_Success_ZeroRetentionDeletesRowsCreatedAtTheSameTimeCommandStarted()
+    {
+        $service = new PurgeSessionsService();
+
+        // 5 old sessions
+        $oldSessions = 5;
+        SessionFactory::make($oldSessions)->modifiedAt(DateTime::now()->subDays(2))->persist();
+
+        // 5 fresh sessions
+        $freshSessions = 5;
+        SessionFactory::make($freshSessions)->modifiedNow()->persist();
+
+        // 2 'future' sessions
+        $futureSessions = 2;
+        SessionFactory::make($futureSessions)->modifiedAt(DateTime::now()->addSeconds(10))->persist();
+
+        $total = $oldSessions + $freshSessions + $futureSessions;
+
+        $totalDeleted = $service->purge(0, 1000);
+        $this->assertSame($total, $totalDeleted);
+        $this->assertSame(0, SessionFactory::count());
+    }
+
     public function testPurgeSessionsService_Success_ReportsZeroWhenNothingToDelete()
     {
         $service = new PurgeSessionsService();

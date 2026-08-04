@@ -748,6 +748,19 @@ trait UsersFindersTrait
     }
 
     /**
+     * Active and non deleted not disabled users only with role
+     *
+     * @param \Cake\ORM\Query\SelectQuery $query Query to carve.
+     * @return \Cake\ORM\Query\SelectQuery
+     */
+    public function findActiveNotDeletedNotDisabledContainRole(SelectQuery $query): SelectQuery
+    {
+        return $query->find('activeNotDeleted')
+            ->find('notDisabled')
+            ->contain('Roles');
+    }
+
+    /**
      * Find non-disabled users to notify when group permissions are changed
      *
      * @param string $groupId group ID

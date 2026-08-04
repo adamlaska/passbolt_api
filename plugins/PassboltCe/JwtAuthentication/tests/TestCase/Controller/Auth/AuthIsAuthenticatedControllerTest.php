@@ -62,4 +62,13 @@ class AuthIsAuthenticatedControllerTest extends JwtAuthenticationIntegrationTest
         $this->assertResponseError();
         $this->assertEventFired(LogAuthenticationWithNonValidJwtAccessToken::AUTHENTICATION_WITH_INVALID_ACCESS_TOKEN_EVENT);
     }
+
+    public function testIsAuthenticatedWithJwt_ErrorDisabledUser()
+    {
+        $user = UserFactory::make()->user()->disabled()->persist();
+        $this->createJwtTokenAndSetInHeader($user->id);
+        $this->getJson('/auth/is-authenticated.json');
+        $this->assertResponseError();
+        $this->assertEventFired(LogAuthenticationWithNonValidJwtAccessToken::AUTHENTICATION_WITH_INVALID_ACCESS_TOKEN_EVENT);
+    }
 }

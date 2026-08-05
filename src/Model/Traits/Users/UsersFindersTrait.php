@@ -476,8 +476,7 @@ trait UsersFindersTrait
             ->groupBy('LOWER(Users.username)')
             ->having('count(*) > 1');
 
-        return $this->find('list', keyField: 'id', valueField: 'username')
-            ->disableHydration()
+        return $this->unhydratedFind('list', keyField: 'id', valueField: 'username')
             ->select(['id', 'username'])
             ->where([
                 'LOWER(username) IN' => $subQueryOfLowerCasedUsernameDuplicates,

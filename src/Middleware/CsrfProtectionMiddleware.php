@@ -16,7 +16,6 @@ declare(strict_types=1);
  */
 namespace App\Middleware;
 
-use App\Service\Cookie\AbstractSecureCookieService;
 use Cake\Core\Configure;
 use Cake\Http\Middleware\CsrfProtectionMiddleware as CakeCsrfProtectionMiddleware;
 use Cake\Http\ServerRequest;
@@ -102,6 +101,6 @@ class CsrfProtectionMiddleware extends CakeCsrfProtectionMiddleware
      */
     public function makeCsrfCookieSecureIfRequestIsHttps(ServerRequest $request): void
     {
-        $this->_config['secure'] = AbstractSecureCookieService::isHttpsOrCookiesSecure($request);
+        $this->_config['secure'] = $request->is('https');
     }
 }

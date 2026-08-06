@@ -260,7 +260,8 @@ trait UsersFindersTrait
             $query->contain(['Profiles' => AvatarsTable::addContainAvatar()]);
         }
         if (isset($options['contain']['groups_users']) && $options['contain']['groups_users']) {
-            $query->contain('GroupsUsers');
+            // Force select strategy: ORDER BY (e.g. a joined Profiles column) + a GROUP BY, which MySQL 5.7 only_full_group_by rejects.
+            $query->contain(['GroupsUsers' => ['strategy' => 'select']]);
         }
 
         // Filter out guests and deleted users

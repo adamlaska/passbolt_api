@@ -709,7 +709,7 @@ class UserScimResource implements ScimResourceInterface
 
         // Check if the user is an admin
         $query = $this->Users
-            ->find()
+            ->unhydratedFind()
             ->select(['existing' => 1])
             ->contain(['Roles'])
             ->where([
@@ -718,7 +718,7 @@ class UserScimResource implements ScimResourceInterface
             ])
             ->limit(1)
             ->epilog('FOR UPDATE');
-        $isAdmin = (bool)count($query->disableHydration()->toArray());
+        $isAdmin = (bool)count($query->toArray());
 
         if ($isAdmin) {
             throw new ForbiddenException(__('An administrator user cannot be suspended via SCIM.'));

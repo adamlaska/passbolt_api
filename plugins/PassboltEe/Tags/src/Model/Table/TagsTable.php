@@ -567,7 +567,7 @@ class TagsTable extends Table
      */
     public function findMetadataUpgradeIndex(array $options): Query
     {
-        $query = $this->find('v4')->disableHydration();
+        $query = $this->unhydratedFind('v4');
 
         $query->contain('ResourcesTags');
 
@@ -629,7 +629,7 @@ class TagsTable extends Table
      */
     public function findMetadataRotateKeyIndex(): Query
     {
-        $query = $this->find();
+        $query = $this->unhydratedFind();
 
         return $query
             ->where([
@@ -640,7 +640,6 @@ class TagsTable extends Table
             ->innerJoin(['MetadataKeys' => 'metadata_keys'], [
                 'MetadataKeys.id' => new IdentifierExpression('Tags.metadata_key_id'),
                 $query->expr()->isNotNull('MetadataKeys.expired'),
-            ])
-            ->disableHydration();
+            ]);
     }
 }

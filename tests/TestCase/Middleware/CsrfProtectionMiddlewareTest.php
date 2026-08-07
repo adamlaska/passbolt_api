@@ -50,7 +50,7 @@ class CsrfProtectionMiddlewareTest extends AppIntegrationTestCase
         $response = $middleware->process($request, new TestRequestHandler());
 
         $csrfToken = $response->getCookieCollection()->get('csrfToken');
-        $this->assertTrue($csrfToken->isSecure());
+        $this->assertFalse($csrfToken->isSecure());
     }
 
     public function testCsrfProtectionMiddleware_SSL_And_Cookie_Secure_Deactivated()

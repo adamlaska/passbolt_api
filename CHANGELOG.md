@@ -2,6 +2,16 @@
 All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/).
 
+## [5.14.3] - 2026-08-06
+### Fixed
+- PB-53457 Fix env()-backed config flags to enforce strict boolean type
+- PB-53498 Fix CSRF cookie not working over HTTP deployments
+
+## [5.14.3-test.1] - 2026-08-04
+### Fixed
+- PB-53457 Fix env()-backed config flags to enforce strict boolean type
+- PB-53498 Fix CSRF cookie not working over HTTP deployments
+
 ## [5.14.0] - 2026-07-20
 ### Added
 - PB-49943 Add a model cache health check service

@@ -65,6 +65,7 @@ class AuthIsAuthenticatedControllerTest extends JwtAuthenticationIntegrationTest
 
     public function testIsAuthenticatedWithJwt_ErrorDisabledUser()
     {
+        /** @var \App\Model\Entity\User $user */
         $user = UserFactory::make()->user()->disabled()->persist();
         $this->createJwtTokenAndSetInHeader($user->id);
         $this->getJson('/auth/is-authenticated.json');

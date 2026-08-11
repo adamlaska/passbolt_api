@@ -84,6 +84,18 @@ class HasNoInvisibleCharactersValidationRuleTest extends TestCase
             'em_space' => ["sales\u{2003}team"],
             'hair_space' => ["sales\u{200A}team"],
             'nbsp_only' => ["\u{00A0}\u{00A0}"],
+            'null' => ["sales\u{0000}team"],
+            'tab' => ["sales\u{0009}team"],
+            'line_feed' => ["sales\u{000A}team"],
+            'carriage_return' => ["sales\u{000D}team"],
+            'escape' => ["sales\u{001B}team"],
+            'delete' => ["sales\u{007F}team"],
+            'next_line_c1' => ["sales\u{0085}team"],
+            'private_use_area_start' => ["sales\u{E000}team"],
+            'private_use_area_end' => ["sales\u{F8FF}team"],
+            'variation_selector_1' => ["sales\u{FE00}team"],
+            'variation_selector_15_text' => ["sales\u{FE0E}team"],
+            'variation_selector_16_emoji' => ["sales\u{FE0F}team"],
         ];
     }
 

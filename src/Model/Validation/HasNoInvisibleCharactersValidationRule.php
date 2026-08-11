@@ -21,7 +21,8 @@ class HasNoInvisibleCharactersValidationRule extends PassboltValidationRule
 {
     // (?!\x{20})\p{Zs} matches every Space_Separator except ASCII space — future-proof
     // against new Zs additions rather than an explicit NBSP/ideographic-space list.
-    private const INVISIBLE_CHARACTERS_REGEX = '/[\p{Cf}\p{Zl}\p{Zp}]|(?!\x{20})\p{Zs}/u';
+    private const INVISIBLE_CHARACTERS_REGEX =
+        '/[\p{Cc}\p{Cf}\p{Co}\p{Zl}\p{Zp}]|[\x{FE00}-\x{FE0F}]|(?!\x{20})\p{Zs}/u';
 
     /**
      * @inheritDoc

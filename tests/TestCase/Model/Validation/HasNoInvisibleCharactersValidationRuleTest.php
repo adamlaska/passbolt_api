@@ -65,6 +65,7 @@ class HasNoInvisibleCharactersValidationRuleTest extends TestCase
     public static function invisibleStringsProvider(): array
     {
         return [
+            'only_invisible_character' => ["\u{200B}"],
             'zero_width_space' => ["sales\u{200B}team"],
             'zero_width_non_joiner' => ["sales\u{200C}team"],
             'zero_width_joiner' => ["sales\u{200D}team"],
@@ -96,6 +97,7 @@ class HasNoInvisibleCharactersValidationRuleTest extends TestCase
             'variation_selector_1' => ["sales\u{FE00}team"],
             'variation_selector_15_text' => ["sales\u{FE0E}team"],
             'variation_selector_16_emoji' => ["sales\u{FE0F}team"],
+            'multiple_zero_width' => ["there\u{200B}s\u{200B}an\u{200B}invalid\u{200B}char"],
         ];
     }
 

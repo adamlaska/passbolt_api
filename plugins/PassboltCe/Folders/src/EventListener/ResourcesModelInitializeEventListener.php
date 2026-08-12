@@ -12,17 +12,17 @@ declare(strict_types=1);
  * @copyright     Copyright (c) Passbolt SA (https://www.passbolt.com)
  * @license       https://opensource.org/licenses/AGPL-3.0 AGPL License
  * @link          https://www.passbolt.com Passbolt(tm)
- * @since         2.13.0
+ * @since         5.15.0
  */
 
 namespace Passbolt\Folders\EventListener;
 
-use App\Model\Table\PermissionsTable;
+use App\Model\Table\ResourcesTable;
 use Cake\Event\EventInterface;
 use Cake\Event\EventListenerInterface;
-use Passbolt\Folders\Model\Behavior\PermissionsCleanupBehavior;
+use Passbolt\Folders\Model\Behavior\FolderizableBehavior;
 
-class PermissionsModelInitializeEventListener implements EventListenerInterface
+class ResourcesModelInitializeEventListener implements EventListenerInterface
 {
     /**
      * @inheritDoc
@@ -31,8 +31,8 @@ class PermissionsModelInitializeEventListener implements EventListenerInterface
     {
         return [
             'Model.initialize' => [
-                'addFoldersAssociation',
-                'addPermissionsCleanupBehavior',
+                'addFoldersRelationsAssociation',
+                'addFolderizableBehavior',
             ],
         ];
     }
@@ -41,16 +41,20 @@ class PermissionsModelInitializeEventListener implements EventListenerInterface
      * @param \Cake\Event\EventInterface $event Event
      * @return void
      */
-    public function addFoldersAssociation(EventInterface $event): void
+    public function addFoldersRelationsAssociation(EventInterface $event): void
     {
         $table = $event->getSubject();
-        if (!$table instanceof PermissionsTable || $table->hasAssociation('Folders')) {
+        if (!$table instanceof ResourcesTable || $table->hasAssociation('FoldersRelations')) {
             return;
         }
 
-        $table->belongsTo('Folders', [
-            'className' => 'Passbolt/Folders.Folders',
-            'foreignKey' => 'aco_foreign_key',
+        $table->hasMany('FoldersRelations', [
+            'className' => 'Passbolt/Folders.FoldersRelations',
+            'foreignKey' => 'foreign_id',
+            'conditions' => [
+                'FoldersRelations.foreign_model' => 'Resource',
+            ],
+            'dependent' => true,
         ]);
     }
 
@@ -58,13 +62,13 @@ class PermissionsModelInitializeEventListener implements EventListenerInterface
      * @param \Cake\Event\EventInterface $event Event
      * @return void
      */
-    public function addPermissionsCleanupBehavior(EventInterface $event): void
+    public function addFolderizableBehavior(EventInterface $event): void
     {
         $table = $event->getSubject();
-        if (!$table instanceof PermissionsTable || $table->behaviors()->has('PermissionsCleanup')) {
+        if (!$table instanceof ResourcesTable || $table->behaviors()->has('Folderizable')) {
             return;
         }
 
-        $table->addBehavior(PermissionsCleanupBehavior::class);
+        $table->addBehavior(FolderizableBehavior::class);
     }
 }

@@ -12,17 +12,17 @@ declare(strict_types=1);
  * @copyright     Copyright (c) Passbolt SA (https://www.passbolt.com)
  * @license       https://opensource.org/licenses/AGPL-3.0 AGPL License
  * @link          https://www.passbolt.com Passbolt(tm)
- * @since         2.13.0
+ * @since         5.15.0
  */
 
-namespace Passbolt\Folders\EventListener;
+namespace Passbolt\Rbacs\Event;
 
-use App\Model\Table\PermissionsTable;
+use App\Model\Table\RolesTable;
 use Cake\Event\EventInterface;
 use Cake\Event\EventListenerInterface;
-use Passbolt\Folders\Model\Behavior\PermissionsCleanupBehavior;
+use Passbolt\Log\Model\Table\ActionsTable;
 
-class PermissionsModelInitializeEventListener implements EventListenerInterface
+class RbacsModelInitializeEventListener implements EventListenerInterface
 {
     /**
      * @inheritDoc
@@ -31,8 +31,8 @@ class PermissionsModelInitializeEventListener implements EventListenerInterface
     {
         return [
             'Model.initialize' => [
-                'addFoldersAssociation',
-                'addPermissionsCleanupBehavior',
+                'addRbacsAssociationToActions',
+                'addRbacsAssociationToRoles',
             ],
         ];
     }
@@ -41,16 +41,19 @@ class PermissionsModelInitializeEventListener implements EventListenerInterface
      * @param \Cake\Event\EventInterface $event Event
      * @return void
      */
-    public function addFoldersAssociation(EventInterface $event): void
+    public function addRbacsAssociationToActions(EventInterface $event): void
     {
         $table = $event->getSubject();
-        if (!$table instanceof PermissionsTable || $table->hasAssociation('Folders')) {
+        if (!$table instanceof ActionsTable || $table->hasAssociation('Rbacs')) {
             return;
         }
 
-        $table->belongsTo('Folders', [
-            'className' => 'Passbolt/Folders.Folders',
-            'foreignKey' => 'aco_foreign_key',
+        $table->hasMany('Rbacs', [
+            'className' => 'Passbolt/Rbacs.Rbacs',
+            'foreignKey' => 'foreign_id',
+            'conditions' => [
+                'Rbacs.foreign_model' => 'Action',
+            ],
         ]);
     }
 
@@ -58,13 +61,16 @@ class PermissionsModelInitializeEventListener implements EventListenerInterface
      * @param \Cake\Event\EventInterface $event Event
      * @return void
      */
-    public function addPermissionsCleanupBehavior(EventInterface $event): void
+    public function addRbacsAssociationToRoles(EventInterface $event): void
     {
         $table = $event->getSubject();
-        if (!$table instanceof PermissionsTable || $table->behaviors()->has('PermissionsCleanup')) {
+        if (!$table instanceof RolesTable || $table->hasAssociation('Rbacs')) {
             return;
         }
 
-        $table->addBehavior(PermissionsCleanupBehavior::class);
+        $table->hasMany('Rbacs', [
+            'className' => 'Passbolt/Rbacs.Rbacs',
+            'foreignKey' => 'role_id',
+        ]);
     }
 }

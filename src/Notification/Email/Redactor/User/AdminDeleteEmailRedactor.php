@@ -34,7 +34,7 @@ use Passbolt\EmailNotificationSettings\Utility\EmailNotificationSettings;
 use Passbolt\Locale\Service\LocaleService;
 
 /**
- * Email sent to all administrators when any administrator is deleted.
+ * Email sent to all administrators when any user (admin or regular) is deleted.
  */
 class AdminDeleteEmailRedactor implements SubscribedEmailRedactorInterface
 {
@@ -96,9 +96,6 @@ class AdminDeleteEmailRedactor implements SubscribedEmailRedactorInterface
         if (!$deletedUser instanceof User) {
             throw new InvalidArgumentException('`user` is missing from event data.');
         }
-        if (!$deletedUser->role->isAdmin()) {
-            return $emailCollection;
-        }
 
         /** @var array $groupsIds */
         $groupsIds = $event->getData('groupsIds');
@@ -142,14 +139,19 @@ class AdminDeleteEmailRedactor implements SubscribedEmailRedactorInterface
             function () use ($user, $recipient, $deletedBy) {
                 $operatorFullName = $deletedBy->profile->full_name;
                 $userFullName = $user->profile->full_name;
+                $isAdmin = $user->role->isAdmin();
 
                 if ($recipient->id === $deletedBy->id) {
-                    return __('You deleted administrator {0}', $userFullName);
+                    return $isAdmin
+                        ? __('You deleted administrator {0}', $userFullName)
+                        : __('You deleted user {0}', $userFullName);
                 } elseif ($recipient->id === $user->id) {
                     return __('{0} deleted your account', $operatorFullName);
                 }
 
-                return __('{0} deleted administrator {1}', $operatorFullName, $userFullName);
+                return $isAdmin
+                    ? __('{0} deleted administrator {1}', $operatorFullName, $userFullName)
+                    : __('{0} deleted user {1}', $operatorFullName, $userFullName);
             }
         );
 
@@ -165,6 +167,7 @@ class AdminDeleteEmailRedactor implements SubscribedEmailRedactorInterface
                     'recipient' => $recipient,
                     'user' => $user,
                     'operator' => $deletedBy,
+                    'isAdmin' => $user->role->isAdmin(),
                 ],
                 'title' => $subject,
             ],

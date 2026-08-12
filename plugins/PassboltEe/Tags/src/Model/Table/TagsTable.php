@@ -19,6 +19,7 @@ namespace Passbolt\Tags\Model\Table;
 use App\Error\Exception\CustomValidationException;
 use App\Model\Traits\Query\CaseSensitiveCompareValueTrait;
 use App\Model\Validation\ArmoredMessage\IsParsableMessageValidationRule;
+use App\Model\Validation\HasNoInvisibleCharactersValidationRule;
 use App\ORM\Association\PassboltBelongsToMany;
 use App\Utility\UserAccessControl;
 use ArrayObject;
@@ -118,7 +119,8 @@ class TagsTable extends Table
             ->notEmptyString('slug', __('The tag should not be empty.'))
             ->requirePresence('slug', 'create', __('A tag is required.'))
             ->utf8Extended('slug', __('The tag should be a valid BMP-UTF8 string.'))
-            ->maxLength('slug', 128, __('The tag length should be maximum {0} characters.', 128));
+            ->maxLength('slug', 128, __('The tag length should be maximum {0} characters.', 128))
+            ->add('slug', 'noInvisibleCharacters', new HasNoInvisibleCharactersValidationRule());
 
         $validator
             ->boolean('is_shared', __('The shared status should be a valid boolean.'))

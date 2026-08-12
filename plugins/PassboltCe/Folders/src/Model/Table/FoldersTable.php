@@ -18,6 +18,7 @@ declare(strict_types=1);
 namespace Passbolt\Folders\Model\Table;
 
 use App\Model\Validation\ArmoredMessage\IsParsableMessageValidationRule;
+use App\Model\Validation\HasNoInvisibleCharactersValidationRule;
 use Cake\ORM\Behavior\TimestampBehavior;
 use Cake\ORM\RulesChecker;
 use Cake\ORM\Table;
@@ -154,7 +155,8 @@ class FoldersTable extends Table
                 __('The name length should be maximum {0} characters.', Folder::MAX_NAME_LENGTH)
             )
             ->requirePresence('name', 'create', __('A name is required.'))
-            ->allowEmptyString('name', __('The name should not be empty.'), false);
+            ->allowEmptyString('name', __('The name should not be empty.'), false)
+            ->add('name', 'noInvisibleCharacters', new HasNoInvisibleCharactersValidationRule());
 
         $validator
             ->uuid('created_by', __('The identifier of the user who created the folder should be a valid UUID.'))

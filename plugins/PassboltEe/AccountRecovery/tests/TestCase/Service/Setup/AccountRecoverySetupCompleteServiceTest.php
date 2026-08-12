@@ -47,7 +47,7 @@ class AccountRecoverySetupCompleteServiceTest extends AccountRecoveryTestCase
     {
         parent::setUp();
 
-        (new AccountRecoveryPlugin())->addAssociationsToUsersTable();
+        (new AccountRecoveryPlugin())->bootstrap($this->stubApp());
     }
 
     /**

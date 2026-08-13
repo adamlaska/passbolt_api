@@ -36,7 +36,7 @@ use Passbolt\Locale\Service\LocaleService;
 /**
  * Email sent to all administrators when any user (admin or regular) is deleted.
  */
-class AdminDeleteEmailRedactor implements SubscribedEmailRedactorInterface
+class UserDeleteAdminEmailRedactor implements SubscribedEmailRedactorInterface
 {
     use LocatorAwareTrait;
     use SubscribedEmailRedactorTrait;
@@ -44,7 +44,7 @@ class AdminDeleteEmailRedactor implements SubscribedEmailRedactorInterface
     public const CONFIG_KEY_EMAIL_ENABLED = 'passbolt.email.send.admin.user.delete.admin';
     public const CONFIG_KEY_SEND_USER_EMAIL = 'passbolt.email.send.admin.user.delete.user';
 
-    public const TEMPLATE = 'AD/admin_deleted';
+    public const TEMPLATE = 'AD/user_deleted';
 
     /**
      * @var \App\Model\Table\UsersTable

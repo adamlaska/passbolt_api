@@ -62,7 +62,7 @@ class PasswordExpiryUsersDeleteControllerTest extends AppIntegrationTestCase
         $this->assertTrue($resourceSharedViewed->isExpired());
         $this->assertFalse($resourceSharedNotViewed->isExpired());
         // Two notifications: the owner about the expired resource, and the
-        // acting admin about the user deletion (AdminDeleteEmailRedactor).
+        // acting admin about the user deletion (UserDeleteAdminEmailRedactor).
         $this->assertEmailQueueCount(2);
         $this->assertEmailInBatchContains(
             'Access for users to your shared passwords have been revoked.',

@@ -30,7 +30,7 @@ use Cake\ORM\TableRegistry;
 
 /**
  * @covers \App\Controller\Users\UsersDeleteController
- * @covers \App\Notification\Email\Redactor\User\AdminDeleteEmailRedactor
+ * @covers \App\Notification\Email\Redactor\User\UserDeleteAdminEmailRedactor
  */
 class UsersDeleteControllerTest extends AppIntegrationTestCase
 {

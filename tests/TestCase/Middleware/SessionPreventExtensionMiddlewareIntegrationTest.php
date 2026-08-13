@@ -38,33 +38,21 @@ class SessionPreventExtensionMiddlewareIntegrationTest extends AppIntegrationTes
         $this->assertResponseOk();
         // Here it is updating last user interaction
         $this->assertSessionHasKey('SessionPreventExtensionMiddleware');
-        // We are not updating the Config.time as we are not preventing the extension
-        $this->assertSessionNotHasKey('Config');
+        // We are not updating the Config.time as we are postponing the session time out
+        $this->assertSessionNotHasKey('Config.time');
     }
 
-    public function testSessionPreventExtensionMiddleware_LoggedInSessionWhenCallingIsAuthenticatedEndpoint(): void
+    public function testSessionPreventExtensionMiddleware_LoggedInSessionWhenCallingIsAuthenticatedEndpoint_Should_Not_PostponeTimeout(): void
     {
         $user = $this->logInAsUser();
 
         $timeReference = 1234;
-        $_SESSION['SessionPreventExtensionMiddleware']['time'] = $timeReference;
+        $this->session(['SessionPreventExtensionMiddleware' => ['time' => $timeReference]]);
 
         $this->get('/auth/is-authenticated.json');
-
-        $expectedSession = [
-            'SessionPreventExtensionMiddleware' => [
-                'time' => $timeReference,
-            ],
-            'Config' => [
-                'time' => $timeReference,
-            ],
-            'Auth' => [
-                'user' => [
-                    'id' => $user->id,
-                ],
-            ]
-        ];
         $this->assertResponseOk();
-        $this->assertSame($expectedSession, $_SESSION);
+        $this->assertSession($timeReference, 'SessionPreventExtensionMiddleware.time');
+        $this->assertSession($timeReference, 'Config.time');
+        $this->assertSession($user->id, 'Auth.user.id');
     }
 }

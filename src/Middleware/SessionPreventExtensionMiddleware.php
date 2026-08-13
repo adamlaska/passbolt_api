@@ -54,6 +54,12 @@ class SessionPreventExtensionMiddleware implements MiddlewareInterface
 
         $session = $request->getSession();
 
+        /** @var \Authentication\Identity $identity */
+        $identity = $request->getAttribute('identity');
+        if (empty($identity)) {
+            return $handler->handle($request);
+        }
+
         if ($this->shouldSessionExtensionPrevented($request)) {
             $time = $session->read('SessionPreventExtensionMiddleware.time');
             if ($time) {

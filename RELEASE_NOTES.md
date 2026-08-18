@@ -43,7 +43,6 @@ Release song: TBD
 - PB-53453 Upgrades guzzlehttp/guzzle to 7.15.2
 - PB-53655 Removes the config/schema/sessions.sql file
 - PB-53874 Wires plugin table associations via Model.initialize instead of plugin bootstrap()
-- Update CONTRIBUTING.md to mention DDEV
 - Renovate: Update dependency phpstan/phpstan to v1.12.34
 - Renovate: Update dependency duosecurity/duo_universal_php to v1.2.0
 - Renovate: Update dependency cakephp/authentication to v3.3.7
